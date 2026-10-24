@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { createServer, type Server } from "node:http";
+import type { AddressInfo } from "node:net";
 import os from "node:os";
 import path from "node:path";
 import * as bd from "@/lib/brightdata";
@@ -18,10 +20,13 @@ beforeEach(async () => {
   dir = await mkdtemp(path.join(os.tmpdir(), "bd-cache-"));
   process.env.BRIGHTDATA_CACHE_DIR = dir;
   bd.resetRequestCount();
+  // Plain HTTP goes through the (stubbed) global fetch unless a test opts into the real pinned transport.
+  bd._setHttpForTests((u, i) => fetch(u, i));
 });
 afterEach(async () => {
   process.env = { ...env };
   _setLookupForTests(null);
+  bd._setHttpForTests(null);
   vi.unstubAllGlobals();
   await rm(dir, { recursive: true, force: true });
 });
@@ -108,6 +113,32 @@ describe("brightdata adapter", () => {
     await expect(bd.fetchText("https://big.example/huge")).rejects.toThrow(/too large/);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(pulls).toBeLessThan(40);
+  });
+
+  it("pins the connection to the vetted DNS answer, so a rebinding host never reaches an internal address", async () => {
+    let hits = 0;
+    const server: Server = createServer((_req, res) => {
+      hits++;
+      res.end("internal secret");
+    });
+    await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+    const { port } = server.address() as AddressInfo;
+    try {
+      bd._setHttpForTests(null);
+      let calls = 0;
+      // First answer (the pre-check) is public; the connect-time answer flips to loopback.
+      _setLookupForTests(async () => (calls++ === 0 ? [{ address: "93.184.216.34", family: 4 }] : [{ address: "127.0.0.1", family: 4 }]));
+      await expect(bd.fetchText(`http://rebind.example:${port}/admin`)).rejects.toThrow(/not public/);
+      expect(calls).toBe(2);
+      // A lookup failure at connect time fails the request instead of leaving it unchecked.
+      _setLookupForTests(async () => {
+        throw Object.assign(new Error("ENOTFOUND"), { code: "ENOTFOUND" });
+      });
+      await expect(bd.fetchText(`http://gone.example:${port}/admin`)).rejects.toThrow();
+      expect(hits).toBe(0);
+    } finally {
+      await new Promise((r) => server.close(r));
+    }
   });
 
   it("CACHE_ONLY never touches the network", async () => {

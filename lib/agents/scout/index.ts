@@ -65,7 +65,9 @@ function parseUrl(raw: string): string {
   const trimmed = raw.trim();
   let u: URL;
   try {
-    u = new URL(/^[a-z][a-z0-9+.-]*:/i.test(trimmed) ? trimmed : `https://${trimmed}`);
+    // "host.tld:8443/path" is a bare host with a port, not a scheme; "mailto:x" and "file:/x" keep their scheme and get rejected.
+    const bareHostPort = /^[^/:@]+:\d+(?:[/?#]|$)/.test(trimmed);
+    u = new URL(/^[a-z][a-z0-9+.-]*:/i.test(trimmed) && !bareHostPort ? trimmed : `https://${trimmed}`);
   } catch {
     throw new BadInput("not a URL");
   }

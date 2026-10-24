@@ -74,7 +74,7 @@ function hostMatchesCompany(name: string, link: string, conferenceHost?: string)
   return tokens.some((t) => host.split(".")[0] === t || host.includes(t));
 }
 
-async function searchWebsite(c: NormCompany, context?: string, conferenceHost?: string): Promise<{ url: string; snippets: string; source: string; collectedAt: string } | { skip: string }> {
+async function searchWebsite(c: NormCompany, context?: string, conferenceHost?: string): Promise<{ urls: string[]; snippets: string; source: string; collectedAt: string } | { skip: string }> {
   const query = [c.name, context, "official website"].filter(Boolean).join(" ").replace(/\s+/g, " ");
   let results: { data: SerpResult[]; source: string; collectedAt: string };
   try {
@@ -83,10 +83,10 @@ async function searchWebsite(c: NormCompany, context?: string, conferenceHost?: 
     return { skip: `no website; search failed: ${e instanceof Error ? e.message : String(e)}`.slice(0, 160) };
   }
   const usable = results.data.filter((r) => publicLink(r.link));
-  const match = usable.find((r) => hostMatchesCompany(c.name, r.link, conferenceHost));
-  if (!match) return { skip: usable.length ? "no website; search returned no result for this company" : "no website; search returned no public url" };
+  const urls = [...new Set(usable.filter((r) => hostMatchesCompany(c.name, r.link, conferenceHost)).map((r) => r.link))];
+  if (!urls.length) return { skip: usable.length ? "no website; search returned no result for this company" : "no website; search returned no public url" };
   const snippets = results.data.slice(0, 8).map((x) => `- ${x.title}: ${x.description ?? ""} (${x.link})`).join("\n");
-  return { url: match.link, snippets, source: results.source, collectedAt: results.collectedAt };
+  return { urls, snippets, source: results.source, collectedAt: results.collectedAt };
 }
 
 function skip(c: NormCompany, reason: string, skipped: EnrichResult["skipped"]) {
@@ -104,27 +104,38 @@ export async function enrichSponsors(companies: NormCompany[], opts: { limit?: n
   let enriched = 0;
   await mapLimit(picked, opts.concurrency ?? 6, async (c) => {
     try {
-      let url = c.website?.trim() || undefined;
+      const own = c.website?.trim() || undefined;
+      let candidates: string[];
       let fallback = "";
       let fallbackSrc: { source: string; collectedAt: string; via: Via } | undefined;
-      if (!url) {
+      if (own) {
+        if (publicUrlProblem(own)) return skip(c, "website is not a public http(s) url", skipped);
+        candidates = [own];
+      } else {
         c.id ??= companyId(c.name, undefined);
         const found = await searchWebsite(c, opts.context, opts.conferenceHost);
         if ("skip" in found) return skip(c, found.skip, skipped);
-        url = found.url;
-        c.website = url;
+        candidates = found.urls;
         fallback = found.snippets;
         fallbackSrc = { source: found.source, collectedAt: found.collectedAt, via: "serp" };
       }
-      if (publicUrlProblem(url)) return skip(c, "website is not a public http(s) url", skipped);
-      try {
-        await assertResolvedPublic(url);
-      } catch (e) {
-        if (e instanceof UnsafeUrlError) return skip(c, "website host is not public", skipped);
-        throw e;
+      // First candidate whose DNS answers are all public: a private first hit does not hide a usable later one.
+      let resolved: string | undefined;
+      for (const candidate of candidates) {
+        try {
+          await assertResolvedPublic(candidate);
+          resolved = candidate;
+          break;
+        } catch (e) {
+          if (!(e instanceof UnsafeUrlError)) throw e;
+        }
       }
-      const pageUrl = url;
-      const r = await memo({ v: 2, task: "sponsor-enrich", url: pageUrl }, pageUrl, async () => {
+      if (!resolved) return skip(c, "website host is not public", skipped);
+      const pageUrl = resolved;
+      if (!own) c.website = pageUrl;
+      // A searched URL is keyed by company too, so two sponsors that land on one page never share an extraction.
+      const memoKey = own ? { v: 2, task: "sponsor-enrich", url: pageUrl } : { v: 2, task: "sponsor-enrich", url: pageUrl, company: c.name.trim().toLowerCase() };
+      const r = await memo(memoKey, pageUrl, async () => {
         if (!hasLLM()) throw new Error("no LLM");
         const page = await unlock(pageUrl);
         let text = page.data.replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/\n{3,}/g, "\n\n").slice(0, 12_000);
@@ -148,6 +159,7 @@ export async function enrichSponsors(companies: NormCompany[], opts: { limit?: n
       c.topics = [...new Set([...c.topics, ...r.data.topics.map((t) => t.toLowerCase().trim()).filter(Boolean)])].slice(0, 6);
       c.provenance = { source: r.data.source, collectedAt: r.data.collectedAt, via: r.data.via };
       c.enrichSkip = undefined;
+      c.enriched = true;
       enriched++;
     } catch (e) {
       failed.push(`${c.name}: ${e instanceof Error ? e.message : String(e)}`.slice(0, 160));

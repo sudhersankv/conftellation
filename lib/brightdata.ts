@@ -4,8 +4,13 @@
 // Tests replace this module with vi.mock("@/lib/brightdata"), or point BRIGHTDATA_CACHE_DIR at fixtures.
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import http from "node:http";
+import https from "node:https";
+import type { LookupAddress, LookupOptions } from "node:dns";
 import path from "node:path";
-import { assertResolvedPublic, publicUrlProblem, UnsafeUrlError } from "@/lib/publicUrl";
+import { Readable } from "node:stream";
+import zlib from "node:zlib";
+import { assertResolvedPublic, publicUrlProblem, resolvePublicHost, UnsafeUrlError } from "@/lib/publicUrl";
 
 const API = "https://api.brightdata.com";
 
@@ -173,6 +178,75 @@ async function readLimited(res: Response, max: number): Promise<string> {
   return Buffer.concat(chunks).toString("utf8");
 }
 
+type LookupCallback = (err: NodeJS.ErrnoException | null, address: string | LookupAddress[], family?: number) => void;
+
+/** Socket-level DNS: the connection goes only to addresses resolvePublicHost approved (no rebinding between check and connect). */
+function pinnedLookup(hostname: string, options: LookupOptions, callback: LookupCallback) {
+  resolvePublicHost(hostname).then(
+    (answers) => {
+      const fam = options.family === 4 || options.family === 6 ? answers.filter((a) => a.family === options.family) : [];
+      const list = fam.length ? fam : answers;
+      if (options.all) callback(null, list);
+      else callback(null, list[0].address, list[0].family);
+    },
+    (err: NodeJS.ErrnoException) => callback(err, "", 0),
+  );
+}
+
+export type HttpTransport = (url: string, init: RequestInit) => Promise<Response>;
+
+/** node:http(s) with pinnedLookup; never follows redirects (fetchText checks every hop). */
+const nodeTransport: HttpTransport = (url, init) =>
+  new Promise((resolve, reject) => {
+    const u = new URL(url);
+    const method = (init.method ?? "GET").toUpperCase();
+    const headers: Record<string, string> = { "accept-encoding": "gzip, deflate, br" };
+    new Headers(init.headers).forEach((v, k) => void (headers[k] = v));
+    const req = (u.protocol === "https:" ? https : http).request(
+      u,
+      { method, headers, agent: false, lookup: pinnedLookup as never, signal: init.signal ?? undefined },
+      (res) => {
+        const status = res.statusCode ?? 0;
+        const h = new Headers();
+        for (const [k, v] of Object.entries(res.headers)) for (const x of v == null ? [] : Array.isArray(v) ? v : [v]) h.append(k, x);
+        const noBody = method === "HEAD" || [204, 205, 304].includes(status) || (status >= 300 && status < 400);
+        if (noBody) {
+          res.resume();
+          try {
+            resolve(new Response(null, { status, headers: h }));
+          } catch (e) {
+            reject(e);
+          }
+          return;
+        }
+        const enc = String(res.headers["content-encoding"] ?? "").toLowerCase();
+        const decoder = enc === "gzip" || enc === "x-gzip" ? zlib.createGunzip() : enc === "deflate" ? zlib.createInflate() : enc === "br" ? zlib.createBrotliDecompress() : null;
+        let body: Readable = res;
+        if (decoder) {
+          res.on("error", (e) => decoder.destroy(e));
+          body = res.pipe(decoder);
+          h.delete("content-encoding");
+          h.delete("content-length");
+        }
+        try {
+          resolve(new Response(Readable.toWeb(body) as ReadableStream<Uint8Array>, { status, headers: h }));
+        } catch (e) {
+          res.destroy();
+          reject(e);
+        }
+      },
+    );
+    req.on("error", reject);
+    if (typeof init.body === "string" && method !== "GET" && method !== "HEAD") req.write(init.body);
+    req.end();
+  });
+
+let transport: HttpTransport = nodeTransport;
+/** Tests swap the plain-HTTP transport; null restores the pinned node:http(s) one. */
+export function _setHttpForTests(fn: HttpTransport | null) {
+  transport = fn ?? nodeTransport;
+}
+
 export async function fetchText(url: string, init: RequestInit = {}): Promise<Fetched<string>> {
   const problem = publicUrlProblem(url);
   if (problem) throw new UnsafeUrlError(problem);
@@ -182,7 +256,7 @@ export async function fetchText(url: string, init: RequestInit = {}): Promise<Fe
     let method = (init.method ?? "GET").toUpperCase();
     for (let hop = 0; hop < 5; hop++) {
       await assertResolvedPublic(current);
-      const res = await fetch(current, {
+      const res = await transport(current, {
         ...init,
         method,
         body: method === "GET" || method === "HEAD" ? undefined : init.body,

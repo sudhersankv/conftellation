@@ -154,3 +154,20 @@ export async function assertResolvedPublic(raw: string): Promise<void> {
   }
   if (answers.length === 0 || answers.some((a) => isBlockedAddress(a.address))) throw new UnsafeUrlError("URL host is not public");
 }
+
+/**
+ * Connect-time resolution for the plain HTTP fetcher: every answer must be public, and a lookup failure is an error.
+ * The socket connects to exactly these addresses, so a second DNS answer can never swap in an internal host.
+ */
+export async function resolvePublicHost(hostname: string): Promise<{ address: string; family: number }[]> {
+  const host = bareHost(hostname);
+  if (!host || blockedName(host)) throw new UnsafeUrlError("URL host is not public");
+  const kind = isIP(host);
+  if (kind) {
+    if (isBlockedAddress(host)) throw new UnsafeUrlError("URL host is not public");
+    return [{ address: host, family: kind }];
+  }
+  const answers = await lookupHost(host, { all: true, verbatim: true });
+  if (answers.length === 0 || answers.some((a) => isBlockedAddress(a.address))) throw new UnsafeUrlError("URL host is not public");
+  return answers;
+}
