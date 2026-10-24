@@ -11,8 +11,8 @@ import { api, mediaSrc } from "@/lib/client";
 import { apiKey, useApi } from "@/lib/ui/use-api";
 import { useSession } from "@/lib/ui/session-context";
 import { fmtDay, fmtRange, fmtTime } from "@/lib/ui/format";
-import { graphHref } from "@/lib/ui/tokens";
-import { Button, Card, Chip, CollectedAgo, EmptyState, ErrorState, SectionHeader, Segmented, Skeleton, Textarea } from "@/components/ui";
+import { graphHref, TYPE_COLOR } from "@/lib/ui/tokens";
+import { Avatar, Button, Card, Chip, CollectedAgo, EmptyState, ErrorState, SectionHeader, Segmented, Skeleton, Textarea } from "@/components/ui";
 import { CaptureRow, capture } from "./CaptureRow";
 
 const MEMO = /^memo:\s*/i;
@@ -38,15 +38,19 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         </div>
         <h1 className="break-words text-xl font-semibold tracking-tight md:text-2xl">{s.title}</h1>
         {s.speakers.length > 0 && (
-          <p className="mt-1.5 break-words text-sm text-muted">
-            {s.speakers.map((p, i) => (
-              <span key={p.id}>
-                {i > 0 && ", "}
-                <Link href={`/people/${encodeURIComponent(p.id)}`} className="text-text underline-offset-2 hover:underline">{p.name}</Link>
-                {p.company && <span className="text-muted"> · {p.company}</span>}
-              </span>
+          <ul className="mt-2 flex min-w-0 flex-wrap gap-2">
+            {s.speakers.map((p) => (
+              <li key={p.id} className="min-w-0 max-w-full">
+                <Link href={`/people/${encodeURIComponent(p.id)}`} className="press-sm flex min-w-0 items-center gap-2 rounded-full border-2 border-border bg-surface py-0.5 pl-0.5 pr-3 shadow-hardSm hover:bg-surface2">
+                  <Avatar name={p.name} src={p.photoUrl} size="sm" color={TYPE_COLOR.person} />
+                  <span className="min-w-0 truncate text-sm">
+                    <span className="font-heading font-bold text-text">{p.name}</span>
+                    {p.company && <span className="text-muted"> · {p.company}</span>}
+                  </span>
+                </Link>
+              </li>
             ))}
-          </p>
+          </ul>
         )}
         <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 [&>*]:min-w-0 [&>*]:max-w-full [&>*]:break-words">
           <CollectedAgo at={s.collectedAt} source={s.source} />

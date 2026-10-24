@@ -9,6 +9,7 @@ import { apiKey, useApi } from "@/lib/ui/use-api";
 import { useSession } from "@/lib/ui/session-context";
 import { fmtDay, fmtRange } from "@/lib/ui/format";
 import { graphHref, TYPE_COLOR } from "@/lib/ui/tokens";
+import { PersonLinks } from "./PersonCard";
 import { Avatar, Button, buttonClass, Chip, CollectedAgo, EmptyState, ErrorState, SectionHeader, Skeleton, WhyList } from "@/components/ui";
 
 const OPEN_TO: Record<string, string> = { hiring: "Hiring", job_hunting: "Open to roles", buying: "Buying", learning: "Learning" };
@@ -36,10 +37,11 @@ export function PersonView({ personId }: { personId: string }) {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
       <header className="flex items-start gap-4">
-        <Avatar name={p.name} size="lg" color={TYPE_COLOR.person} />
+        <Avatar name={p.name} src={p.photoUrl} size="xl" color={TYPE_COLOR.person} className="shadow-hardSm" />
         <div className="min-w-0 flex-1">
-          <h1 className="text-xl font-semibold tracking-tight md:text-2xl">{p.name}</h1>
+          <h1 className="break-words font-heading text-2xl font-bold tracking-tight md:text-3xl">{p.name}</h1>
           {(p.title || p.company) && <p className="mt-0.5 text-sm text-muted">{[p.title, p.company].filter(Boolean).join(" @ ")}</p>}
+          <PersonLinks links={p.links} className="mt-2.5" />
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             {(p.openTo ?? []).map((o) => <Chip key={o} kind="accent">{OPEN_TO[o] ?? o}</Chip>)}
             <CollectedAgo at={p.collectedAt} source={p.source} className="ml-0.5" />

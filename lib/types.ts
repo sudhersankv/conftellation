@@ -44,7 +44,7 @@ export interface Conference extends Partial<Provenance> {
 
 export type SessionKind = "talk" | "workshop" | "keynote" | "panel" | "other";
 
-export interface PersonRef { id: string; name: string; title?: string; company?: string }
+export interface PersonRef { id: string; name: string; title?: string; company?: string; photoUrl?: string }
 
 export interface Session extends Partial<Provenance> {
   id: string;

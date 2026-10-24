@@ -3,12 +3,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { Inbox, Users } from "lucide-react";
+import { Handshake, Inbox, Users } from "lucide-react";
 import type { MeetProposal, MeetRequest, MeetRequestBody, MeetRespondBody, NetworkUser } from "@/lib/types";
 import { api } from "@/lib/client";
 import { apiKey, useApi } from "@/lib/ui/use-api";
 import { useSession, userName } from "@/lib/ui/session-context";
-import { Avatar, EmptyState, ErrorState, PageHeader, SectionHeader, Skeleton, buttonClass } from "@/components/ui";
+import { Button, EmptyState, ErrorState, PageHeader, SectionHeader, Skeleton, buttonClass } from "@/components/ui";
+import { PersonCard } from "@/components/people/PersonCard";
 import { fmtDay } from "@/lib/ui/format";
 import { IntroCard } from "./IntroCard";
 import { RequestCard } from "./RequestCard";
@@ -171,17 +172,25 @@ export function NetworkView() {
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
             {(net.data.met ?? []).map((m, k) => (
-              <Link key={`${m.person.id}-${k}`} href={`/people/${encodeURIComponent(m.person.id)}`} className="flex items-center gap-3 rounded-xl border-2 border-border bg-surface p-3 shadow-hardSm hover:bg-surface2">
-                <Avatar name={m.person.name} color="#FF8C42" />
-                <div className="min-w-0 flex-1">
-                  <div className="truncate font-heading text-sm font-bold">{m.person.name}</div>
-                  <div className="truncate text-xs text-muted">{[m.person.title, m.person.company].filter(Boolean).join(" · ")}</div>
-                </div>
-                <div className="shrink-0 text-right text-xs text-muted">
-                  <div className={m.conferenceId === confId ? "font-bold text-text" : ""}>{m.conferenceName || "—"}</div>
-                  {m.at && <div suppressHydrationWarning>{fmtDay(m.at)}</div>}
-                </div>
-              </Link>
+              <PersonCard
+                key={`${m.person.id}-${k}`}
+                person={m.person}
+                href
+                compact
+                meta={
+                  <div className="text-right">
+                    <div className={m.conferenceId === confId ? "font-bold text-text" : ""}>{m.conferenceName || "—"}</div>
+                    {m.at && <div suppressHydrationWarning>{fmtDay(m.at)}</div>}
+                  </div>
+                }
+                actions={
+                  m.person.userId && m.person.userId !== userId ? (
+                    <Button size="sm" variant={pendingTo.has(m.person.userId) ? "secondary" : "primary"} onClick={() => setDrawer({ kind: "request", toUserId: m.person.userId! })}>
+                      <Handshake className="size-3.5" aria-hidden />{pendingTo.has(m.person.userId) ? "Request sent · Send another" : "Request meet"}
+                    </Button>
+                  ) : undefined
+                }
+              />
             ))}
           </div>
         )}

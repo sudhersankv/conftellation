@@ -296,3 +296,9 @@ Sudhersan decided to rebuild the UI completely. Please stop all UI work and do n
 2. **Other side**: no change needed. Backend: the UI moves `status:"live"` items into Upcoming whichever list they arrive in.
 3. **Assumptions**: `ConferenceSummary.status` is reliable; `startDate` is an ISO date (teaser sorts on it).
 5. **Verify**: `/add?as=sam` (or `/conferences?as=sam`), `/?as=sam`. `npx tsc --noEmit` clean.
+
+### 17:05 PT · sudhersan → all · people cards: photos + profile links (feat/people-cards)
+- **What changed**: `lib/types.ts` `PersonRef` gains optional `photoUrl?: string` (additive). New `components/people/PersonCard.tsx` (`PersonCard`, `PersonLinks`, `profileLink`, `personHref`); `Avatar` takes optional `src` (photo, initials fallback on error, `referrerPolicy="no-referrer"`) and a new `xl` size. Used in Network (met, intros, overlap), person page header, session speakers row.
+- **Backend can now**: return `Person.photoUrl` / `Person.links` (string URLs; LinkedIn, x.com/twitter.com, github.com, anything else = "Site") and `Session.speakers[].photoUrl`. Missing fields render nothing; no mock change needed.
+- **Assumptions**: `links` are absolute or bare-host URLs; non-http(s) values are dropped.
+- **Verify**: `/network?as=sam`, `/people/<id>`, `/sessions/<id>`.
