@@ -10,7 +10,8 @@ import { freeSlots } from "@/lib/agents/network";
 import { runPlanner } from "@/lib/agents/planner";
 import { q } from "@/lib/falkor";
 import { fakeEmbed } from "@/lib/llm";
-import { closeMeet, warmIntros } from "@/lib/queries/network";
+import { introPaths } from "@/lib/queries/brief";
+import { closeMeet, meetById, plannedMeets, setPlannedMeets, warmIntros } from "@/lib/queries/network";
 import type { IntrosResponse, MeetRequest, NetworkResponse, PersonDetail, PlanResponse, SearchResponse } from "@/lib/types";
 import { req, seedOnce } from "./helpers";
 
@@ -231,6 +232,25 @@ describe("Qodo #33: meet authorization, atomic transitions, one open request", (
     expect(ok.status).toBe(200);
     expect(ok.body.status).toBe("accepted");
     expect(await meetCount(id)).toBe(1);
+    // Re-accepting is a no-op; it cannot move the meet without the other person (that is a counter).
+    expect((await respond(id, { action: "accept" }, "qa-a")).body.status).toBe("accepted");
+    const moved = await respond(id, { action: "accept", proposal: { slot: { from: T("16:00"), to: T("16:20") } } }, "qa-a");
+    expect(moved.status).toBe(409);
+    const [mt] = await q<{ from: string }>(`MATCH (mt:Meet {id:$id}) RETURN mt.slotFrom AS from`, { id });
+    expect(mt.from).toBe(slot.from);
+    // A malformed cookie is no identity, not a 500.
+    expect((await respondRaw(id, { action: "accept" }, { cookie: "ptc_user=%ZZ" })).status).toBe(401);
+    expect((await respondRaw(id, { action: "accept", userId: "qa-b" }, { cookie: "ptc_user=%" })).status).toBe(200);
+  });
+
+  it("a stale accept or decline after a newer counter changes nothing", async () => {
+    const r = await meet("qa-c", { confId: "ptc-2026", toUserId: "qa-d", note: "rev", proposal: {} });
+    await respond(r.body.id, { action: "counter", proposal: { place: "A" } }, "qa-d");
+    const read = (await meetById(r.body.id))!; // qa-c is awaited now
+    await respond(r.body.id, { action: "counter", proposal: { place: "B" } }, "qa-c"); // status stays countered, awaits qa-d
+    expect(await closeMeet({ id: r.body.id, expect: read.status, rev: Number(read.rev), status: "declined", proposal: null, by: "qa-c" })).toBe(false);
+    expect((await meetById(r.body.id))!.status).toBe("countered");
+    expect((await respond(r.body.id, { action: "decline" }, "qa-c")).status).toBe(403);
   });
 
   it("plan diffs report an accepted meet as added, then removed after a decline", async () => {
@@ -242,7 +262,7 @@ describe("Qodo #33: meet authorization, atomic transitions, one open request", (
     expect(again.diff.removed.some((a) => a.id === id)).toBe(false);
 
     // A stale transition (expects 'pending') changes nothing: status and Meet stay together.
-    expect(await closeMeet({ id, expect: "pending", status: "declined", proposal: null, by: "qa-b" })).toBe(false);
+    expect(await closeMeet({ id, expect: "pending", rev: 0, status: "declined", proposal: null, by: "qa-b" })).toBe(false);
     expect(await meetCount(id)).toBe(1);
     // Either participant may cancel an accepted meet; status and Meet node change together.
     const d = await respond(id, { action: "decline" }, "qa-a");
@@ -250,6 +270,14 @@ describe("Qodo #33: meet authorization, atomic transitions, one open request", (
     expect(await meetCount(id)).toBe(0);
     const after = await runPlanner("qa-b", "ptc-2026", { now: NOW });
     expect(after.diff.removed).toContainEqual(expect.objectContaining({ id, type: "meet" }));
+
+    // Plans for two conferences at once keep both meet snapshots.
+    await Promise.all([
+      setPlannedMeets("qa-e", "conf-x", [{ id: "mx", slotStart: null, title: "X" }]),
+      setPlannedMeets("qa-e", "conf-y", [{ id: "my", slotStart: null, title: "Y" }]),
+    ]);
+    expect((await plannedMeets("qa-e", "conf-x")).map((m) => m.id)).toEqual(["mx"]);
+    expect((await plannedMeets("qa-e", "conf-y")).map((m) => m.id)).toEqual(["my"]);
   });
 
   it("concurrent requests for one pair, either direction, leave one open request", async () => {
@@ -301,6 +329,10 @@ describe("Qodo #33: warm intros and search", () => {
     expect(JSON.stringify(b)).not.toContain("SECRET-QA-NOTE");
     const warm = b.intros.find((i) => i.kind === "warm_intro")!;
     for (const n of warm.path.nodes.filter((x) => x.label === "Moment")) expect(n.name).toBe("checkin");
+    // The daily brief's intro query follows the same rules.
+    const brief = await introPaths({ userId: "sam", confId: "ptc-2026", date: null });
+    expect(brief.some((r) => r.viaName === "QA qa-old" || r.viaName === "QA qa-priv")).toBe(false);
+    expect(JSON.stringify(brief)).not.toContain("SECRET-QA-NOTE");
   });
 
   it("semantic people search includes attendees, not only speakers", async () => {

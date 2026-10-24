@@ -144,7 +144,9 @@ export function awaitingUser(row: Pick<MeetRow, "fromUserId" | "toUserId" | "sta
 
 /**
  * `actor` is the acting user. Only participants may act. accept/decline of an open request: only the user it waits on
- * (`awaitingUser`). An accepted meet: either participant may cancel (decline) or counter it; re-accepting is allowed for either.
+ * (`awaitingUser`). An accepted meet: either participant may cancel (decline) or counter it (the other then decides). Accepting an
+ * accepted meet again is a no-op; a different proposal there is 409 (moving it needs a counter). Every write is conditional on the
+ * revision read here, so a newer counter in between turns a stale accept/decline into 409.
  */
 export async function respondMeet(meetId: string, body: MeetRespondBody, now: string, actor: string): Promise<MeetRequest> {
   const row = await meetById(meetId);
@@ -155,19 +157,26 @@ export async function respondMeet(meetId: string, body: MeetRespondBody, now: st
     throw new MeetError(`only ${awaitingUser(row) === row.toUserId ? row.toName : row.fromName} can ${body.action} this meet request`, 403);
   }
   const req = toMeetRequest(row);
+  if (body.action === "accept" && row.status === "accepted") {
+    if (body.proposal && JSON.stringify(body.proposal) !== JSON.stringify(req.proposal)) {
+      throw new MeetError("meet is already accepted; send a counter to change it", 409);
+    }
+    return req;
+  }
+  const base = { id: meetId, expect: row.status, rev: Number(row.rev ?? 0) };
   let ok: boolean;
   if (body.action === "decline") {
-    ok = await closeMeet({ id: meetId, expect: row.status, status: "declined", proposal: null, by: actor });
+    ok = await closeMeet({ ...base, status: "declined", proposal: null, by: actor });
   } else if (body.action === "counter") {
     if (!body.proposal) throw new MeetError("counter needs a proposal", 400);
-    ok = await closeMeet({ id: meetId, expect: row.status, status: "countered", proposal: JSON.stringify(body.proposal), by: actor });
+    ok = await closeMeet({ ...base, status: "countered", proposal: JSON.stringify(body.proposal), by: actor });
   } else {
     const proposal = body.proposal ?? req.proposal;
     const confId = row.conferenceId ?? "";
     const slot = await meetSlot(proposal, confId, [req.fromUserId, req.toUserId], now, meetId);
     if (!slot) throw new MeetError("no mutual free slot", 400);
     ok = await acceptMeet({
-      id: meetId, expect: row.status, proposal: body.proposal ? JSON.stringify(body.proposal) : null, confId, slotFrom: slot.from, slotTo: slot.to,
+      ...base, proposal: body.proposal ? JSON.stringify(body.proposal) : null, confId, slotFrom: slot.from, slotTo: slot.to,
       place: proposal.place ?? slot.place ?? null, sessionId: proposal.sessionId ?? null, title: `${req.fromName} × ${req.toName}`,
     });
   }

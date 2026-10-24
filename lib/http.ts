@@ -31,10 +31,10 @@ const USER_ID = /^[a-z0-9-]{1,40}$/i;
  */
 export function callerId(req: Request, body?: unknown): string | null {
   const fromBody = body && typeof body === "object" ? (body as { userId?: unknown }).userId : undefined;
-  const cookie = /(?:^|;\s*)ptc_user=([^;]*)/.exec(req.headers.get("cookie") ?? "")?.[1];
-  const id = [
-    req.headers.get("x-user-id"), typeof fromBody === "string" ? fromBody : null,
-    new URL(req.url).searchParams.get("userId"), cookie ? decodeURIComponent(cookie) : null,
-  ].find((c) => c != null && c !== "");
+  const cookie = () => {
+    const raw = /(?:^|;\s*)ptc_user=([^;]*)/.exec(req.headers.get("cookie") ?? "")?.[1];
+    try { return raw ? decodeURIComponent(raw) : null; } catch { return null; } // malformed escape → no identity
+  };
+  const id = req.headers.get("x-user-id") || (typeof fromBody === "string" ? fromBody : "") || new URL(req.url).searchParams.get("userId") || cookie();
   return id && USER_ID.test(id) ? id : null;
 }

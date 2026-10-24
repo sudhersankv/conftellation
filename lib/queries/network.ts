@@ -137,10 +137,12 @@ export interface MeetRow {
   proposal: string | null; status: string; at: string; conferenceId: string | null;
   /** Who made the latest counter (null: never countered). */
   counteredBy: string | null;
+  /** Bumped on every update or transition; transitions apply only to the revision that was read. */
+  rev: number;
 }
 
 const MEET_RETURN = `r.id AS id, a.id AS fromUserId, b.id AS toUserId, coalesce(a.name, a.id) AS fromName, coalesce(b.name, b.id) AS toName,
-  r.note AS note, r.proposal AS proposal, r.status AS status, r.at AS at, r.conferenceId AS conferenceId, r.counteredBy AS counteredBy`;
+  r.note AS note, r.proposal AS proposal, r.status AS status, r.at AS at, r.conferenceId AS conferenceId, r.counteredBy AS counteredBy, coalesce(r.rev, 0) AS rev`;
 
 export async function meetRequests(userId: string, confId: string): Promise<MeetRow[]> {
   return q<MeetRow>(
@@ -181,9 +183,9 @@ export async function upsertMeetRequest(m: { id: string; from: string; to: strin
      WITH a, b, collect(o) AS open
      WITH a, b, [x IN open WHERE startNode(x).id = $from] AS mine, [x IN open WHERE startNode(x).id = $to] AS theirs
      FOREACH (x IN CASE WHEN size(theirs) = 0 THEN mine[0..1] ELSE [] END |
-       SET x.note = $note, x.proposal = $proposal, x.status = 'pending', x.at = $at, x.counteredBy = null)
+       SET x.note = $note, x.proposal = $proposal, x.status = 'pending', x.at = $at, x.counteredBy = null, x.rev = coalesce(x.rev, 0) + 1)
      FOREACH (_ IN CASE WHEN size(theirs) = 0 AND size(mine) = 0 THEN [1] ELSE [] END |
-       CREATE (a)-[:REQUESTED_MEET {id:$id, note:$note, proposal:$proposal, status:'pending', at:$at, conferenceId:$confId}]->(b))
+       CREATE (a)-[:REQUESTED_MEET {id:$id, note:$note, proposal:$proposal, status:'pending', at:$at, conferenceId:$confId, rev:1}]->(b))
      RETURN CASE WHEN size(theirs) > 0 THEN theirs[0].id WHEN size(mine) > 0 THEN mine[0].id ELSE $id END AS id`,
     m,
   );
@@ -192,14 +194,15 @@ export async function upsertMeetRequest(m: { id: string; from: string; to: strin
 
 /**
  * Accept, in one atomic query: the request becomes accepted and its Meet node (both users ATTENDS it, AT the proposed session,
- * DURING the conference) is written. Applies only while the request still has status `expect`; false when it changed meanwhile.
+ * DURING the conference) is written. Applies only while the request still has status `expect` and revision `rev`; false when it
+ * changed meanwhile (a newer counter or update).
  */
 export async function acceptMeet(m: {
-  id: string; expect: string; proposal: string | null; confId: string; slotFrom: string; slotTo: string; place: string | null; sessionId: string | null; title: string;
+  id: string; expect: string; rev: number; proposal: string | null; confId: string; slotFrom: string; slotTo: string; place: string | null; sessionId: string | null; title: string;
 }): Promise<boolean> {
   const rows = await q<{ id: string }>(
-    `MATCH (a:User)-[r:REQUESTED_MEET {id:$id}]->(b:User) WHERE r.status = $expect
-     SET r.status = 'accepted', r.proposal = coalesce($proposal, r.proposal), r.respondedAt = $at
+    `MATCH (a:User)-[r:REQUESTED_MEET {id:$id}]->(b:User) WHERE r.status = $expect AND coalesce(r.rev, 0) = $rev
+     SET r.status = 'accepted', r.proposal = coalesce($proposal, r.proposal), r.respondedAt = $at, r.rev = coalesce(r.rev, 0) + 1
      MERGE (mt:Meet {id:$id})
      SET mt.status = 'accepted', mt.at = $at, mt.slotFrom = $slotFrom, mt.slotTo = $slotTo, mt.place = $place, mt.conferenceId = $confId, mt.title = $title
      MERGE (a)-[:ATTENDS]->(mt) MERGE (b)-[:ATTENDS]->(mt)
@@ -221,12 +224,13 @@ export async function acceptMeet(m: {
 
 /**
  * Decline or counter, in one atomic query: set the request status (and the counter proposal) and delete its Meet node if one
- * was accepted, so it leaves both plans. Applies only while the request still has status `expect`; false when it changed meanwhile.
+ * was accepted, so it leaves both plans. Applies only while the request still has status `expect` and revision `rev`; false when
+ * it changed meanwhile.
  */
-export async function closeMeet(m: { id: string; expect: string; status: "declined" | "countered"; proposal: string | null; by: string }): Promise<boolean> {
+export async function closeMeet(m: { id: string; expect: string; rev: number; status: "declined" | "countered"; proposal: string | null; by: string }): Promise<boolean> {
   const rows = await q<{ id: string }>(
-    `MATCH ()-[r:REQUESTED_MEET {id:$id}]->() WHERE r.status = $expect
-     SET r.status = $status, r.proposal = coalesce($proposal, r.proposal), r.respondedAt = $at,
+    `MATCH ()-[r:REQUESTED_MEET {id:$id}]->() WHERE r.status = $expect AND coalesce(r.rev, 0) = $rev
+     SET r.status = $status, r.proposal = coalesce($proposal, r.proposal), r.respondedAt = $at, r.rev = coalesce(r.rev, 0) + 1,
          r.counteredBy = CASE WHEN $status = 'countered' THEN $by ELSE r.counteredBy END
      WITH r
      OPTIONAL MATCH (mt:Meet {id:$id})
@@ -238,23 +242,27 @@ export async function closeMeet(m: { id: string; expect: string; status: "declin
   return rows.length > 0;
 }
 
-/** Meets that were in the user's last stored plan for this conference (for plan diffs). */
-export async function plannedMeets(userId: string, confId: string): Promise<{ id: string; slotStart: string | null; title: string }[]> {
-  const [row] = await q<{ v: string | null }>(`MATCH (u:User {id:$userId}) RETURN u.planMeets AS v`, { userId });
+type PlannedMeet = { id: string; slotStart: string | null; title: string };
+
+/** Meets that were in the user's last stored plan for this conference (for plan diffs). One PlanMeets node per user and conference. */
+export async function plannedMeets(userId: string, confId: string): Promise<PlannedMeet[]> {
+  const [row] = await q<{ v: string | null }>(
+    `MATCH (:User {id:$userId})-[:PLAN_MEETS]->(pm:PlanMeets {conferenceId:$confId}) RETURN pm.meets AS v LIMIT 1`, { userId, confId },
+  );
   try {
-    const all = row?.v ? (JSON.parse(row.v) as Record<string, { id: string; slotStart: string | null; title: string }[]>) : {};
-    return Array.isArray(all[confId]) ? all[confId] : [];
+    const v = row?.v ? JSON.parse(row.v) : [];
+    return Array.isArray(v) ? v : [];
   } catch {
     return [];
   }
 }
 
-export async function setPlannedMeets(userId: string, confId: string, meets: { id: string; slotStart: string | null; title: string }[]) {
-  const [row] = await q<{ v: string | null }>(`MATCH (u:User {id:$userId}) RETURN u.planMeets AS v`, { userId });
-  let all: Record<string, unknown> = {};
-  try { all = row?.v ? JSON.parse(row.v) : {}; } catch { /* reset */ }
-  all[confId] = meets;
-  await q(`MATCH (u:User {id:$userId}) SET u.planMeets = $v`, { userId, v: JSON.stringify(all) });
+/** One write per user and conference, so plans for different conferences never overwrite each other. */
+export async function setPlannedMeets(userId: string, confId: string, meets: PlannedMeet[]) {
+  await q(
+    `MATCH (u:User {id:$userId}) MERGE (u)-[:PLAN_MEETS]->(pm:PlanMeets {conferenceId:$confId}) SET pm.meets = $v`,
+    { userId, confId, v: JSON.stringify(meets) },
+  );
 }
 
 export interface AcceptedMeetRow extends RawPath { id: string; slotFrom: string; slotTo: string; place: string | null; otherName: string; otherUserId: string }
