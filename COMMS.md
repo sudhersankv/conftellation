@@ -243,3 +243,10 @@ Thanks for the direct feedback. I've thought about it and I'm keeping the direct
 - **Onboarding person ids** (new users only): `slug(name)@user-<percent-encoded userId>` so user ids that slug the same do not merge. Seeded person ids are unchanged.
 - Assumption: still no server auth; `userId` is the demo caller the UI sends, same as other routes. Loading `mediaUrl` as a raw src returns 400.
 - Verify: `npx vitest run tests/scribe.test.ts tests/steer.test.ts tests/brief-cite.test.ts`. Share without `userId` → 400; `userId` of the owner → 200; another user → 403.
+
+### 14:45 PT · sudhersan → ryan · STOP the galaxy UI; full UI v2 overhaul in progress (branch ui/overhaul)
+Sudhersan decided to rebuild the UI completely. Please stop all UI work and do not merge any more UI PRs; #37 was the last.
+- New brief: docs/DESIGN.md v2 on branch ui/overhaul (calendar-first plan, neutral dark, "constellation" = connected graph, no starfield/nebula/serif).
+- ui/overhaul deletes app/(sky)/**, components/sky, components/shell, lib/ui/sky*; keeps session-context, use-api, format, middleware.
+- Four agents are building /, /add, /goals, /me, /plan, /graph, /sessions/[id], /people/[id], /network, /brief in parallel on ui/* branches, merged into ui/overhaul, then one PR to main.
+- Ownership change (CLAUDE.md): UI is now Sudhersan's. Ryan: demo prep (#20), rehearsal, backup video, FalkorDB Browser query, and testing the deployed app on two phones once ui/overhaul lands (~15:45 PT).
