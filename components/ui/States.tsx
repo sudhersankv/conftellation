@@ -3,29 +3,37 @@ import type { ReactNode } from "react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/ui/cn";
 
-export function Skeleton({ rows = 3, className }: { rows?: number; className?: string }) {
+export function Skeleton({ rows = 3, className, rowClassName }: { rows?: number; className?: string; rowClassName?: string }) {
   return (
-    <div role="status" aria-busy="true" className={cn("flex flex-col gap-3", className)}>
-      {Array.from({ length: rows }, (_, i) => <div key={i} className="h-16 rounded-card bg-nebula/60" />)}
+    <div role="status" aria-busy="true" className={cn("flex flex-col gap-2", className)}>
+      {Array.from({ length: rows }, (_, i) => <div key={i} className={cn("h-14 animate-pulse rounded-lg bg-surface2", rowClassName)} />)}
       <span className="sr-only">Loading</span>
     </div>
   );
 }
 
-export function EmptyState({ text, action }: { text: string; action?: ReactNode }) {
+export function EmptyState({ title, text, action, icon }: { title?: string; text: string; action?: ReactNode; icon?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center py-10 text-center">
-      <p className="text-body text-dust">{text}</p>
+    <div className="flex flex-col items-center rounded-lg border border-dashed border-border px-6 py-10 text-center">
+      {icon && <div className="mb-3 text-muted">{icon}</div>}
+      {title && <p className="text-sm font-medium text-text">{title}</p>}
+      <p className="mt-1 max-w-sm text-sm text-muted">{text}</p>
       {action && <div className="mt-4">{action}</div>}
     </div>
   );
 }
 
-export function ErrorState({ what, onRetry }: { what: string; onRetry: () => void }) {
+export function ErrorState({ what, onRetry, detail }: { what: string; onRetry?: () => void; detail?: string }) {
   return (
-    <div role="alert" className="flex flex-col items-center gap-4 py-10 text-center">
-      <p className="text-body text-dust">{`Couldn't load ${what}. Check your connection and try again.`}</p>
-      <Button variant="ghost" onClick={onRetry}>Try again</Button>
+    <div role="alert" className="flex flex-col items-center gap-3 rounded-lg border border-danger/30 bg-danger/5 px-6 py-8 text-center">
+      <p className="text-sm text-text">{`Couldn't load ${what}.`}</p>
+      {detail && <p className="max-w-md break-words text-xs text-muted">{detail}</p>}
+      {onRetry && <Button variant="secondary" size="sm" onClick={onRetry}>Try again</Button>}
     </div>
   );
+}
+
+/** Inline status line, e.g. "Scout found 574 sessions". */
+export function StatusLine({ children, className }: { children: ReactNode; className?: string }) {
+  return <p className={cn("text-xs text-muted", className)}>{children}</p>;
 }
