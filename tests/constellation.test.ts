@@ -142,12 +142,28 @@ describe("GET /api/users/:id/constellation", () => {
     expect(body.nodes.find((n) => n.id === "s-evals")?.state).not.toBe("skipped");
   });
 
-  it("a person skipped at one conference stays out of another sky", async () => {
-    await postFeedback(req(`/api/users/sam/feedback?now=${encodeURIComponent(NOW)}`, { confId: "ptc-2026", targetId: "jake-morales@falkordb", kind: "skip" }), { params: { id: "sam" } });
-    const ptc = await sky();
-    const june = await sky("sam", "ai-eng-summit-2026");
-    expect(ptc.body.nodes.find((n) => n.id === "jake-morales@falkordb")?.state).toBe("skipped");
-    expect(june.body.nodes.find((n) => n.id === "jake-morales@falkordb")?.state).not.toBe("skipped");
+  it("a person skip is per conference and does not erase the other plan", async () => {
+    const before = await plan();
+    expect(before.byGoal.some((g) => g.people.some((p) => p.id === "jake-morales@falkordb"))).toBe(true);
+    const juneSkip = await postFeedback(req(`/api/users/sam/feedback?now=${encodeURIComponent(NOW)}`, { confId: "ai-eng-summit-2026", targetId: "jake-morales@falkordb", kind: "skip" }), { params: { id: "sam" } });
+    expect(juneSkip.status).toBe(200);
+    const afterJune = await plan();
+    expect(afterJune.byGoal.some((g) => g.people.some((p) => p.id === "jake-morales@falkordb"))).toBe(true);
+
+    const ptcSkip = await postFeedback(req(`/api/users/sam/feedback?now=${encodeURIComponent(NOW)}`, { confId: "ptc-2026", targetId: "jake-morales@falkordb", kind: "skip" }), { params: { id: "sam" } });
+    expect(ptcSkip.status).toBe(200);
+    const edges = await q<{ c: string }>(
+      `MATCH (:User {id:'sam'})-[r:SKIPPED]->(:Person {id:'jake-morales@falkordb'}) RETURN r.conferenceId AS c`,
+    );
+    expect(edges.map((e) => e.c).sort()).toEqual(["ai-eng-summit-2026", "ptc-2026"]);
+    expect((await sky()).body.nodes.find((n) => n.id === "jake-morales@falkordb")?.state).toBe("skipped");
+
+    const boost = await postFeedback(req(`/api/users/sam/feedback?now=${encodeURIComponent(NOW)}`, { confId: "ptc-2026", targetId: "jake-morales@falkordb", kind: "boost" }), { params: { id: "sam" } });
+    expect(boost.status).toBe(200);
+    const left = await q<{ c: string }>(
+      `MATCH (:User {id:'sam'})-[r:SKIPPED]->(:Person {id:'jake-morales@falkordb'}) RETURN r.conferenceId AS c`,
+    );
+    expect(left.map((e) => e.c)).toEqual(["ai-eng-summit-2026"]);
   });
 
   it("a user with a capture but no attendance is not an other-user star", async () => {
