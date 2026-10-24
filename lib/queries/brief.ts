@@ -156,3 +156,8 @@ export async function writeSummary(s: { id: string; kind: string; ownerId: strin
     s,
   );
 }
+
+/** Drop a stored summary so an empty regeneration cannot leave the previous body in place. */
+export async function deleteSummary(id: string) {
+  await q(`MATCH (s:Summary {id:$id}) DETACH DELETE s`, { id });
+}

@@ -10,6 +10,16 @@ export class UnknownConference extends Error {}
 /** Goals are ranked by the order given: 1, 0.8, 0.6, then 0.5. */
 const weightAt = (i: number) => Math.max(0.5, Math.round((1 - 0.2 * i) * 10) / 10);
 
+/**
+ * Person id for an onboarded attendee. The user id is percent-encoded so two ids that slug
+ * the same (`alex-kim` and `alex kim`) do not MERGE onto one Person.
+ */
+export function attendeePersonId(name: string, userId: string): string {
+  const who = slug(name) || "user";
+  const token = encodeURIComponent(userId).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
+  return `${who}@user-${token}`;
+}
+
 export async function onboard(userId: string, body: OnboardingRequest, now?: string): Promise<OnboardingResponse> {
   const [conf] = await q<{ id: string }>(`MATCH (c:Conference {id:$id}) RETURN c.id AS id`, { id: body.confId });
   if (!conf) throw new UnknownConference(`conference ${body.confId} not found`);
@@ -26,7 +36,7 @@ export async function onboard(userId: string, body: OnboardingRequest, now?: str
        MERGE (u)-[:IS]->(p)
        SET u.personId = $pid)
      WITH u MATCH (c:Conference {id:$confId}) MERGE (u)-[:ATTENDS]->(c)`,
-    { userId, name, openTo: body.openTo ?? [], pid: `${slug(name)}@user-${slug(userId)}`, at: new Date().toISOString(), confId: body.confId },
+    { userId, name, openTo: body.openTo ?? [], pid: attendeePersonId(name, userId), at: new Date().toISOString(), confId: body.confId },
   );
   if (body.availFrom !== undefined || body.availTo !== undefined) await setWindow(userId, body.availFrom ?? null, body.availTo ?? null);
 

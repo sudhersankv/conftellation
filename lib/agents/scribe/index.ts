@@ -7,7 +7,7 @@ import { embedOne, hasLLM, structured } from "@/lib/llm";
 import { isoInZone, ms, PT } from "@/lib/time";
 import { companySlug, personId as personIdOf, topicId } from "@/lib/agents/scout/normalized";
 import {
-  addMentions, conferenceTopics, goalForMoment, momentById, nowInputs, personExists, setMomentEmbedding, targetById, targetTopics,
+  addMentions, conferenceTopics, goalForMoment, momentById, momentOwner, nowInputs, personExists, setMomentEmbedding, targetById, targetTopics,
   upsertMetPerson, userExists, writeMoment, type TargetRow,
 } from "@/lib/queries/moments";
 import type { CreateMomentResponse, MomentKind } from "@/lib/types";
@@ -49,6 +49,15 @@ export async function attachTarget(userId: string, confId: string, now: string):
   return slots.find((s) => ms(s.slotStart) <= t && t < ms(s.slotEnd)) ?? null;
 }
 
+async function storedMoment(userId: string, id: string): Promise<CreateMomentResponse> {
+  const moment = await momentById(id);
+  if (!moment) throw new Error(`moment ${id} was not written`);
+  const ids = [moment.targetId, moment.personId].filter(Boolean) as string[];
+  const goalId = await goalForMoment(userId, id, ids);
+  const lit = [...new Set([moment.id, moment.targetId, moment.personId, goalId].filter(Boolean) as string[])];
+  return { moment, lit };
+}
+
 export async function capture(input: CaptureInput): Promise<CreateMomentResponse> {
   const { userId, confId, kind } = input;
   const nowIso = isoInZone(new Date(input.now ?? Date.now()), PT);
@@ -57,13 +66,22 @@ export async function capture(input: CaptureInput): Promise<CreateMomentResponse
   if ((kind === "note" || kind === "voice") && !text && !input.mediaUrl) throw new ScribeError(`${kind} needs text`);
   if (kind === "photo" && !input.mediaUrl) throw new ScribeError("photo needs a file");
 
-  const [exists, explicit, confTopics, knownPerson] = await Promise.all([
+  const id = input.momentId ?? newMomentId();
+  const [exists, existing] = await Promise.all([
     userExists(userId),
+    input.momentId ? momentOwner(id) : Promise.resolve(null),
+  ]);
+  if (!exists) throw new ScribeError(`user ${userId} not found`, 404);
+  if (existing) {
+    if (existing.userId !== userId || existing.conferenceId !== confId) throw new ScribeError(`moment ${id} belongs to another capture`, 409);
+    return storedMoment(userId, id);
+  }
+
+  const [explicit, confTopics, knownPerson] = await Promise.all([
     input.targetId ? targetById(input.targetId) : Promise.resolve(null),
     conferenceTopics(confId),
     input.personId ? personExists(input.personId) : Promise.resolve(false),
   ]);
-  if (!exists) throw new ScribeError(`user ${userId} not found`, 404);
   if (input.targetId && !explicit) throw new ScribeError(`target ${input.targetId} not found`, 404);
   if (explicit?.conferenceId && explicit.conferenceId !== confId) throw new ScribeError(`target ${explicit.id} is not at ${confId}`);
   if (input.personId && !knownPerson) throw new ScribeError(`person ${input.personId} not found`, 404);
@@ -80,12 +98,13 @@ export async function capture(input: CaptureInput): Promise<CreateMomentResponse
   }
 
   const topics = quickTopics(text, confTopics, target ? await targetTopics(target.id) : []);
-  const id = input.momentId ?? newMomentId();
-  const ok = await writeMoment({
+  const written = await writeMoment({
     id, userId, confId, kind, at: nowIso, text, mediaUrl: input.mediaUrl ?? null, shared: input.shared ?? false,
     targetId: target?.id ?? "", personId, topics,
   });
-  if (!ok) throw new ScribeError(`conference ${confId} not found`, 404);
+  if (written === "conflict") throw new ScribeError(`moment ${id} belongs to another capture`, 409);
+  if (written === "retry") return storedMoment(userId, id);
+  if (written !== "created") throw new ScribeError(`conference ${confId} not found`, 404);
 
   const ids = [target?.id, personId].filter(Boolean) as string[];
   const [moment, goalId] = await Promise.all([momentById(id), goalForMoment(userId, id, ids)]);
@@ -97,9 +116,15 @@ export async function capture(input: CaptureInput): Promise<CreateMomentResponse
 }
 
 /** Existing topic names that appear in the text first, then the target's own topics; at most 3. */
+const normTopic = (s: string) => s.toLowerCase().replace(/[^a-z0-9/+.\- ]+/g, " ").replace(/\s+/g, " ").trim();
+
 export function quickTopics(text: string | null, confTopics: { id: string; name: string }[], targetTopicIds: string[]): string[] {
-  const hay = ` ${(text ?? "").toLowerCase().replace(/[^a-z0-9/+.\- ]+/g, " ")} `;
-  const named = confTopics.filter((t) => t.id.length > 2 && hay.includes(` ${t.id} `)).map((t) => t.id);
+  const hay = ` ${normTopic(text ?? "")} `;
+  const hit = (s: string) => {
+    const n = normTopic(s);
+    return n.length > 2 && hay.includes(` ${n} `);
+  };
+  const named = confTopics.filter((t) => hit(t.id) || hit(t.name)).map((t) => t.id);
   return [...new Set([...named, ...targetTopicIds])].slice(0, MAX_TOPICS);
 }
 

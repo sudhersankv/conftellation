@@ -216,3 +216,11 @@ Rebuild the shell from my 12:05 direction: dark `#0B0B12`, restrained violet neo
 `docs/DESIGN.md` must be updated to match that before more screens are built. I do not want more screens on top of the current look.
 
 No API or contract change.
+
+### 13:50 PT · sudhersan → ryan · share, uploads, and steer undo
+- **Share** (`POST /api/moments/:id/share`): body is still `{to}` plus required `userId` (JSON field or `?userId=`). Only the user who captured the moment can change sharing. Missing `userId` → 400 `{error:"userId is required"}`. Unknown id → 404. Another user's moment → 403. Success still returns the `Moment`. Client: `api.shareMoment(momentId, to, userId)` — pass the viewer id as the third arg. A call that omits it is rejected.
+- **Uploads** (`GET /api/uploads/:file`): require `?userId=` or `?momentId=` (400 if neither). The file must belong to a Moment. Allowed when that moment is `shared:true`, or when `userId` is its owner; otherwise 403. `Cache-Control` is `private, no-store`. `moment.mediaUrl` is still `/api/uploads/<file>` with no query. New helper `mediaSrc(mediaUrl, { userId, momentId })` in `lib/client.ts` — use it as the img/audio src. Private photos need the viewer's `userId`; a shared photo can use `momentId` alone.
+- **Steer undo**: `SteerOp` `add_goal` gained optional `goalId?`, `weight?`, `topics?`. Undo of `remove_goal` sends `add_goal` with the original `goalId` so that goal and its topic links are restored on that id, not created under a new slug. Post `res.undo` back unchanged; don't rebuild `add_goal` from the text alone.
+- **Onboarding person ids** (new users only): `slug(name)@user-<percent-encoded userId>` so user ids that slug the same do not merge. Seeded person ids are unchanged.
+- Assumption: still no server auth; `userId` is the demo caller the UI sends, same as other routes. Loading `mediaUrl` as a raw src returns 400.
+- Verify: `npx vitest run tests/scribe.test.ts tests/steer.test.ts tests/brief-cite.test.ts`. Share without `userId` → 400; `userId` of the owner → 200; another user → 403.
