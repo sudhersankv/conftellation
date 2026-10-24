@@ -1,6 +1,7 @@
 // Intros (Q5, Q6), network overlap (Q7), meet requests, accepted Meets. Every intro carries its named path.
 import { q } from "@/lib/falkor";
 import type { RawPath } from "@/lib/queries/plan";
+import type { MetPerson } from "@/lib/types";
 
 // A Moment in a path is named by its kind, never its text (it can be another user's note).
 const PATH = (p: string, as = "") => `
@@ -275,4 +276,21 @@ export async function acceptedMeets(userId: string, confId: string): Promise<Acc
      RETURN mt.id AS id, mt.slotFrom AS slotFrom, mt.slotTo AS slotTo, mt.place AS place, coalesce(o.name, o.id) AS otherName, o.id AS otherUserId, ${PATH("p")}`,
     { userId, confId },
   );
+}
+
+/** Everyone the user has logged as met, across conferences, newest first (My people). */
+export async function metPeople(userId: string): Promise<MetPerson[]> {
+  const rows = await q<{ id: string; name: string; title: string | null; company: string | null; companyId: string | null; conferenceId: string | null; conferenceName: string | null; at: string | null }>(
+    `MATCH (u:User {id:$userId})-[m:MET]->(p:Person)
+     OPTIONAL MATCH (p)-[:WORKS_AT]->(co:Company)
+     OPTIONAL MATCH (c:Conference {id: m.conferenceId})
+     RETURN p.id AS id, p.name AS name, p.title AS title, coalesce(co.name, p.company) AS company, co.id AS companyId,
+            m.conferenceId AS conferenceId, c.name AS conferenceName, m.at AS at
+     ORDER BY m.at DESC LIMIT 100`,
+    { userId },
+  );
+  return rows.map((r) => ({
+    person: { id: r.id, name: r.name, title: r.title ?? undefined, company: r.company ?? undefined, companyId: r.companyId ?? undefined },
+    conferenceId: r.conferenceId ?? "", conferenceName: r.conferenceName ?? r.conferenceId ?? "", at: r.at ?? "",
+  }));
 }

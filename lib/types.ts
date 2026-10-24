@@ -257,7 +257,9 @@ export interface NetworkUser {
   sharedTopics: string[];
   freeSlots: { from: string; to: string }[];
 }
-export interface NetworkResponse { users: NetworkUser[]; incoming: MeetRequest[]; outgoing: MeetRequest[] }
+/** Someone the user logged as met, at any conference (newest first). */
+export interface MetPerson { person: Person; conferenceId: string; conferenceName: string; at: string }
+export interface NetworkResponse { users: NetworkUser[]; incoming: MeetRequest[]; outgoing: MeetRequest[]; met?: MetPerson[] }
 
 /** `userId` (optional): the acting user; when set it must equal the sender in the URL. */
 export interface MeetRequestBody { toUserId: string; note: string; proposal: MeetProposal; userId?: string }

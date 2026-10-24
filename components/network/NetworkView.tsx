@@ -8,7 +8,8 @@ import type { MeetProposal, MeetRequest, MeetRequestBody, MeetRespondBody, Netwo
 import { api } from "@/lib/client";
 import { apiKey, useApi } from "@/lib/ui/use-api";
 import { useSession, userName } from "@/lib/ui/session-context";
-import { EmptyState, ErrorState, PageHeader, SectionHeader, Skeleton, buttonClass } from "@/components/ui";
+import { Avatar, EmptyState, ErrorState, PageHeader, SectionHeader, Skeleton, buttonClass } from "@/components/ui";
+import { fmtDay } from "@/lib/ui/format";
 import { IntroCard } from "./IntroCard";
 import { RequestCard } from "./RequestCard";
 import { PersonOverlapCard } from "./PersonOverlapCard";
@@ -155,6 +156,32 @@ export function NetworkView() {
           <div className="grid gap-3 md:grid-cols-2">
             {users.map((u) => (
               <PersonOverlapCard key={u.user.id} nu={u} pending={pendingTo.has(u.user.id)} onRequest={() => setDrawer({ kind: "request", toUserId: u.user.id })} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* People met, across every conference */}
+      <section>
+        <SectionHeader title="People you've met" count={net.data?.met?.length} />
+        {!net.data ? (
+          <Skeleton rows={2} rowClassName="h-16" />
+        ) : (net.data.met ?? []).length === 0 ? (
+          <EmptyState text="No one logged yet. Use “Met someone” on a session page and they'll be remembered across conferences." />
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2">
+            {(net.data.met ?? []).map((m, k) => (
+              <Link key={`${m.person.id}-${k}`} href={`/people/${encodeURIComponent(m.person.id)}`} className="flex items-center gap-3 rounded-xl border-2 border-border bg-surface p-3 shadow-hardSm hover:bg-surface2">
+                <Avatar name={m.person.name} color="#FF8C42" />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-heading text-sm font-bold">{m.person.name}</div>
+                  <div className="truncate text-xs text-muted">{[m.person.title, m.person.company].filter(Boolean).join(" · ")}</div>
+                </div>
+                <div className="shrink-0 text-right text-xs text-muted">
+                  <div className={m.conferenceId === confId ? "font-bold text-text" : ""}>{m.conferenceName || "—"}</div>
+                  {m.at && <div suppressHydrationWarning>{fmtDay(m.at)}</div>}
+                </div>
+              </Link>
             ))}
           </div>
         )}
