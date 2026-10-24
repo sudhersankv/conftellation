@@ -17,12 +17,12 @@ function openai(): OpenAI {
 }
 
 export const hasLLM = () => Boolean(process.env.OPENAI_API_KEY);
-const useFakeEmbed = () => process.env.EMBED_FAKE === "true" || !hasLLM();
-export const embedderName = () => (useFakeEmbed() ? "fake-hash-v1" : process.env.OPENAI_EMBED_MODEL ?? "text-embedding-3-small");
+const isFakeEmbed = () => process.env.EMBED_FAKE === "true" || !hasLLM();
+export const embedderName = () => (isFakeEmbed() ? "fake-hash-v1" : process.env.OPENAI_EMBED_MODEL ?? "text-embedding-3-small");
 
 export async function embed(texts: string[]): Promise<number[][]> {
   if (texts.length === 0) return [];
-  if (useFakeEmbed()) return texts.map(fakeEmbed);
+  if (isFakeEmbed()) return texts.map(fakeEmbed);
   const model = process.env.OPENAI_EMBED_MODEL ?? "text-embedding-3-small";
   const out: number[][] = [];
   for (let i = 0; i < texts.length; i += BATCH) {
