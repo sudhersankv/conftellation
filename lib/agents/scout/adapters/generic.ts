@@ -157,7 +157,9 @@ function sessionEnd(value: string | null | undefined, start: string, timeZone: s
   const day = localDate(start, timeZone);
   const end = sessionInstant(value, day, timeZone);
   if (!end || !day || !/^\d{1,2}:\d{2}$/.test(value?.trim() ?? "")) return end;
-  return Date.parse(end) <= Date.parse(start) ? sessionInstant(value, nextDay(day), timeZone) : end;
+  const delta = Date.parse(end) - Date.parse(start);
+  if (delta === 0) return undefined; // an echoed start time means "unknown end": the caller's default length applies
+  return delta < 0 ? sessionInstant(value, nextDay(day), timeZone) : end;
 }
 
 function toPerson(p: Extracted["people"][number]): NormPerson | undefined {

@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { memo, serp, unlock, type SerpResult } from "@/lib/brightdata";
 import { hasLLM, structured } from "@/lib/llm";
-import { assertResolvedPublic, publicUrlProblem, UnsafeUrlError } from "@/lib/publicUrl";
+import { assertResolvedPublic, publicUrlProblem, resolvePublicHost, UnsafeUrlError } from "@/lib/publicUrl";
 import type { Via } from "@/lib/types";
 import { companyId, type NormCompany } from "./normalized";
 import { mapLimit } from "./upsert";
@@ -119,15 +119,17 @@ export async function enrichSponsors(companies: NormCompany[], opts: { limit?: n
         fallback = found.snippets;
         fallbackSrc = { source: found.source, collectedAt: found.collectedAt, via: "serp" };
       }
-      // First candidate whose DNS answers are all public: a private first hit does not hide a usable later one.
+      // First candidate whose DNS answers are all public: a private or dead first hit does not hide a usable later one.
+      // Search hits must actually resolve; the sponsor's own listed site keeps the lenient check (Unlocker surfaces DNS errors).
       let resolved: string | undefined;
       for (const candidate of candidates) {
         try {
-          await assertResolvedPublic(candidate);
+          if (own) await assertResolvedPublic(candidate);
+          else await resolvePublicHost(new URL(candidate).hostname);
           resolved = candidate;
           break;
         } catch (e) {
-          if (!(e instanceof UnsafeUrlError)) throw e;
+          if (own && !(e instanceof UnsafeUrlError)) throw e;
         }
       }
       if (!resolved) return skip(c, "website host is not public", skipped);

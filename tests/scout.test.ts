@@ -163,6 +163,7 @@ beforeAll(async () => {
   net.unlock.set("https://rescueexpo.example:8443/expo", "# RESCUE EXPO\n");
   for (const site of ["https://rescue.example/", "https://twinlabs.example/", "https://staleco.example/"]) net.unlock.set(site, `# ${site}\n${"We build cloud infrastructure for platform teams. ".repeat(12)}`);
   net.serp.set("Rescue Co", [
+    { title: "Rescue Co (gone)", link: "https://rescue-dead.example/", description: "does not resolve" },
     { title: "Rescue Co (old)", link: "https://rescue-internal.example/", description: "resolves to a private address" },
     { title: "Rescue Co", link: "https://rescue.example/", description: "public" },
   ]);
@@ -276,7 +277,8 @@ describe("POST /api/conferences (other paths)", () => {
   });
 
   it("searches name-only sponsors and stores a skip reason when search has no public url", async () => {
-    const { status, body } = await post({ url: "https://nameonly.example/" });
+    _setLookupForTests(async () => [{ address: "93.184.216.34", family: 4 }]);
+    const { status, body } = await post({ url: "https://nameonly.example/" }).finally(() => _setLookupForTests(null));
     expect(status, body.error).toBe(200);
     expect(net.calls.some((c) => c.startsWith("serp ") && c.includes("Found Co"))).toBe(true);
     expect(net.calls.some((c) => c.startsWith("serp ") && c.includes("Ghost Co"))).toBe(true);
@@ -296,7 +298,10 @@ describe("POST /api/conferences (other paths)", () => {
 
   it("tries later search hits, keys searched profiles per company, clears stale skips, and accepts host:port input", async () => {
     await q(`MERGE (co:Company {id:'stale-co'}) SET co.name = 'Stale Co', co.enrichSkip = 'website host is not public'`);
-    _setLookupForTests(async (host) => (host === "rescue-internal.example" ? [{ address: "10.0.0.9", family: 4 }] : [{ address: "93.184.216.34", family: 4 }]));
+    _setLookupForTests(async (host) => {
+      if (host === "rescue-dead.example") throw Object.assign(new Error("ENOTFOUND"), { code: "ENOTFOUND" });
+      return host === "rescue-internal.example" ? [{ address: "10.0.0.9", family: 4 }] : [{ address: "93.184.216.34", family: 4 }];
+    });
     try {
       const { status, body } = await post({ url: "rescueexpo.example:8443/expo" });
       expect(status, body.error).toBe(200);
@@ -305,6 +310,7 @@ describe("POST /api/conferences (other paths)", () => {
       _setLookupForTests(null);
     }
     expect(net.calls).not.toContain("unlock https://rescue-internal.example/");
+    expect(net.calls).not.toContain("unlock https://rescue-dead.example/");
     const rows = await q<{ id: string; skip: string | null; website: string | null; description: string | null }>(
       `MATCH (co:Company)-[:SPONSORS]->(:Conference {id:'rescue-expo-2026'}) RETURN co.id AS id, co.enrichSkip AS skip, co.website AS website, co.description AS description`,
     );
@@ -412,6 +418,11 @@ describe("generic extraction -> normalized", () => {
     const n = extractedToNormalized(base([session("2026-12-04T01:30:00+09:00", "09:15")]), { id: "u", url: "https://u.example/", timeZone: "America/Los_Angeles", collectedAt: "x" });
     expect(n.sessions[0].end).toBe("2026-12-03T09:15:00-08:00");
     expect(Date.parse(n.sessions[0].end) - Date.parse(n.sessions[0].start)).toBe(45 * 60_000);
+  });
+
+  it("treats an end equal to the start as unknown (default length), not a 24-hour session", () => {
+    const n = extractedToNormalized(base([session("2026-12-03T10:00", "10:00")]), { id: "u", url: "https://u.example/", timeZone: "Europe/London", collectedAt: "x" });
+    expect(n.sessions[0]).toMatchObject({ start: "2026-12-03T10:00:00+00:00", end: "2026-12-03T10:30:00+00:00" });
   });
 
   it("does not invent a booth from a hall alone", () => {
