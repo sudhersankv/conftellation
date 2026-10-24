@@ -11,6 +11,7 @@
     "test": "vitest run",
     "seed": "tsx seed/seed.ts",
     "smoke": "tsx scripts/smoke.ts",
+    "inspect": "tsx scripts/inspect.ts",
     "falkor:ping": "tsx scripts/falkor-ping.ts"
   },
   "dependencies": {

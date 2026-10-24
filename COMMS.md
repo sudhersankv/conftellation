@@ -18,3 +18,7 @@ Don't use it for: status chatter (use issues), secrets (never).
 - `lib/types.ts` is the contract; `lib/client.ts` is the only way the UI calls the API; `mocks/index.ts` backs every route under `app/api/**` today.
 - Demo user id `sam`, other user `emily`, conference id `ptc-2026` (mocks). Real seed ids will match these.
 - When a route goes real, I'll post here: `route X is live`. Response shape won't change.
+
+### 11:52 PT · sudhersan → ryan · contract: `Via` widened + real seed
+- `lib/types.ts`: `Via` gains `"rainfocus" | "ics"` (additive; GitHub Universe nodes carry `via:"rainfocus"`, PTC/June seed data carries `via:"seed"`). If you switch on `via` for the "collected Xh ago" chip, add a default case.
+- Demo graph is seeded (`npm run seed`): PTC (13 sessions, 7 booths), AI Engineer Summit June, GitHub Universe (157 sessions). All mock ids exist in the graph with the same meaning. Extra PTC ids you may see: sessions `s-opening s-falkor-intro s-evals s-review s-truefoundry s-otel s-gpu s-hiring s-demos`, booths `b-brightdata b-truefoundry b-qodo b-tensorgrid b-lumen`.

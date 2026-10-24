@@ -39,9 +39,14 @@ export async function embedOne(text: string): Promise<number[]> {
 
 /** Structured output: the model must return JSON matching `schema`. Throws if no key. */
 export async function structured<T>(schema: ZodType<T>, system: string, user: string, name = "result"): Promise<T> {
+  const model = process.env.OPENAI_MODEL ?? "gpt-5.4-nano";
+  // Reasoning models (gpt-5*, o*) reject temperature; they take reasoning_effort instead.
+  const reasoning = /^(gpt-5|o\d)/.test(model);
   const res = await openai().chat.completions.parse({
-    model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
-    temperature: 0,
+    model,
+    ...(reasoning
+      ? { reasoning_effort: (process.env.OPENAI_REASONING_EFFORT ?? "low") as "low" }
+      : { temperature: 0 }),
     messages: [{ role: "system", content: system }, { role: "user", content: user }],
     response_format: zodResponseFormat(schema as never, name),
   });

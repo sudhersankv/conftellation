@@ -1,0 +1,146 @@
+{
+  "conference": {
+    "id": "ptc-2026",
+    "name": "Patch the Conference",
+    "url": "https://www.wemakedevs.org/hackathons/ptc",
+    "startDate": "2026-10-24",
+    "endDate": "2026-10-24",
+    "city": "San Francisco"
+  },
+  "provenance": { "source": "https://www.wemakedevs.org/hackathons/ptc", "collectedAt": "2026-10-24T16:00:00Z", "via": "seed" },
+  "sessions": [
+    {
+      "id": "s-opening", "title": "Opening: patch the conference experience", "kind": "keynote",
+      "start": "2026-10-24T10:00:00-07:00", "end": "2026-10-24T10:20:00-07:00", "room": "Main Hall",
+      "abstract": "Kickoff, rules and the problem statement: conferences are broken for attendees. Build something that fixes it.",
+      "topics": ["hackathon", "conferences"], "speakers": [{ "name": "Organizer Team", "title": "Organizers", "company": "WeMakeDevs" }]
+    },
+    {
+      "id": "s-falkor-intro", "title": "Graph databases for AI apps: a FalkorDB primer", "kind": "workshop",
+      "start": "2026-10-24T10:30:00-07:00", "end": "2026-10-24T11:15:00-07:00", "room": "Stage A",
+      "abstract": "Model entities and relationships as a graph, query with Cypher, and add vector search to the same store.",
+      "topics": ["graph database", "cypher", "vector search"], "speakers": [{ "name": "Dana Kim", "title": "Solutions Engineer", "company": "FalkorDB" }]
+    },
+    {
+      "id": "s-graphrag", "title": "GraphRAG for agent memory", "kind": "workshop",
+      "start": "2026-10-24T11:30:00-07:00", "end": "2026-10-24T12:15:00-07:00", "room": "Stage A",
+      "abstract": "Give agents long-term memory as a knowledge graph. Store tool calls and observations as edges, retrieve paths instead of chunks, and query why an agent took a step.",
+      "topics": ["graphrag", "agent memory", "agent tracing"], "speakers": [{ "id": "jake-morales@falkordb", "name": "Jake Morales", "title": "DevRel", "company": "FalkorDB" }]
+    },
+    {
+      "id": "s-evals", "title": "Evaluating agents before they ship", "kind": "talk",
+      "start": "2026-10-24T11:30:00-07:00", "end": "2026-10-24T12:00:00-07:00", "room": "Stage B",
+      "abstract": "Offline evals, golden traces and regression suites for multi-step LLM agents.",
+      "topics": ["agent evaluation", "observability"], "speakers": [{ "name": "Sofia Rossi", "title": "Founding Engineer", "company": "Lumen Labs" }]
+    },
+    {
+      "id": "s-review", "title": "AI code review that catches agent bugs", "kind": "talk",
+      "start": "2026-10-24T12:30:00-07:00", "end": "2026-10-24T13:00:00-07:00", "room": "Stage B",
+      "abstract": "Context-aware review of agent code: tool schemas, retries and prompt changes, flagged in the pull request.",
+      "topics": ["code review", "testing"], "speakers": [{ "name": "Noa Levi", "title": "Developer Advocate", "company": "Qodo" }]
+    },
+    {
+      "id": "s-tracing", "title": "Tracing multi-agent systems end to end", "kind": "talk",
+      "start": "2026-10-24T13:00:00-07:00", "end": "2026-10-24T13:30:00-07:00", "room": "Stage B",
+      "abstract": "Every tool call and model step as a span. Find the failing step in a multi-agent run, replay it, and alert on it in production.",
+      "topics": ["agent tracing", "observability", "opentelemetry"], "speakers": [{ "id": "priya-nair@acmetrace", "name": "Priya Nair", "title": "CTO", "company": "Acme Trace" }]
+    },
+    {
+      "id": "s-truefoundry", "title": "Deploying LLM agents on Kubernetes", "kind": "workshop",
+      "start": "2026-10-24T13:00:00-07:00", "end": "2026-10-24T13:45:00-07:00", "room": "Stage A",
+      "abstract": "Ship agents and model servers to Kubernetes with autoscaling, secrets and rollbacks, using TrueFoundry.",
+      "topics": ["ai infrastructure", "llm deployment", "kubernetes"], "speakers": [{ "name": "Arjun Mehta", "title": "Platform Engineer", "company": "TrueFoundry" }]
+    },
+    {
+      "id": "s-scrape", "title": "Live web data for agents", "kind": "workshop",
+      "start": "2026-10-24T14:00:00-07:00", "end": "2026-10-24T14:45:00-07:00", "room": "Stage A",
+      "abstract": "Unblock any public page, get it as markdown, and feed agents fresh web data with Bright Data.",
+      "topics": ["web scraping", "agents"], "speakers": [{ "id": "lena-ortiz@brightdata", "name": "Lena Ortiz", "title": "Solutions Architect", "company": "Bright Data" }]
+    },
+    {
+      "id": "s-otel", "title": "OpenTelemetry for LLM apps", "kind": "talk",
+      "start": "2026-10-24T14:00:00-07:00", "end": "2026-10-24T14:30:00-07:00", "room": "Stage B",
+      "abstract": "Semantic conventions for LLM spans, token and cost metrics, and where vendor tracers plug in.",
+      "topics": ["opentelemetry", "observability", "agent tracing"], "speakers": [{ "name": "Sofia Rossi", "title": "Founding Engineer", "company": "Lumen Labs" }]
+    },
+    {
+      "id": "s-infra", "title": "Running inference at scale", "kind": "talk",
+      "start": "2026-10-24T15:00:00-07:00", "end": "2026-10-24T15:30:00-07:00", "room": "Stage B",
+      "abstract": "Batching, caching and GPU utilisation for serving models and agent workloads at scale.",
+      "topics": ["ai infrastructure", "inference"], "speakers": [{ "id": "jake-morales@falkordb", "name": "Jake Morales", "title": "DevRel", "company": "FalkorDB" }]
+    },
+    {
+      "id": "s-gpu", "title": "GPU scheduling for inference workloads", "kind": "talk",
+      "start": "2026-10-24T15:00:00-07:00", "end": "2026-10-24T15:45:00-07:00", "room": "Stage A",
+      "abstract": "Bin-packing models onto GPUs, fractional GPUs and queue-based autoscaling on Kubernetes.",
+      "topics": ["ai infrastructure", "kubernetes", "inference"], "speakers": [{ "name": "Arjun Mehta", "title": "Platform Engineer", "company": "TrueFoundry" }]
+    },
+    {
+      "id": "s-hiring", "title": "Panel: hiring for AI engineering teams", "kind": "panel",
+      "start": "2026-10-24T16:00:00-07:00", "end": "2026-10-24T16:30:00-07:00", "room": "Stage B",
+      "abstract": "What teams building AI infrastructure look for in engineers, and how to get hired into one.",
+      "topics": ["hiring", "career", "ai infrastructure"],
+      "speakers": [
+        { "id": "emily-chen@tensorgrid", "name": "Emily Chen", "title": "Engineering Manager", "company": "TensorGrid" },
+        { "name": "Noa Levi", "title": "Developer Advocate", "company": "Qodo" }
+      ]
+    },
+    {
+      "id": "s-demos", "title": "Hackathon demos and judging", "kind": "keynote",
+      "start": "2026-10-24T17:30:00-07:00", "end": "2026-10-24T18:30:00-07:00", "room": "Main Hall",
+      "abstract": "Teams demo what they built. Judges from the sponsors pick winners per track.",
+      "topics": ["hackathon"], "speakers": []
+    }
+  ],
+  "companies": [
+    {
+      "id": "falkordb.com", "name": "FalkorDB", "website": "https://www.falkordb.com", "sponsorTier": "Main track",
+      "description": "Low-latency graph database with vector search, built for GraphRAG.",
+      "topics": ["graph database", "graphrag", "agent memory"],
+      "booth": { "id": "b-falkor", "label": "Booth 2", "hall": "Expo", "order": 2 },
+      "people": [{ "id": "jake-morales@falkordb", "name": "Jake Morales", "title": "DevRel" }, { "name": "Dana Kim", "title": "Solutions Engineer" }]
+    },
+    {
+      "id": "brightdata.com", "name": "Bright Data", "website": "https://brightdata.com", "sponsorTier": "Track",
+      "description": "Web data platform: unblock and scrape public web pages, search results and datasets for AI.",
+      "topics": ["web scraping", "web data"],
+      "booth": { "id": "b-brightdata", "label": "Booth 4", "hall": "Expo", "order": 4 },
+      "people": [{ "id": "lena-ortiz@brightdata", "name": "Lena Ortiz", "title": "Solutions Architect" }]
+    },
+    {
+      "id": "truefoundry.com", "name": "TrueFoundry", "website": "https://www.truefoundry.com", "sponsorTier": "Sponsor",
+      "description": "Platform for deploying and scaling LLMs and agents on your own Kubernetes clusters.",
+      "topics": ["ai infrastructure", "llm deployment", "kubernetes"],
+      "booth": { "id": "b-truefoundry", "label": "Booth 6", "hall": "Expo", "order": 6 },
+      "people": [{ "name": "Arjun Mehta", "title": "Platform Engineer" }]
+    },
+    {
+      "id": "qodo.ai", "name": "Qodo", "website": "https://www.qodo.ai", "sponsorTier": "Sponsor",
+      "description": "AI code review and test generation in the pull request.",
+      "topics": ["code review", "testing"],
+      "booth": { "id": "b-qodo", "label": "Booth 8", "hall": "Expo", "order": 8 },
+      "people": [{ "name": "Noa Levi", "title": "Developer Advocate" }]
+    },
+    {
+      "id": "tensorgrid.io", "name": "TensorGrid", "website": "https://tensorgrid.io", "sponsorTier": "Community",
+      "description": "Managed GPU clusters for inference. Hiring infrastructure and platform engineers.",
+      "topics": ["ai infrastructure", "inference", "hiring"],
+      "booth": { "id": "b-tensorgrid", "label": "Booth 10", "hall": "Expo", "order": 10 },
+      "people": [{ "id": "emily-chen@tensorgrid", "name": "Emily Chen", "title": "Engineering Manager" }]
+    },
+    {
+      "id": "lumenlabs.dev", "name": "Lumen Labs", "website": "https://lumenlabs.dev", "sponsorTier": "Community",
+      "description": "Evaluation suites and regression tests for LLM agents.",
+      "topics": ["agent evaluation", "observability"],
+      "booth": { "id": "b-lumen", "label": "Booth 12", "hall": "Expo", "order": 12 },
+      "people": [{ "name": "Sofia Rossi", "title": "Founding Engineer" }]
+    },
+    {
+      "id": "acmetrace.dev", "name": "Acme Trace", "website": "https://acmetrace.dev", "sponsorTier": "Community",
+      "description": "Open-source tracing for LLM agents. Captures every tool call and model step as a span.",
+      "topics": ["agent tracing", "observability", "opentelemetry"],
+      "booth": { "id": "b-acme", "label": "Booth 14", "hall": "Expo", "order": 14 },
+      "people": [{ "id": "mike-okafor@acmetrace", "name": "Mike Okafor", "title": "Software Engineer" }, { "id": "priya-nair@acmetrace", "name": "Priya Nair", "title": "CTO" }]
+    }
+  ]
+}

@@ -16,9 +16,11 @@ Living, harness-agnostic handoff for whichever agent is driving (Claude Code, Cu
 
 - **What**: Conftellations, an attendee-owned conference brain. Hackathon: Patch the Conference (WeMakeDevs), **Sat Oct 24 2026, SF. Code freeze 16:45 PT, demo 17:30 PT.** Main track FalkorDB, secondary Bright Data, Qodo reviews PRs.
 - **Team**: **Sudhersan** (`sudhersankv`, you/Cursor) = graph + backend + deploy. **Ryan** (`RyanV27`, his own agent) = UI. Ryan is setting up Qodo on the repo right now.
-- **State**: scaffold, contract, mock-backed routes, FalkorDB client and tests on `main`. **#2 done** (`lib/llm.ts` with a fake embedder fallback, `lib/brightdata.ts` with disk cache + cap). Env verified 11:38 PT (install, falkor:ping, tests all pass).
-- **Your next task**: **#1** (seed), then **#3** (Scout), **#4** (Planner), **#7** (Constellation). See §7.
-- **Blocked on the user**: `OPENAI_API_KEY`, `BRIGHTDATA_API_KEY` + zone names, which sponsor the "$50 credits" belong to, Fly.io go-ahead, any real PTC details. See §9.
+- **State**: **#2 done** (adapters), **#1 done** (demo graph seeded on the hosted instance with **real OpenAI embeddings**). All routes still serve mocks. 11 tests pass (`npm test`, ~20 s, seeds `_test` graph with the fake embedder).
+- **Working mode (user, 11:50 PT)**: go **module by module**, test each live before moving on, ask the user on use-case questions instead of assuming.
+- **LLM**: `OPENAI_MODEL=gpt-5.4-nano` (user's choice; verified live, ~2 s structured call). `lib/llm.ts` sends `reasoning_effort` (env `OPENAI_REASONING_EFFORT`, default `low`) instead of `temperature` for gpt-5*/o* models.
+- **Bright Data: BLOCKED.** Key is set but the account has **no zones** (`web_unlocker1` → "zone not found"; `bdata zones` → none) and `bdata budget` → 403 (key lacks permissions). Plain-HTTP platform imports (Sessionize, RainFocus, sched) don't need it.
+- **Your next task**: unblock Bright Data zones, then **#3** Scout (live demo = **KubeCon NA 2026 via Sessionize + Bright Data sponsor enrichment**), **#4** Planner, **#7** Constellation. See §7.
 
 ---
 
@@ -60,7 +62,26 @@ npm run smoke           # NOT WRITTEN YET: tsx scripts/smoke.ts
 | `lib/falkor.ts` | FalkorDB singleton (survives HMR via `globalThis`), `q()` (read/write), `ro()` (read-only), `vecf32()` inline literal helper. Uses HOST/PORT/TLS if `FALKORDB_HOST` is set, else `FALKORDB_URL`. |
 | `lib/llm.ts` | `embed(texts)` (batched 100), `embedOne`, `structured(zodSchema, system, user)` via `chat.completions.parse` + `zodResponseFormat`, `hasLLM()`, `embedderName()`. **No key (or `EMBED_FAKE=true`) → `fakeEmbed`**: deterministic 1536-d feature hashing of words + bigrams (lexical similarity, so vector search still ranks sensibly). `structured()` throws without a key; callers must check `hasLLM()` and fall back. |
 | `lib/brightdata.ts` | `unlock(url,{format})`, `serp(query)`, `studio(collectorId, inputs)`, `scraperApi(datasetId, inputs)`, plus `fetchText`/`fetchJson` for plain HTTP. All return `{data, cached, collectedAt, via, source}`. Cache: `seed/raw/cache/<sha1(key)>.json` (override `BRIGHTDATA_CACHE_DIR`). Cap: `BRIGHTDATA_MAX_REQUESTS` per process, counts only Bright Data calls (not plain HTTP). `CACHE_ONLY=true` = offline, miss throws. |
+| `lib/agents/scout/normalized.ts` | `NormalizedConference` (the one ingest shape) + identity helpers: `slug`, `companySlug` ("Acme Trace"→`acmetrace`), `personId` (`jake-morales@falkordb`), `companyId` (domain else slug), `topicId` (lowercase, parentheticals dropped, **no singularization** so mock topic ids like `agents` survive), `stripHtml`. |
+| `lib/agents/scout/upsert.ts` | `upsertConference(norm)` → `{counts, ids}`. MERGE-only, batched `UNWIND`; companies resolved by name in-batch **and** against existing graph companies (so "TrueFoundry" in June maps to `truefoundry.com`); topics merged into existing ones at cosine sim ≥ 0.9; embeds Session/Person/Company. `writeEmbeddings(label, items)` reusable. |
+| `lib/agents/scout/adapters/rainfocus.ts` | RainFocus slim sessions + exhibitors → normalized (UTC → venue tz, type→kind, Topic/product attributes → topics). |
+| `lib/schema.ts` | `ensureIndexes()` range + vector indexes (idempotent). |
+| `lib/time.ts` | `isoInZone(date, tz)`, `localToIso(local, tz)`, `PT`. |
+| `seed/ptc.json`, `seed/ai-eng-summit-june.json` | Hand-written PTC (fabricated plausible schedule 10:00–18:30, clashes at 11:30/13:00/14:00/15:00 on purpose) and June conference. `via:"seed"`. |
+| `seed/personal.ts`, `seed/demo.ts`, `seed/seed.ts`, `seed/env.ts` | Personal layer (Sam/Emily/Mike + 12 generated `u-*` users, deterministic), `seedDemo()` reused by tests, CLI. Scripts import `seed/env.ts` first so `.env.local` loads before `lib/falkor` reads the graph name. |
+| `scripts/inspect.ts` (`npm run inspect`) | Sanity queries on the demo graph (Q1, vector, Q6, dupes). |
+| `tests/fakes.ts`, `tests/helpers.ts`, `tests/seed.test.ts` | `fakeLlm` for `vi.mock` (use dynamic import inside the factory), `seedOnce()` seeds `_test` (no GitHub Universe, ~18 s), `req()`. Vitest runs files sequentially (`fileParallelism:false`) since they share `_test`. |
 | `tests/adapters.test.ts` | Primed cache → 0 network calls for every adapter fn; cap; CACHE_ONLY; fake embedder sanity. |
+| `lib/agents/scout/normalized.ts` | `NormalizedConference` (the one shape every ingest path produces) + identity helpers: `slug`, `companySlug` ("Acme Trace"→"acmetrace"), `personId(name, company)` → `jake-morales@falkordb`, `companyId(name, website)` → domain or slug, `topicId` (lowercase, no parentheticals; **no singularisation**, to keep mock ids like `agents`), `stripHtml`. |
+| `lib/agents/scout/upsert.ts` | `upsertConference(norm)` → `{counts, ids}`. MERGE-only, batched UNWIND/FOREACH, stamps `source/collectedAt/via`. Resolves speaker companies against the batch **and existing graph companies by name** (so "TrueFoundry" → `truefoundry.com`). New topics merge into an existing Topic at similarity ≥ 0.9. Embeds Session/Person/Company. Also exports `resolveTopics`, `writeEmbeddings(label, [{id,text}])`. |
+| `lib/agents/scout/adapters/rainfocus.ts` | RainFocus slim sessions + exhibitors → normalized (kind map, topic aliases, UTC → venue tz). |
+| `lib/schema.ts` | `ensureIndexes()`: range indexes on every label's id (+ Conference.url) and vector indexes (1536, cosine) on Session/Person/Company/Topic. Idempotent. |
+| `lib/time.ts` | `isoInZone(date, tz)`, `localToIso(local, tz)`, `PT`, `ms()`. |
+| `seed/ptc.json`, `seed/ai-eng-summit-june.json` | Hand-written normalized conferences (fabricated but plausible PTC schedule 10:00–18:30 with deliberate clashes at 11:30, 13:00, 14:00, 15:00; 7 booths in walking order 2..14). |
+| `seed/personal.ts` | Sam (3 goals, problem, June MET Jake, today's moments m1–m6, MET Mike/Emily), Emily (hiring; checked in at s-graphrag + s-tracing → warm intro), Mike (booth staff), 12 generated users `u-ana…u-lia` (deterministic PRNG) with goals, PLANS, check-ins, shared notes clustered mid-session (hot moments), pending meet `meet-1` sam→emily. **Sam has no PLANS edges yet: the Planner (#4) writes them.** |
+| `seed/demo.ts`, `seed/seed.ts`, `seed/env.ts` | `seedDemo({githubUniverse})` = wipe → indexes → PTC → June → GitHub Universe → personal. CLI `npm run seed [-- --no-ghu]` (~45 s with real embeddings). `seed/env.ts` must be the first import in CLI scripts. |
+| `scripts/inspect.ts` | `npm run inspect`: label counts, Q1, a vector query, Q6, identity checks. |
+| `tests/fakes.ts`, `tests/helpers.ts`, `tests/seed.test.ts` | `fakeLlm(orig, structuredImpl?)` for `vi.mock("@/lib/llm", async (orig) => (await import("./fakes")).fakeLlm(await orig()))`; `seedOnce()` seeds `_test` (no GHU); `req(url, body?)` builds a `Request`. Vitest runs files sequentially (shared `_test` graph). |
 | `scripts/falkor-ping.ts` | Connectivity + vector sanity check. |
 | `tests/setup.ts`, `tests/contract.test.ts`, `vitest.config.ts` | vitest with `@` alias. Setup forces graph `<name>_test`. Contract tests check the fixture invariants (3 passing). |
 | `CLAUDE.md` | Principles, ownership, run commands, FalkorDB facts. **Cursor should treat it as the project rules** (`AGENTS.md` and `.cursor/rules/` point to it). |
@@ -86,6 +107,12 @@ Dev: `typescript`, `tailwindcss@3`, `eslint`, `vitest`, `tsx`, `dotenv`, `@brigh
 - **Vector `score` is a cosine DISTANCE**: lower = closer. Sort ascending; similarity = `1 - score`.
 - Vector index DDL that worked: `CREATE VECTOR INDEX FOR (p:Label) ON (p.prop) OPTIONS {dimension:N, similarityFunction:'cosine'}`. Use dimension 1536 for `text-embedding-3-small`.
 - Vector search can't filter by property: filter by conference in a following `MATCH`.
+- After an aggregation, `ORDER BY` may only reference projected aliases (`RETURN s.start AS start, count(t) AS n ORDER BY n DESC, start`), not `s.start`.
+- `SET n += $map`, `UNWIND $rows` + `vecf32(r.v)`, and `FOREACH (x IN list | MERGE ...)` all work.
+- `tsconfig.json` needed `"target": "es2017"` (Set/Map iteration). Delete `tsconfig.tsbuildinfo` if tsc shows stale errors.
+- `ORDER BY` after an aggregation can only reference projected aliases (`RETURN s.start AS start … ORDER BY start`, not `ORDER BY s.start`).
+- `SET n += $map` works; `FOREACH (x IN list | MERGE …)` works inside UNWIND batches; `vecf32(r.v)` works on UNWIND rows from params.
+- Real `text-embedding-3-small` distances on the seed: a good match is ~0.29–0.40, unrelated ≥ 0.55.
 - FalkorDB Browser for the demo: the hosted instance should have a cloud browser UI (check the FalkorDB Cloud dashboard). Locally it is `docker run -p 6379:6379 -p 3000:3000 falkordb/falkordb` → http://localhost:3000.
 
 ### Conference scraping (probe results; full detail in issue #3 comment)
@@ -127,6 +154,7 @@ All plain HTTP on public pages. **No Bright Data needed for these two.**
 10. Full authority, but stay in scope: a strong demoable MVP. Use the user's PowerShell; Docker may be started.
 11. Deploy target: **Fly.io** (issue #19).
 12. Contracts and pipeline locked so UI work runs in parallel.
+13. (11:56 PT) LLM model `gpt-5.4-nano`. PTC data may be fabricated. Live import demo = KubeCon NA 2026 (Sessionize) + Bright Data sponsor enrichment. Work module by module, testing each, and ask on use-case questions.
 
 ### Test strategy (agreed; also in #21)
 - **Primary seam: route handlers.** Call them directly with a `Request` against the `_test` graph seeded from a small fixture. Assert response + resulting graph state. No assertions on Cypher text or prompts.
@@ -181,10 +209,8 @@ The backend load is heavy, so prioritise by spec §15 "never cut": Sky with why-
 
 ## 7. Next steps for Cursor (in order)
 
-1. ~~#2 adapters~~ **done** (see §2).
-2. ~~(merged into 1)~~
-3. **#1 seed** (`seed/seed.ts`, `npm run seed`): wipe the graph → indexes (spec §5.4) → load PTC (hand-written `seed/ptc.json`: sponsors FalkorDB, Bright Data, TrueFoundry, Qodo + fictional Acme Trace Booth 14) → GitHub Universe from `seed/raw/github-universe-2026-sessions.slim.json` → AI Eng Summit June (6 sessions, Sam met Jake) → users (`sam`, `emily`, `mike` + 10–15 generated) → Sam's day → embeddings. **Ids must match `mocks/index.ts`.** Without an OpenAI key, write a deterministic fake embedder (hash → 1536-d vector) behind a flag so the graph can be built now and re-embedded later.
-4. **#3 Scout**: platform adapters (`sessionize`, `sched`, `rainfocus`, `ics`, `unlocker+llm`) → `NormalizedConference` → shared `upsertConference()` used by both the seed and the route.
+1. ~~#2 adapters~~ **done**. ~~#1 seed~~ **done** (brief/trip/crowd precompute is part of #8; seed should call the planner for Sam once #4 lands).
+4. **#3 Scout** (`POST /api/conferences`, `GET /api/conferences/:id`): router → adapters (`sessionize`, `sched` .ics, `rainfocus`, `ics`, `unlocker+llm`) → `NormalizedConference` → `upsertConference()` (already exists). Already-imported URL → `cached:true`.
 5. **#4 Planner** then **#7 Constellation**: these unblock Ryan's Sky (#12) and Plan (#13) on real data. Post `route X is live` in COMMS.md each time.
 6. **#19 Fly deploy** early (even on mocks): `Dockerfile` (node:22-alpine, standalone output, `PORT=3001`), `fly launch --no-deploy --name conftellations --region sjc` (confirm with the user first), `fly secrets import < .env.local`, `fly deploy`.
 7. Then #6, #5, #9, #8, #10 in that order.
@@ -227,12 +253,12 @@ npx skills@latest add mattpocock/skills -a cursor
 
 ## 9. Open questions for the user (blocking or soon-blocking)
 
-1. `OPENAI_API_KEY` and the model name the credits allow → blocks embeddings (#1), extraction (#3), steer (#5), brief (#8).
-2. `BRIGHTDATA_API_KEY`, the **Web Unlocker zone name** (`web_unlocker1` vs `cli_unlocker`), the **SERP zone name**, any Scraper Studio collector id.
+1. ~~OPENAI_API_KEY~~ set (11:47 PT). Model `gpt-5.4-nano`.
+2. ~~BRIGHTDATA_API_KEY~~ set, but **no zones exist** on the account and the key lacks permissions for budget. User said "do what you can to fix it" (11:56 PT). Need an Unlocker zone + SERP zone.
 3. Which sponsor gave the **$50 credits**, and is it applied to the account?
 4. Fly.io: confirm app name `conftellations`, region `sjc`, and that the personal org has billing set up.
-5. Real PTC details (booth numbers, rooms, workshop times) or OK to fabricate plausible ones.
-6. Which non-platform conference URL to use for the live "paste any URL" demo.
+5. ~~Real PTC details~~ → fabricated is fine (user, 11:56 PT).
+6. ~~Live "paste any URL" demo~~ → **KubeCon NA 2026** (Sessionize fast path) + Bright Data sponsor enrichment (user, 11:56 PT).
 
 ---
 
@@ -258,3 +284,6 @@ Format: `HH:MM PT · agent · what changed (issue #, commit/PR)`
 - 11:50 PT · Claude Code · HANDOFF.md, AGENTS.md, `.cursor/rules/conftellations.mdc`; handed to Cursor. Next: #2 → #1 → #3 → #4.
 - 11:38 PT · Cursor · Env check: `npm install`, `falkor:ping`, `npm test` all pass. OpenAI + Bright Data keys still empty.
 - 11:42 PT · Cursor · #2 done: `lib/llm.ts` (fake hash embedder fallback), `lib/brightdata.ts` (sha1 disk cache, cap, CACHE_ONLY), `tests/adapters.test.ts` (7/7 pass). Next: #1 seed.
+- 11:47 PT · Cursor · User added OpenAI + Bright Data keys to `.env.local`.
+- 11:53 PT · Cursor · #1 done: shared `upsertConference()` + identity rules, RainFocus adapter, `seed/ptc.json`, June conf, personal layer, `npm run seed` (real embeddings, ~45 s), `npm run inspect`, `tests/seed.test.ts`. `Via` widened (`rainfocus`, `ics`; COMMS note). 11/11 tests pass.
+- 11:56 PT · Cursor · Model → `gpt-5.4-nano` (verified live). Bright Data: no zones on account, budget 403. Decisions: KubeCon is the live import demo; fabricated PTC is fine; work module by module.

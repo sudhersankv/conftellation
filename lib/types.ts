@@ -13,7 +13,7 @@ export type EdgeType =
   | "SKIPPED" | "BOOSTED" | "STEERED" | "CAPTURED" | "AT" | "MET" | "MENTIONS"
   | "DURING" | "REQUESTED_MEET" | "SHARED_WITH" | "HAS_SUMMARY";
 
-export type Via = "studio" | "unlocker" | "serp" | "scraper-api" | "sessionize" | "sched" | "seed" | "user";
+export type Via = "studio" | "unlocker" | "serp" | "scraper-api" | "sessionize" | "sched" | "rainfocus" | "ics" | "seed" | "user";
 
 /** Every scraped node carries this. Cards show "collected Xh ago". */
 export interface Provenance {
