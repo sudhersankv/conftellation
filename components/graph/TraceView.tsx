@@ -15,7 +15,8 @@ const laneOf = (t: SkyNodeType): Lane | null =>
 
 const HOUR = 3600_000;
 const GUTTER = 84; // lane labels
-const TOP = 96; // room for the page header overlay
+const TOP_DESKTOP = 96; // room for the page header overlay
+const TOP_PHONE = 150; // header + stacked controls on a phone
 const FONT = `"DM Sans", ui-sans-serif, system-ui, sans-serif`;
 
 let mctx: CanvasRenderingContext2D | null = null;
@@ -81,10 +82,11 @@ export function TraceView({ nodes, links, itinerary, coverage, width, height, hi
     const W = Math.round(GUTTER + 24 + hours * pxPerHour);
     const xOf = (t: number) => GUTTER + 12 + ((t - start) / HOUR) * pxPerHour;
 
+    const TOP = phone ? TOP_PHONE : TOP_DESKTOP;
     const goalY = TOP + 22;
     const axisY = TOP + 92;
     const laneTop = axisY + 18;
-    const laneH = Math.max(96, (height - laneTop - 56) / LANES.length);
+    const laneH = Math.max(124, (height - laneTop - 56) / LANES.length);
     const H = Math.max(height, laneTop + laneH * LANES.length + 56);
 
     const goalPos = new Map<string, { x: number; y: number }>();
@@ -94,7 +96,7 @@ export function TraceView({ nodes, links, itinerary, coverage, width, height, hi
     const placed: Placed[] = [];
     LANES.forEach((lane, li) => {
       const items = timed.filter((x) => laneOf(x.n.type) === lane.key).sort((a, b) => a.t - b.t);
-      const rows = lane.key === "moment" ? 2 : Math.max(1, Math.floor((laneH - 16) / 36));
+      const rows = lane.key === "moment" ? 2 : Math.max(3, Math.floor((laneH - 16) / 36));
       const lastEnd = new Array(rows).fill(-Infinity);
       for (const { n, t } of items) {
         const full = titleCase(n.label);
