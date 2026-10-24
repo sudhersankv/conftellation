@@ -17,15 +17,16 @@ Primary view = **calendar**. Memory view = **graph**. "Constellation" is an anal
 
 ## 2. Look & feel
 
-**Reference feel: Linear / Notion dark mode / Google Calendar.** Clean, dense where it should be, calm elsewhere.
+**Reference feel: neo-brutalist, playful but tidy** (the owner's site, callmekv.netlify.app). Confident, not corporate.
 
-- **Dark, neutral, one accent.** Background `#0B0B12`, surfaces `#14141D` / `#1B1B27`, hairline borders `#272735`. Text `#EDEDF2`, muted `#8E8EA3`. Accent violet `#8B7CF6` for primary actions, focus, selected states. **No gradients, glows, nebulae, starfields, blur washes, serif/display fonts.**
-- **Font**: Geist (already in `app/fonts`), system fallback. Sizes via Tailwind `text-xs/sm/base/lg/xl/2xl`. Headings `font-semibold tracking-tight`.
-- **Shape**: `rounded-lg` (10px) for cards and inputs, `rounded-md` for chips, `rounded-full` only for avatars and tiny status dots. 1px borders, no drop shadows except menus/sheets (`shadow-xl`).
-- **Spacing**: 4px grid. Page padding `px-4 md:px-8`, max width `max-w-6xl`. Cards `p-4`.
-- **Motion**: 150ms ease-out on hover/press; sheets 250ms. No parallax, no idle animations. Respect `prefers-reduced-motion`.
-- **Node/type colours** (spec §12 mapping; the ONLY place colour-coding appears, as small dots, tags and block edges):
-  goal `#F2C14E` · problem `#F2C14E` · session `#8B7CF6` · person `#F28B5B` · company/booth `#4FD1A0` · moment `#FFFFFF` · other user `#4FC3D9` · conference `#8E8EA3` · topic `#8E8EA3`. Use `TYPE_COLOR` from `lib/ui/tokens.ts`, never hard-code.
+- **Paper and ink.** Background cream `#FFF7E8`, cards white, `surface2` light cream `#FFF1D6`. Borders, text and shadows are ink `#111111`; muted `#5B5566`, faint `#9A93A6`. `color-scheme: light`.
+- **Flat colour blocks.** Accent yellow `#FFD23F` (primary buttons: yellow fill, ink text, ink border), plus pink `#FF6FAE`, blue `#4DA3FF`, orange, purple, green as solid fills for bands, stat tiles and avatars. **No stars, galaxies, glows, gradients or blur.** Never put yellow/green text on cream; colour is a fill, text stays ink.
+- **Type**: Space Grotesk 500/700 (`font-heading`) for headings, nav, buttons, chips; DM Sans 400/500 (`font-sans`) for body; Caveat 600 (`font-hand`) for exactly ONE handwritten annotation ("your conference brain" on Home). Page titles 28–36px bold, tight.
+- **Shape**: 2px ink borders (`border-2 border-border`), cards `rounded-xl` (16px), chips and buttons full pills. **Hard shadows, no blur**: `shadow-hard` (4px 4px 0 #111) on cards and primary buttons, `shadow-hardSm` on small controls. `.press` / `.press-sm` lift on hover and push in on press.
+- **Controls**: inputs white with ink border and a 3px yellow focus ring; Segmented and nav = ink fill with cream text when selected; phone bottom nav active = yellow pill. Card `accent` prop = 6px colour bar on the left.
+- **Spacing**: 4px grid. Page padding `px-4 md:px-10`, max width `max-w-6xl`. Cards `p-4`. Motion 120–150ms; respect `prefers-reduced-motion`.
+- **Node/type colours** (spec §12; dots ringed in ink, block bars, tiles):
+  goal `#FFD23F` · session `#A78BFA` · person `#FF8C42` · company/booth `#3DDC97` · moment `#111111` · other user `#4DA3FF` · conference/topic `#B8B2C2` · meet `#FF6FAE`. Use `TYPE_COLOR` from `lib/ui/tokens.ts`, never hard-code.
 - **Provenance everywhere scraped data appears**: `<CollectedAgo at={collectedAt} source={source} />`.
 - **Conference cues**: time chips (`1:00–1:30 PM`), room/booth chips (`Stage B`, `Booth 14`), goal tags, track-coloured topic tags. These make it a *conference* app, not a generic dashboard.
 - **Responsive**: works at **390px** (phone, bottom nav) and at **1280px+** (laptop/projector, left sidebar). The demo runs on both. Calendar: at phone width show one day, a vertical time list; at `md+` show the hour grid.

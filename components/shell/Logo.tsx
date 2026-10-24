@@ -9,10 +9,10 @@ export function LogoMark({ size = 28, className }: { size?: number; className?: 
       aria-hidden
     >
       <svg viewBox="0 0 24 24" width={size - 8} height={size - 8} fill="none">
-        <path d="M5 17 L11 6 L19 15" stroke="#111" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        <circle cx="5" cy="17" r="2.6" fill="#111" />
-        <circle cx="19" cy="15" r="2.6" fill="#111" />
-        <circle cx="11" cy="6" r="3.6" fill="#FFD23F" stroke="#111" strokeWidth="2" />
+        <path d="M4.5 9 L11 18 L19.5 5.5" stroke="#111" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="4.5" cy="9" r="2.6" fill="#111" />
+        <circle cx="11" cy="18" r="2.6" fill="#111" />
+        <circle cx="19.5" cy="5.5" r="3.4" fill="#FFD23F" stroke="#111" strokeWidth="2" />
       </svg>
     </span>
   );
