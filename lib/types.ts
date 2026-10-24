@@ -224,7 +224,8 @@ export interface SkyNode {
   state: SkyNodeState;
   goalId?: string; // cluster
   at?: string; // replay order
-  conferenceId?: string;
+  conferenceId?: string; // primary conference (newest, unless a stronger state came from another)
+  conferenceIds?: string[]; // set when this id belongs to more than one attended conference
   isOtherUser?: boolean;
   fit?: number; // 0..1 magnitude (normalised plan score); UI uses 0.5 when absent
 }

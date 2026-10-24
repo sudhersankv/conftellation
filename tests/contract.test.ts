@@ -19,6 +19,14 @@ describe("mocks honour the contract", () => {
       expect(ids.has(l.target)).toBe(true);
     }
   });
+  it("every why-path node and createMoment lit id is a Sky node; Sky nodes carry conferenceId", () => {
+    const ids = new Set(mocks.constellation.nodes.map((n) => n.id));
+    const items = [...mocks.plan.itinerary.map((s) => s.item), ...mocks.plan.byGoal.flatMap((g) => [...g.sessions, ...g.people, ...g.booths])];
+    const paths = [...items.flatMap((i) => i.why), ...mocks.brief.paths, ...Object.values(mocks.people).flatMap((p) => p.why)];
+    for (const p of paths) for (const n of p.nodes) expect(ids.has(n.id), `${p.id} node ${n.id}`).toBe(true);
+    for (const id of mocks.createMoment.lit) expect(ids.has(id), `lit ${id}`).toBe(true);
+    for (const n of mocks.constellation.nodes) if (n.type !== "user") expect(n.conferenceId, n.id).toBeTruthy();
+  });
   it("person details are keyed by person id and carry a why", () => {
     for (const [id, d] of Object.entries(mocks.people)) {
       expect(d.person.id).toBe(id);
