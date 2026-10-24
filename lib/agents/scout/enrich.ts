@@ -1,8 +1,9 @@
 // Sponsor enrichment: the sponsor's own homepage via Bright Data Web Unlocker (SERP snippets if the page comes back empty)
 // → LLM → "what they do" + topics. Results are memoized next to the scrape cache, so a pre-warmed import costs no credits and no LLM calls.
 import { z } from "zod";
-import { memo, serp, unlock } from "@/lib/brightdata";
+import { memo, serp, unlock, type SerpResult } from "@/lib/brightdata";
 import { hasLLM, structured } from "@/lib/llm";
+import { assertResolvedPublic, publicUrlProblem, UnsafeUrlError } from "@/lib/publicUrl";
 import type { Via } from "@/lib/types";
 import type { NormCompany } from "./normalized";
 import { mapLimit } from "./upsert";
@@ -27,49 +28,105 @@ Return:
 
 const MIN_PAGE = 500;
 
-/** Top sponsors by tier, in listing order within a tier. */
+/** Top sponsors by tier, in listing order within a tier. Name-only sponsors stay in the list so they can be searched. */
 export function topSponsors(companies: NormCompany[], limit: number): NormCompany[] {
   return companies
     .map((c, i) => ({ c, i }))
-    .filter(({ c }) => c.website)
     .sort((a, b) => tierRank(a.c.sponsorTier) - tierRank(b.c.sponsorTier) || a.i - b.i)
     .slice(0, limit)
     .map(({ c }) => c);
 }
 
-export interface EnrichResult { enriched: number; failed: string[] }
+export interface EnrichResult {
+  enriched: number;
+  failed: string[];
+  skipped: { name: string; reason: string }[];
+}
+
+const publicLink = (link: string) => {
+  try {
+    return publicUrlProblem(link) ? undefined : link;
+  } catch {
+    return undefined;
+  }
+};
+
+async function searchWebsite(c: NormCompany, context?: string): Promise<{ url: string; snippets: string; source: string; collectedAt: string } | { skip: string }> {
+  const query = [c.name, context, "official website"].filter(Boolean).join(" ").replace(/\s+/g, " ");
+  let results: { data: SerpResult[]; source: string; collectedAt: string };
+  try {
+    results = await serp(query);
+  } catch (e) {
+    return { skip: `no website; search failed: ${e instanceof Error ? e.message : String(e)}`.slice(0, 160) };
+  }
+  const url = results.data.map((r) => r.link).map(publicLink).find((link): link is string => Boolean(link));
+  if (!url) return { skip: "no website; search returned no public url" };
+  const snippets = results.data.slice(0, 8).map((x) => `- ${x.title}: ${x.description ?? ""} (${x.link})`).join("\n");
+  return { url, snippets, source: results.source, collectedAt: results.collectedAt };
+}
+
+function skip(c: NormCompany, reason: string, skipped: EnrichResult["skipped"]) {
+  c.website = c.website && !publicUrlProblem(c.website) ? c.website : undefined;
+  c.enrichSkip = reason;
+  skipped.push({ name: c.name, reason });
+}
 
 /** Mutates the top `limit` companies in place: description, topics, provenance (via "unlocker" or "serp"). */
-export async function enrichSponsors(companies: NormCompany[], opts: { limit?: number; concurrency?: number } = {}): Promise<EnrichResult> {
+export async function enrichSponsors(companies: NormCompany[], opts: { limit?: number; concurrency?: number; context?: string } = {}): Promise<EnrichResult> {
   const limit = opts.limit ?? Number(process.env.SCOUT_ENRICH_LIMIT ?? 22);
   const picked = topSponsors(companies, limit);
   const failed: string[] = [];
+  const skipped: EnrichResult["skipped"] = [];
   let enriched = 0;
   await mapLimit(picked, opts.concurrency ?? 6, async (c) => {
     try {
-      const url = c.website!;
-      const r = await memo({ v: 2, task: "sponsor-enrich", url }, url, async () => {
+      let url = c.website?.trim() || undefined;
+      let fallback = "";
+      let fallbackSrc: { source: string; collectedAt: string; via: Via } | undefined;
+      if (!url) {
+        const found = await searchWebsite(c, opts.context);
+        if ("skip" in found) return skip(c, found.skip, skipped);
+        url = found.url;
+        c.website = url;
+        fallback = found.snippets;
+        fallbackSrc = { source: found.source, collectedAt: found.collectedAt, via: "serp" };
+      }
+      if (publicUrlProblem(url)) return skip(c, "website is not a public http(s) url", skipped);
+      try {
+        await assertResolvedPublic(url);
+      } catch (e) {
+        if (e instanceof UnsafeUrlError) return skip(c, "website host is not public", skipped);
+        throw e;
+      }
+      const pageUrl = url;
+      const r = await memo({ v: 2, task: "sponsor-enrich", url: pageUrl }, pageUrl, async () => {
         if (!hasLLM()) throw new Error("no LLM");
-        const page = await unlock(url);
+        const page = await unlock(pageUrl);
         let text = page.data.replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/\n{3,}/g, "\n\n").slice(0, 12_000);
-        let src: { source: string; collectedAt: string; via: Via } = { source: url, collectedAt: page.collectedAt, via: "unlocker" };
+        let src: { source: string; collectedAt: string; via: Via } = { source: pageUrl, collectedAt: page.collectedAt, via: "unlocker" };
         if (text.trim().length < MIN_PAGE) {
-          const s = await serp(`${c.name} ${new URL(url).hostname}`);
-          text = s.data.slice(0, 8).map((x) => `- ${x.title}: ${x.description ?? ""} (${x.link})`).join("\n");
-          src = { source: s.source, collectedAt: s.collectedAt, via: "serp" };
+          if (fallback.trim().length >= 100 && fallbackSrc) {
+            text = fallback;
+            src = fallbackSrc;
+          } else {
+            const s = await serp(`${c.name} ${new URL(pageUrl).hostname}`);
+            text = s.data.slice(0, 8).map((x) => `- ${x.title}: ${x.description ?? ""} (${x.link})`).join("\n");
+            src = { source: s.source, collectedAt: s.collectedAt, via: "serp" };
+          }
         }
         if (text.trim().length < 100) throw new Error("no usable content");
-        const out = await structured(Extract, SYSTEM, `Company: ${c.name}\nURL: ${url}\n\n${text}`, "sponsor");
+        const out = await structured(Extract, SYSTEM, `Company: ${c.name}\nURL: ${pageUrl}\n\n${text}`, "sponsor");
         if (!out.known || !out.description) throw new Error("content doesn't say what they do");
         return { description: out.description, topics: out.topics, ...src };
       });
       c.description = r.data.description;
       c.topics = [...new Set([...c.topics, ...r.data.topics.map((t) => t.toLowerCase().trim()).filter(Boolean)])].slice(0, 6);
       c.provenance = { source: r.data.source, collectedAt: r.data.collectedAt, via: r.data.via };
+      c.enrichSkip = undefined;
       enriched++;
     } catch (e) {
       failed.push(`${c.name}: ${e instanceof Error ? e.message : String(e)}`.slice(0, 160));
     }
   });
-  return { enriched, failed };
+  return { enriched, failed, skipped };
 }

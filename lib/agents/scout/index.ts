@@ -2,6 +2,7 @@
 // Router: RainFocus (known sites) -> Sessionize -> sched/.ics -> generic (Bright Data Unlocker + LLM). Sponsor pages are read on every path
 // that doesn't bring its own, and the top sponsors are enriched from their own sites (enrich.ts).
 import { fetchJson, fetchText, requestsUsed } from "@/lib/brightdata";
+import { assertResolvedPublic, publicUrlProblem, UnsafeUrlError } from "@/lib/publicUrl";
 import { ensureIndexes } from "@/lib/schema";
 import type { AddConferenceResponse, Conference } from "@/lib/types";
 import { conferenceById, conferenceByUrl, conferenceCounts } from "@/lib/queries/conferences";
@@ -35,8 +36,15 @@ export async function importConference(rawUrl: string, opts: { enrich?: boolean 
   if (hit) {
     return { response: { conference: hit, counts: await conferenceCounts(hit.id), cached: true }, brightDataRequests: 0, ms: Date.now() - t0 };
   }
-  const { norm, path } = await buildNormalized(fetchUrl);
-  const enrich = opts.enrich === false || norm.companies.length === 0 ? undefined : await enrichSponsors(norm.companies);
+  let built: { norm: NormalizedConference; path: ScoutPath };
+  try {
+    built = await buildNormalized(fetchUrl);
+  } catch (e) {
+    if (e instanceof UnsafeUrlError) throw new BadInput(e.message);
+    throw e;
+  }
+  const { norm, path } = built;
+  const enrich = opts.enrich === false || norm.companies.length === 0 ? undefined : await enrichSponsors(norm.companies, { context: norm.conference.name });
   await ensureIndexes();
   const r = await upsertConference(norm);
   const conference = (await conferenceById(norm.conference.id)) as Conference;
@@ -47,21 +55,52 @@ export async function importConference(rawUrl: string, opts: { enrich?: boolean 
 }
 
 function parseUrl(raw: string): string {
+  const trimmed = raw.trim();
   let u: URL;
   try {
-    u = new URL(/^https?:\/\//i.test(raw.trim()) ? raw.trim() : `https://${raw.trim()}`);
+    u = new URL(/^[a-z][a-z0-9+.-]*:/i.test(trimmed) ? trimmed : `https://${trimmed}`);
   } catch {
     throw new BadInput("not a URL");
   }
-  if (!/^https?:$/.test(u.protocol) || !u.hostname.includes(".")) throw new BadInput("not a web URL");
+  const problem = publicUrlProblem(u.toString());
+  if (problem) throw new BadInput(problem);
   u.hash = "";
   return u.toString();
 }
 
-const urlVariants = (u: string) => [u, `${u}/`, u.replace(/^https:/, "http:"), `${u.replace(/^https:/, "http:")}/`];
+/** Slash and http/https forms. The query string stays intact; only the path gains or loses a trailing slash. */
+export function urlVariants(raw: string): string[] {
+  const out = new Set<string>();
+  for (const value of [raw, raw.replace(/^https:/i, "http:")]) {
+    let u: URL;
+    try {
+      u = new URL(value);
+    } catch {
+      continue;
+    }
+    const forms = [new URL(u), new URL(u)];
+    if (!forms[1].pathname.endsWith("/")) forms[1].pathname += "/";
+    const bare = new URL(u);
+    if (bare.pathname.length > 1 && bare.pathname.endsWith("/")) bare.pathname = bare.pathname.replace(/\/+$/, "");
+    for (const form of [...forms, bare]) out.add(form.toString());
+    out.add(value);
+  }
+  return [...out];
+}
+
+async function readText(url: string, init?: RequestInit): Promise<{ data: string; collectedAt: string } | null> {
+  if (publicUrlProblem(url)) return null;
+  try {
+    await assertResolvedPublic(url);
+    return await fetchText(url, init);
+  } catch {
+    return null;
+  }
+}
 
 /** Fetch + normalize without touching the graph (also used by scripts/prewarm-kubecon.ts). `conference.url` is the normalized URL (the cache key). */
 export async function buildNormalized(url: string): Promise<{ norm: NormalizedConference; path: ScoutPath }> {
+  await assertResolvedPublic(url);
   const r = await route(url);
   r.norm.conference.url = normalizeUrl(url);
   return r;
@@ -79,17 +118,20 @@ async function route(url: string): Promise<{ norm: NormalizedConference; path: S
     return { norm: await fromSessionize(sz, url, {}), path: "sessionize" };
   }
 
-  if (/\.ics(\?|$)/i.test(url) || /\.sched\.com$/.test(host)) {
-    const icsUrl = /\.ics(\?|$)/i.test(url) ? url : `https://${host}/all.ics`;
-    return { norm: await fromIcs(icsUrl, url, {}), path: "ics" };
+  if (/\.ics(\?|$)/i.test(url)) return { norm: await fromIcs(url, url, {}), path: "ics" };
+  if (/\.sched\.com$/.test(host)) {
+    const html = await readText(url, { headers: { Accept: "text/html" } });
+    const norm = await fromIcs(`https://${host}/all.ics`, url, html?.data ? metaEvent(html.data) : {});
+    if (html?.data) {
+      const sponsors = await findSponsors(html.data, url);
+      if (sponsors.length) norm.companies = sponsors;
+    }
+    return { norm, path: "ics" };
   }
 
   let html: string | undefined;
-  try {
-    html = (await fetchText(url, { headers: { Accept: "text/html" } })).data;
-  } catch {
-    // blocked or down: Unlocker handles it below
-  }
+  const page = await readText(url, { headers: { Accept: "text/html" } });
+  html = page?.data;
 
   if (html) {
     if (html.trimStart().startsWith("BEGIN:VCALENDAR")) return { norm: await fromIcs(url, url, {}), path: "ics" };
@@ -98,7 +140,7 @@ async function route(url: string): Promise<{ norm: NormalizedConference; path: S
     let sched = sz ? undefined : schedHost(url, html);
     if (!sz && !sched) {
       for (const link of links(html, url, /schedule|agenda|program/i).slice(0, 3)) {
-        const sub = await fetchText(link).catch(() => null);
+        const sub = await readText(link);
         if (!sub) continue;
         sz = await firstSessionize(sessionizeCodes(sub.data));
         sched = sz ? undefined : schedHost(link, sub.data);
@@ -166,7 +208,7 @@ async function findSponsors(html: string, url: string): Promise<NormCompany[]> {
   const candidates = links(html, url, /sponsor|exhibitor|partner/i)
     .sort((a, b) => Number(/sponsor-?list|sponsors\/?$/i.test(b)) - Number(/sponsor-?list|sponsors\/?$/i.test(a)));
   for (const link of [url, ...candidates.slice(0, 2)]) {
-    const page = link === url ? { data: html, collectedAt: new Date().toISOString() } : await fetchText(link).catch(() => null);
+    const page = link === url ? { data: html, collectedAt: new Date().toISOString() } : await readText(link);
     const found = page ? sponsorLogos(page.data) : [];
     if (found.length) {
       return found

@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import * as bd from "@/lib/brightdata";
 import { EMBED_DIM, embed, fakeEmbed } from "@/lib/llm";
+import { _setLookupForTests } from "@/lib/publicUrl";
 
 let dir: string;
 const env = { ...process.env };
@@ -20,6 +21,7 @@ beforeEach(async () => {
 });
 afterEach(async () => {
   process.env = { ...env };
+  _setLookupForTests(null);
   vi.unstubAllGlobals();
   await rm(dir, { recursive: true, force: true });
 });
@@ -57,6 +59,55 @@ describe("brightdata adapter", () => {
     expect(again.cached).toBe(true);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     await expect(bd.unlock("https://b.example")).rejects.toThrow(/cap/);
+  });
+
+  it("refuses private, link-local, and non-http urls before fetching", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+    await expect(bd.fetchText("http://127.0.0.1/secret")).rejects.toThrow(/not public/);
+    await expect(bd.fetchText("http://169.254.169.254/latest")).rejects.toThrow(/not public/);
+    await expect(bd.fetchText("file:///etc/passwd")).rejects.toThrow(/not a web URL/);
+    await expect(bd.unlock("http://10.0.0.8/")).rejects.toThrow(/not public/);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("does not follow a redirect onto an internal address", async () => {
+    const fetchSpy = vi.fn(async (url: string) => {
+      if (String(url).includes("127.0.0.1")) return new Response("secret");
+      return new Response(null, { status: 302, headers: { location: "http://127.0.0.1/latest" } });
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+    await expect(bd.fetchText("https://public.example/start")).rejects.toThrow(/not public/);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(String(fetchSpy.mock.calls[0][0])).toBe("https://public.example/start");
+  });
+
+  it("refuses a hostname that resolves to a private address", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+    _setLookupForTests(async () => [{ address: "10.0.0.5", family: 4 }]);
+    await expect(bd.fetchText("https://rebind.example/admin")).rejects.toThrow(/not public/);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("aborts a response larger than the byte cap", async () => {
+    const chunk = new Uint8Array(64 * 1024);
+    let pulls = 0;
+    const stream = new ReadableStream({
+      pull(controller) {
+        pulls++;
+        if (pulls > 40) {
+          controller.close();
+          return;
+        }
+        controller.enqueue(chunk);
+      },
+    });
+    const fetchSpy = vi.fn(async () => new Response(stream));
+    vi.stubGlobal("fetch", fetchSpy);
+    await expect(bd.fetchText("https://big.example/huge")).rejects.toThrow(/too large/);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(pulls).toBeLessThan(40);
   });
 
   it("CACHE_ONLY never touches the network", async () => {

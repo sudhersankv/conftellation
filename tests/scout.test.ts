@@ -3,6 +3,8 @@ import path from "node:path";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST as addConference } from "@/app/api/conferences/route";
 import { GET as getConference } from "@/app/api/conferences/[id]/route";
+import { q } from "@/lib/falkor";
+import { urlVariants } from "@/lib/agents/scout";
 import type { AddConferenceResponse, ConferenceDetail } from "@/lib/types";
 import { req } from "./helpers";
 
@@ -12,6 +14,7 @@ const fx = (f: string) => readFileSync(path.join(__dirname, "fixtures", "scout",
 const net = vi.hoisted(() => ({
   http: new Map<string, string>(),
   unlock: new Map<string, string>(),
+  serp: new Map<string, { title: string; link: string; description?: string }[]>(),
   calls: [] as string[],
   used: 0,
 }));
@@ -38,19 +41,48 @@ vi.mock("@/lib/brightdata", () => {
       if (data === undefined) throw new Error(`Bright Data 502: ${url}`);
       return { data, cached: false, collectedAt: at, via: "unlocker", source: url };
     },
-    serp: async () => ({ data: [], cached: true, collectedAt: at, via: "serp", source: "" }),
+    serp: async (query: string) => {
+      net.calls.push(`serp ${query}`);
+      net.used++;
+      const hit = [...net.serp.entries()].find(([k]) => query.includes(k));
+      const data = hit?.[1] ?? [];
+      return { data, cached: true, collectedAt: at, via: "serp", source: `https://www.google.com/search?q=${encodeURIComponent(query)}` };
+    },
     memo: async (_key: unknown, source: string, run: () => Promise<unknown>) => ({ data: await run(), cached: false, collectedAt: at, via: "memo", source }),
     requestsUsed: () => net.used,
   };
 });
 
+const blankConf = { region: "", country: "", timezone: "" };
 const generic = {
-  conference: { name: "Graph Summit 2026", startDate: "2026-12-03", endDate: "2026-12-03", city: "London", region: null, country: "UK", timezone: "Europe/London" },
+  conference: { name: "Graph Summit 2026", startDate: "2026-12-03", endDate: "2026-12-03", city: "London", ...blankConf },
   sessions: [
-    { title: "Graphs for agent memory", abstract: "How agents remember.", kind: "talk", date: "2026-12-03", start: "10:00", end: "10:30", room: "Main", speakers: [{ name: "Ada Graph", title: "CTO", company: "Nodely" }], topics: ["agent memory"] },
-    { title: "Untimed panel", abstract: null, kind: "panel", date: null, start: null, end: null, room: null, speakers: [], topics: [] },
+    { title: "Graphs for agent memory", abstract: "How agents remember.", kind: "talk", start: "2026-12-03T10:00:00+00:00", end: "2026-12-03T10:30:00+00:00", room: "Main", url: "https://graphsummit.example/agenda#memory", speakers: ["Ada Graph"], topics: ["agent memory"] },
+    { title: "Untimed panel", abstract: "", kind: "panel", start: "", end: "", room: "", url: "", speakers: [], topics: [] },
   ],
-  sponsors: [{ name: "Nodely", website: "https://nodely.example", tier: "Gold", description: "Graph hosting." }],
+  people: [{ name: "Ada Graph", title: "CTO", company: "Nodely", bio: "Builds graph systems.", links: ["https://nodely.example/ada"] }],
+  companies: [{ name: "Nodely", website: "https://nodely.example", description: "Graph hosting.", sponsorTier: "Gold", booth: "B12", hall: "West", topics: ["graph databases"] }],
+};
+const spanDays = {
+  conference: { name: "Span Days 2026", startDate: "2026-12-01", endDate: "", city: "London", ...blankConf },
+  sessions: [
+    { title: "Opening day", abstract: "", kind: "keynote", start: "2026-12-01T10:00:00+00:00", end: "2026-12-01T11:00:00+00:00", room: "", url: "", speakers: [], topics: ["opening"] },
+    { title: "Closing day", abstract: "", kind: "talk", start: "2026-12-03T15:00:00+00:00", end: "2026-12-03T16:00:00+00:00", room: "", url: "", speakers: [], topics: ["closing"] },
+  ],
+  people: [],
+  companies: [],
+};
+const nameOnly = {
+  conference: { name: "Name Only Expo 2026", startDate: "2026-12-04", endDate: "2026-12-04", city: "London", ...blankConf },
+  sessions: [
+    { title: "Welcome", abstract: "", kind: "keynote", start: "2026-12-04T09:00:00+00:00", end: "2026-12-04T09:30:00+00:00", room: "", url: "", speakers: [], topics: ["welcome"] },
+  ],
+  people: [],
+  companies: [
+    { name: "Found Co", website: "", description: "", sponsorTier: "Gold", booth: "", hall: "", topics: [] },
+    { name: "Ghost Co", website: "", description: "", sponsorTier: "", booth: "", hall: "", topics: [] },
+    { name: "Loopback Labs", website: "http://127.0.0.1/", description: "", sponsorTier: "", booth: "", hall: "", topics: [] },
+  ],
 };
 
 vi.mock("@/lib/llm", async (orig) =>
@@ -60,7 +92,12 @@ vi.mock("@/lib/llm", async (orig) =>
       const company = user.match(/^Company: (.+)$/m)?.[1] ?? "?";
       return { known: true, description: `${company} builds cloud infrastructure for platform teams.`, topics: ["Kubernetes Security", "observability"] };
     }
-    if (name === "conference") return generic;
+    if (name === "conference") {
+      if (user.includes("SPAN DAYS")) return spanDays;
+      if (user.includes("NAME ONLY SPONSORS")) return nameOnly;
+      if (user.includes("CAP PAGES")) return { ...generic, conference: { ...generic.conference, name: "Cap Pages 2026" } };
+      return generic;
+    }
     if (name === "timezone") return { timezone: "America/Denver" };
     throw new Error(`unexpected structured() call ${name}`);
   }),
@@ -89,6 +126,23 @@ beforeAll(async () => {
   for (const site of ["https://www.anthropic.com/", "https://aws.amazon.com/", "https://www.datadoghq.com/"]) net.unlock.set(site, `# ${site}\n${"We build cloud infrastructure for platform teams. ".repeat(12)}`);
   net.unlock.set("https://graphsummit.example/", "# Graph Summit 2026\n[Agenda](https://graphsummit.example/agenda)\n");
   net.unlock.set("https://graphsummit.example/agenda", "## 10:00 Graphs for agent memory");
+  net.unlock.set("https://span.example/", "# SPAN DAYS\n");
+  net.unlock.set("https://nameonly.example/", "# NAME ONLY SPONSORS\n");
+  net.unlock.set("https://found.example/", `# Found Co\n${"We build cloud infrastructure for platform teams. ".repeat(12)}`);
+  net.serp.set("Found Co", [{ title: "Found Co", link: "https://found.example/", description: "Found builds storage." }]);
+  net.serp.set("Ghost Co", [{ title: "internal", link: "http://10.1.1.1/secret", description: "no" }]);
+  const capLinks = Array.from({ length: 8 }, (_, i) => `[a](https://cap.example/agenda/${"p".repeat(i + 1)})`).join("\n");
+  net.unlock.set("https://cap.example/start", `# CAP PAGES\n${capLinks}\n`);
+  for (let i = 1; i <= 8; i++) net.unlock.set(`https://cap.example/agenda/${"p".repeat(i)}`, "session list");
+  net.http.set("https://sponsors26.sched.com/", `<h3 class="sponsors-logos--header">Gold</h3><a href="https://schedco.example/" title="Go to Sched Co"><img alt="Sched Co logo" /></a>`);
+  net.http.set("https://sponsors26.sched.com/all.ics", [
+    "BEGIN:VCALENDAR", "X-WR-CALNAME:sponsors26", "BEGIN:VEVENT", "DTSTART:20261203T170000Z", "DTEND:20261203T173000Z",
+    "SUMMARY:Sponsor keynote", "CATEGORIES:KEYNOTES", "LOCATION:Hall A\\, Austin\\, TX\\, USA", "UID:sp1", "END:VEVENT", "END:VCALENDAR",
+  ].join("\r\n"));
+  net.http.set("https://query26.sched.com/all.ics", [
+    "BEGIN:VCALENDAR", "X-WR-CALNAME:query26", "BEGIN:VEVENT", "DTSTART:20261203T170000Z", "DTEND:20261203T173000Z",
+    "SUMMARY:Query keynote", "CATEGORIES:KEYNOTES", "LOCATION:Hall A\\, Austin\\, TX\\, USA", "UID:q1", "END:VEVENT", "END:VCALENDAR",
+  ].join("\r\n"));
   net.http.set("https://demo26.sched.com/all.ics", [
     "BEGIN:VCALENDAR", "X-WR-CALNAME:demo26", "BEGIN:VEVENT", "DTSTART:20261203T170000Z", "DTEND:20261203T173000Z",
     "SUMMARY:Keynote: Opening", "CATEGORIES:KEYNOTES", "LOCATION:Hall A\\, Austin\\, TX\\, USA", "UID:abc123", "END:VEVENT",
@@ -153,8 +207,98 @@ describe("POST /api/conferences (other paths)", () => {
     expect(body.counts).toMatchObject({ sessions: 1, people: 1 });
     expect(net.calls).toContain("unlock https://graphsummit.example/agenda");
     const { body: d } = await detail("graph-summit-2026");
-    expect(d.sessions[0]).toMatchObject({ title: "Graphs for agent memory", start: "2026-12-03T10:00:00+00:00", end: "2026-12-03T10:30:00+00:00" });
+    expect(d.sessions[0]).toMatchObject({ title: "Graphs for agent memory", start: "2026-12-03T10:00:00+00:00", end: "2026-12-03T10:30:00+00:00", url: "https://graphsummit.example/agenda#memory" });
     expect(d.sessions[0].speakers[0]).toMatchObject({ id: "ada-graph@nodely", company: "Nodely" });
+    expect(d.booths).toEqual([expect.objectContaining({ label: "B12", hall: "West", companyId: "nodely.example" })]);
+    expect(d.sponsors?.find((s) => s.name === "Nodely")?.topics).toContain("graph databases");
+    const [person] = await q<{ bio: string | null; links: string[] | null }>(`MATCH (p:Person {id:'ada-graph@nodely'}) RETURN p.bio AS bio, p.links AS links`);
+    expect(person.bio).toBe("Builds graph systems.");
+    expect(person.links).toContain("https://nodely.example/ada");
+  });
+
+  it("caps generic follow-up pages at five even when SCOUT_EXTRA_PAGES is higher", async () => {
+    const prev = process.env.SCOUT_EXTRA_PAGES;
+    process.env.SCOUT_EXTRA_PAGES = "20";
+    try {
+      const { status, body } = await post({ url: "https://cap.example/start" });
+      expect(status, body.error).toBe(200);
+      const followed = net.calls.filter((c) => c.startsWith("unlock https://cap.example/agenda/"));
+      expect(followed).toHaveLength(5);
+      expect(net.calls.filter((c) => c.startsWith("unlock https://cap.example/"))).toHaveLength(6);
+    } finally {
+      if (prev === undefined) delete process.env.SCOUT_EXTRA_PAGES;
+      else process.env.SCOUT_EXTRA_PAGES = prev;
+    }
+  });
+
+  it("uses the last session day when a generic import has no end date", async () => {
+    const { status, body } = await post({ url: "https://span.example/" });
+    expect(status, body.error).toBe(200);
+    expect(body.conference).toMatchObject({ id: "span-days-2026", startDate: "2026-12-01", endDate: "2026-12-03" });
+  });
+
+  it("searches name-only sponsors and stores a skip reason when search has no public url", async () => {
+    const { status, body } = await post({ url: "https://nameonly.example/" });
+    expect(status, body.error).toBe(200);
+    expect(net.calls.some((c) => c.startsWith("serp ") && c.includes("Found Co"))).toBe(true);
+    expect(net.calls.some((c) => c.startsWith("serp ") && c.includes("Ghost Co"))).toBe(true);
+    expect(net.calls).toContain("unlock https://found.example/");
+    expect(net.calls.some((c) => c.includes("127.0.0.1") || c.includes("10.1.1.1"))).toBe(false);
+    const { body: d } = await detail("name-only-expo-2026");
+    expect(d.sponsors?.find((s) => s.name === "Found Co")).toMatchObject({ id: "found.example", website: "https://found.example/", via: "unlocker", description: "Found Co builds cloud infrastructure for platform teams." });
+    const rows = await q<{ id: string; skip: string | null; website: string | null }>(
+      `MATCH (co:Company)-[:SPONSORS]->(:Conference {id:'name-only-expo-2026'}) RETURN co.id AS id, co.enrichSkip AS skip, co.website AS website`,
+    );
+    expect(rows.find((r) => r.id === "ghost-co")).toMatchObject({ skip: "no website; search returned no public url", website: null });
+    expect(rows.find((r) => r.id === "loopback-labs")?.skip).toBe("website is not a public http(s) url");
+    expect(rows.find((r) => r.id === "loopback-labs")?.website ?? null).toBeNull();
+  });
+
+  it("reads sponsors from a direct sched.com page", async () => {
+    const { status, body } = await post({ url: "https://sponsors26.sched.com/" });
+    expect(status, body.error).toBe(200);
+    expect(body.counts.companies).toBe(1);
+    const { body: d } = await detail(body.conference.id);
+    expect(d.sponsors?.map((s) => s.name)).toEqual(["Sched Co"]);
+  });
+
+  it("treats slash and non-slash query urls as the same import", async () => {
+    expect(urlVariants("https://query26.sched.com/list?year=2026")).toContain("https://query26.sched.com/list/?year=2026");
+    expect(urlVariants("https://query26.sched.com/list/?year=2026")).toContain("https://query26.sched.com/list?year=2026");
+    expect(urlVariants("https://query26.sched.com/list?year=2026").some((u) => u.includes("year=2026/"))).toBe(false);
+    const first = await post({ url: "https://query26.sched.com/list?year=2026" });
+    expect(first.status, first.body.error).toBe(200);
+    expect(first.body.cached).toBe(false);
+    net.calls.length = 0;
+    const second = await post({ url: "https://query26.sched.com/list/?year=2026" });
+    expect(second.status, second.body.error).toBe(200);
+    expect(second.body).toMatchObject({ cached: true, conference: { id: first.body.conference.id } });
+    expect(net.calls).toEqual([]);
+  });
+
+  it("rejects internal and non-http urls before any fetch", async () => {
+    const urls = [
+      "http://127.0.0.1/secret",
+      "http://localhost/admin",
+      "http://10.1.2.3/x",
+      "http://192.168.1.9/",
+      "http://172.16.0.5/",
+      "http://169.254.169.254/latest",
+      "http://[::1]/",
+      "http://[fd00::1]/",
+      "http://[fe80::1]/",
+      "http://0.0.0.0/",
+      "http://metadata.google.internal/computeMetadata/v1/",
+      "http://printer.local/",
+      "file:///etc/passwd",
+      "ftp://example.com/feed",
+    ];
+    for (const url of urls) {
+      net.calls.length = 0;
+      const { status, body } = await post({ url });
+      expect(status, `${url} ${body.error}`).toBe(422);
+      expect(net.calls, url).toEqual([]);
+    }
   });
 
   it("sched.com: reads the public .ics feed in the venue timezone", async () => {
