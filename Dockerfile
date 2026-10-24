@@ -11,6 +11,9 @@ WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# Demo clock baked into the client bundle (fly.toml [build.args]); the server side reads DEMO_NOW at runtime.
+ARG NEXT_PUBLIC_DEMO_NOW
+ENV NEXT_PUBLIC_DEMO_NOW=$NEXT_PUBLIC_DEMO_NOW
 # Lint is not a deploy gate; types are still checked by next build and CI.
 RUN npx next build --no-lint
 

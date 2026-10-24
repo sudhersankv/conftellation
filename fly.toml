@@ -4,6 +4,10 @@ primary_region = "sjc"
 [build]
   dockerfile = "Dockerfile"
 
+[build.args]
+  # Client-side demo clock; must match the DEMO_NOW secret. `?now=off` in the URL disables it per tab.
+  NEXT_PUBLIC_DEMO_NOW = "2026-10-24T13:05:00-07:00"
+
 [env]
   PORT = "3001"
   HOSTNAME = "0.0.0.0"

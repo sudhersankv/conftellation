@@ -9,6 +9,7 @@ export const initials = (name: string) => name.split(/\s+/).map((w) => w[0]).joi
 
 const ID = /^[a-z0-9-]{1,80}$/i;
 const NOW_KEY = "ptc_now";
+const DEFAULT_NOW = process.env.NEXT_PUBLIC_DEMO_NOW && !Number.isNaN(Date.parse(process.env.NEXT_PUBLIC_DEMO_NOW)) ? process.env.NEXT_PUBLIC_DEMO_NOW : undefined;
 const writeCookie = (k: string, v: string) => { document.cookie = `${k}=${encodeURIComponent(v)}; path=/; max-age=31536000; samesite=lax`; };
 
 interface Session {
@@ -29,15 +30,17 @@ const Ctx = createContext<Session>({
 export function SessionProvider({ initialUserId, initialConfId, children }: { initialUserId?: string; initialConfId?: string; children: ReactNode }) {
   const [userId, setU] = useState(initialUserId && ID.test(initialUserId) ? initialUserId : "sam");
   const [confId, setC] = useState(initialConfId && ID.test(initialConfId) ? initialConfId : "ptc-2026");
-  const [nowOverride, setNowOverride] = useState<string | undefined>();
+  // Demo clock: NEXT_PUBLIC_DEMO_NOW (build-time, matches the server's DEMO_NOW) unless `?now=` overrides or `?now=off` clears it.
+  const [nowOverride, setNowOverride] = useState<string | undefined>(DEFAULT_NOW);
   useEffect(() => {
     try {
       const raw = new URLSearchParams(window.location.search).get("now");
-      if (raw === "off" || raw === "") { sessionStorage.removeItem(NOW_KEY); return; }
+      if (raw === "off" || raw === "") { sessionStorage.setItem(NOW_KEY, "off"); setNowOverride(undefined); return; }
       const v = raw?.replace(/ /g, "+"); // a literal "+07:00" arrives as a space
       if (v && !Number.isNaN(Date.parse(v))) { sessionStorage.setItem(NOW_KEY, v); setNowOverride(v); return; }
       const saved = sessionStorage.getItem(NOW_KEY);
-      if (saved) setNowOverride(saved);
+      if (saved === "off") setNowOverride(undefined);
+      else if (saved) setNowOverride(saved);
     } catch { /* storage blocked */ }
   }, []);
   const setUserId = useCallback((id: string) => { if (!ID.test(id)) return; writeCookie("ptc_user", id); setU(id); }, []);
