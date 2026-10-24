@@ -225,3 +225,14 @@ export const ask: import("@/lib/types").AskResponse = {
   lines: [{ text: "Acme Trace (Booth 14) offers agent tracing, your team's problem; you met Mike there at lunch.", pathId: "p2" }],
   paths: [pBoothAcme],
 };
+
+export const conferences: import("@/lib/types").ConferencesResponse = {
+  upcoming: [
+    { conference: { id: "kubecon-cloudnativecon-north-america-2026", name: "KubeCon + CloudNativeCon North America 2026", url: "https://events.linuxfoundation.org/kubecon-cloudnativecon-north-america", startDate: "2026-11-09", endDate: "2026-11-12", city: "Salt Lake City", timezone: "America/Denver", source: "https://sessionize.com/api/v2/svi82w6c/view/All", collectedAt: "2026-10-24T18:00:00Z", via: "sessionize" }, counts: { sessions: 574, people: 701, companies: 242, booths: 0 }, attendees: 3, attending: false, status: "upcoming" },
+    { conference: { id: "github-universe-2026", name: "GitHub Universe 2026", url: "https://githubuniverse.com", startDate: "2026-10-27", endDate: "2026-10-30", city: "San Francisco", source: "https://reg.githubuniverse.com/flow/github/universe26/attendee-portal/page/sessioncatalog", collectedAt: "2026-10-24T18:00:00Z", via: "rainfocus" }, counts: { sessions: 157, people: 183, companies: 54, booths: 1 }, attendees: 1, attending: false, status: "upcoming" },
+  ],
+  past: [
+    { conference: conferenceDetail.conference, counts: { sessions: 13, people: 12, companies: 7, booths: 7 }, attendees: 16, attending: true, status: "live" },
+    { conference: { id: "ai-eng-summit-2026", name: "AI Engineer Summit", url: "https://www.ai.engineer", startDate: "2026-06-03", endDate: "2026-06-05", city: "San Francisco" }, counts: { sessions: 6, people: 5, companies: 2, booths: 0 }, attendees: 2, attending: true, status: "past" },
+  ],
+};

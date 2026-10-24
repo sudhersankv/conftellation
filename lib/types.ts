@@ -67,7 +67,8 @@ export interface Person extends Partial<Provenance> {
   company?: string;
   companyId?: string;
   bio?: string;
-  links?: string[];
+  links?: string[]; // public profile links from the conference site (LinkedIn, X, GitHub, site)
+  photoUrl?: string; // public speaker photo from the conference site
   userId?: string; // set if this person is also a Conftellations user
   openTo?: OpenTo[];
 }
@@ -344,3 +345,17 @@ export interface ApiError { error: string }
 export interface AskRequest { confId: string; question: string }
 /** Every answer line cites a path in `paths` (same mechanism as the brief). `lines` empty → `summary` says what the graph had nothing on. */
 export interface AskResponse { question: string; lines: BriefLine[]; paths: WhyPath[]; summary?: string }
+
+// ---------- Conference catalogue (pre-scraped; users pick one and join) ----------
+
+export interface ConferenceSummary {
+  conference: Conference;
+  counts: { sessions: number; people: number; companies: number; booths: number };
+  attendees: number; // users attending
+  attending: boolean; // the requesting user attends (has onboarded)
+  status: "upcoming" | "live" | "past"; // relative to the demo clock / now
+}
+/** GET /api/conferences?userId= */
+export interface ConferencesResponse { upcoming: ConferenceSummary[]; past: ConferenceSummary[] }
+/** POST /api/conferences accepts a URL or a plain conference name (Scout searches for the schedule page). */
+export interface AddConferenceRequestV2 { url?: string; name?: string }

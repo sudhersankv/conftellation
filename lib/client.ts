@@ -4,7 +4,7 @@ import type {
   AddConferenceResponse, BriefResponse, CommunityResponse, ConferenceDetail, ConstellationResponse,
   CreateMomentResponse, FeedbackRequest, IntrosResponse, MeetRequest, MeetRequestBody, MeetRespondBody,
   Moment, NetworkResponse, OnboardingRequest, OnboardingResponse, PlanResponse, RecordResponse,
-  SearchResponse, SteerResponse, TripReportResponse, CreateMomentFields, PersonDetail, SteerOp, AskResponse,
+  SearchResponse, SteerResponse, TripReportResponse, CreateMomentFields, PersonDetail, SteerOp, AskResponse, ConferencesResponse,
 } from "@/lib/types";
 
 /** Append the demo access query required by GET /api/uploads/:file. Private media needs the owner's userId; shared media may use momentId. */
@@ -50,7 +50,10 @@ const q = (params: Record<string, string | undefined>) => {
 };
 
 export const api = {
-  addConference: (url: string) => call<AddConferenceResponse>("/api/conferences", post({ url })),
+  /** `input` may be a URL or a conference name (Scout searches for the schedule page). */
+  addConference: (input: string) => call<AddConferenceResponse>("/api/conferences", post(/^https?:\/\//i.test(input.trim()) ? { url: input.trim() } : { name: input.trim() })),
+  /** Catalogue of every imported conference, split by date. */
+  conferences: (userId?: string) => call<ConferencesResponse>(`/api/conferences${q({ userId })}`),
   conference: (id: string) => call<ConferenceDetail>(`/api/conferences/${encodeURIComponent(id)}`),
   onboarding: (userId: string, body: OnboardingRequest) => call<OnboardingResponse>(`/api/users/${userId}/onboarding`, post(body)),
   plan: (userId: string, confId: string, opts: { now?: string } = {}) => call<PlanResponse>(`/api/users/${userId}/plan${q({ confId, now: opts.now })}`),

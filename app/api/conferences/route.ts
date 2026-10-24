@@ -2,10 +2,15 @@
 import * as mocks from "@/mocks";
 import { error, handle, json, useMocks } from "@/lib/http";
 import { BadInput, importConference } from "@/lib/agents/scout";
-import type { AddConferenceRequest, AddConferenceResponse } from "@/lib/types";
+import type { AddConferenceRequest, AddConferenceResponse, ConferencesResponse } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
+
+// GET /api/conferences?userId= — catalogue of imported conferences. STUB until the catalogue query lands: returns the mock.
+export async function GET() {
+  return json<ConferencesResponse>(mocks.conferences);
+}
 
 export const POST = handle(async (req: Request) => {
   if (useMocks()) return json<AddConferenceResponse>(mocks.addConference);
