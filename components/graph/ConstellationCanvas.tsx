@@ -126,17 +126,17 @@ export function ConstellationCanvas({ nodes, links, width, height, highlight, re
   useEffect(() => {
     const g = fg.current;
     if (!g) return;
-    (g.d3Force("charge") as unknown as { strength(v: number): void } | undefined)?.strength(-90);
+    (g.d3Force("charge") as unknown as { strength(v: number): void } | undefined)?.strength(-120);
     (g.d3Force("link") as unknown as { distance(v: number): void; strength(v: number): void } | undefined)?.distance(60);
-    (g.d3Force("link") as unknown as { strength(v: number): void } | undefined)?.strength(0.15);
+    (g.d3Force("link") as unknown as { strength(v: number): void } | undefined)?.strength(0.04);
     g.d3Force("radial", forceRadial<GNode>((n) => ringRadius(n, anchorId), 0, 0)
-      .strength((n) => (n.id === anchorId ? 1 : n.type === "goal" || n.type === "problem" ? 0.7 : n.state === "dust" ? 0.15 : 0.35)) as never);
+      .strength((n) => (n.id === anchorId ? 1 : n.type === "goal" || n.type === "problem" ? 0.9 : n.state === "dust" ? 0.3 : 0.6)) as never);
     // Collide on the label chip half-width (capped) so always-on labels don't stack.
     g.d3Force("collide", forceCollide<GNode>((n) => {
       if (n.state === "dust") return n.r + 4;
       if (ALWAYS_LABEL.has(n.type) || n.id === anchorId) return Math.max(n.r + 14, Math.min(n.labelW / 2, 70));
-      return n.r + 16;
-    }).iterations(2) as never);
+      return n.r + 22;
+    }).iterations(3) as never);
     g.d3ReheatSimulation();
   }, [data, anchorId]);
 
@@ -220,7 +220,11 @@ export function ConstellationCanvas({ nodes, links, width, height, highlight, re
     const padX = 6 / scale, padY = 3 / scale, h = fs + 2 * padY;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    for (const n of data.nodes) {
+    // Greedy de-overlap: anchor, goals and lit nodes claim space first; a chip that would cover one already drawn is skipped.
+    const rank = (n: GNode) => (n.id === anchorId ? 0 : hl.has(n.id) || sel.has(n.id) ? 1 : n.type === "goal" || n.type === "problem" ? 2 : n.type === "conference" ? 3 : 4 + (1 - (n.fit ?? 0.5)));
+    const order = [...data.nodes].sort((a, b) => rank(a) - rank(b));
+    const placed: [number, number, number, number][] = [];
+    for (const n of order) {
       if (n.state === "dust") continue;
       if (rv && !rv.has(n.id)) continue;
       const isAnchor = n.id === anchorId;
@@ -234,6 +238,10 @@ export function ConstellationCanvas({ nodes, links, width, height, highlight, re
       ctx.font = `${weight} ${fs}px ${FONT}`;
       const w = ctx.measureText(n.text).width + 2 * padX;
       const x = n.x ?? 0, y = (n.y ?? 0) + n.r + 4 / scale + h / 2;
+      const box: [number, number, number, number] = [x - w / 2, y - h / 2, x + w / 2, y + h / 2];
+      const m = 2 / scale;
+      if (!always && placed.some((b) => box[0] < b[2] + m && box[2] > b[0] - m && box[1] < b[3] + m && box[3] > b[1] - m)) continue;
+      placed.push(box);
       roundRect(ctx, x - w / 2, y - h / 2, w, h, 5 / scale);
       ctx.fillStyle = isGoal || isAnchor ? rgba(lit ? YELLOW : PAPER, alpha) : rgba(lit ? YELLOW : PAPER, alpha * 0.96);
       ctx.fill();
