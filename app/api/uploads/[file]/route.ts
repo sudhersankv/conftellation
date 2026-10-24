@@ -1,6 +1,6 @@
 // GET /api/uploads/[file] - capture media saved by POST /api/users/:id/moments
-// Demo access: ?userId= and/or ?momentId=. A private moment is readable only by its owner.
-// Shared moments are readable with either param. Responses are not publicly cacheable.
+// Demo access: ?userId= and/or ?momentId=. A private moment is readable by its owner and by
+// users it was shared with (SHARED_WITH). Network-shared moments are readable with either param. Responses are not publicly cacheable.
 import { error, handle } from "@/lib/http";
 import { momentByMedia } from "@/lib/queries/moments";
 import { readUpload, safeName } from "@/lib/uploads";
@@ -16,7 +16,7 @@ export const GET = handle(async (req: Request, { params }: { params: { file: str
   const moment = await momentByMedia(params.file);
   if (!moment) return error("not found", 404);
   if (momentId && moment.id !== momentId) return error("not found", 403);
-  const allowed = moment.shared || userId === moment.userId;
+  const allowed = moment.shared || (!!userId && (userId === moment.userId || (moment.sharedWith ?? []).includes(userId)));
   if (!allowed) return error("not found", 403);
   const f = await readUpload(params.file);
   if (!f) return error("not found", 404);

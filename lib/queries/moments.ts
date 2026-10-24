@@ -196,10 +196,11 @@ function toMoment(r: MomentRow): Moment {
 }
 
 /** Moment that stores this upload filename, if any. */
-export async function momentByMedia(file: string): Promise<{ id: string; userId: string; shared: boolean } | null> {
-  const [r] = await q<{ id: string; userId: string; shared: boolean }>(
+export async function momentByMedia(file: string): Promise<{ id: string; userId: string; shared: boolean; sharedWith: string[] } | null> {
+  const [r] = await q<{ id: string; userId: string; shared: boolean; sharedWith: string[] }>(
     `MATCH (m:Moment) WHERE m.mediaUrl ENDS WITH $suffix
-     RETURN m.id AS id, m.userId AS userId, coalesce(m.shared, false) AS shared LIMIT 1`,
+     RETURN m.id AS id, m.userId AS userId, coalesce(m.shared, false) AS shared,
+            [(m)-[:SHARED_WITH]->(o:User) | o.id] AS sharedWith LIMIT 1`,
     { suffix: `/${file}` },
   );
   return r ?? null;

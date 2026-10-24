@@ -116,6 +116,23 @@ describe("POST /api/users/:id/moments", () => {
     expect((await open(`?momentId=${body.moment.id}`)).status).toBe(200);
   });
 
+  it("a photo shared with a user is readable by that user until the share is revoked", async () => {
+    const file = new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 9])], { type: "image/jpeg" });
+    const { status, body } = await capture({ kind: "photo", file, targetId: "s-tracing" });
+    expect(status, body.error).toBe(200);
+    const name = body.moment.mediaUrl!.split("/").pop()!;
+    const open = (qs: string) => getUpload(req(`${body.moment.mediaUrl}${qs}`), { params: { file: name } });
+    expect((await open("?userId=emily")).status).toBe(403);
+    expect((await share(body.moment.id, ["emily"])).status).toBe(200);
+    expect((await open("?userId=emily")).status).toBe(200);
+    expect((await open(`?userId=emily&momentId=${body.moment.id}`)).status).toBe(200);
+    expect((await open("?userId=mike")).status).toBe(403);
+    expect((await open(`?momentId=${body.moment.id}`)).status).toBe(403);
+    expect((await share(body.moment.id, [])).body.shared).toBe(false);
+    expect((await open("?userId=emily")).status).toBe(403);
+    expect((await open("?userId=sam")).status).toBe(200);
+  });
+
   it("a conflicting or retried upload does not replace the original photo", async () => {
     const file = new Blob([new Uint8Array([1, 2, 3, 4])], { type: "image/jpeg" });
     const a = await capture({ kind: "photo", file, clientId: "c-photo-own", targetId: "s-tracing" });
