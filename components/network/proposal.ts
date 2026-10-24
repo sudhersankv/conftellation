@@ -9,13 +9,14 @@ import { fmtDay, fmtRange } from "@/lib/ui/format";
 export type SessionLookup = (id: string) => string | undefined;
 
 /** Session id → title, from the network's shared items first, then the conference schedule (cached). */
-export function useSessionLookup(confId: string, network?: NetworkResponse): SessionLookup {
+export function useSessionLookup(confId: string, network?: NetworkResponse): { title: SessionLookup; end: SessionLookup } {
   const conf = useApi(apiKey("conference", confId), () => api.conference(confId));
   return useMemo(() => {
     const m = new Map<string, string>();
-    conf.data?.sessions.forEach((s) => m.set(s.id, s.title));
+    const ends = new Map<string, string>();
+    conf.data?.sessions.forEach((s) => { m.set(s.id, s.title); ends.set(s.id, s.end); });
     network?.users.forEach((u) => u.shared.forEach((s) => m.set(s.id, s.title)));
-    return (id: string) => m.get(id);
+    return { title: (id: string) => m.get(id), end: (id: string) => ends.get(id) };
   }, [conf.data, network]);
 }
 

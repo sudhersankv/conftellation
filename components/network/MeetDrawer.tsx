@@ -14,7 +14,7 @@ const SELECT = "h-10 w-full rounded-lg border border-border bg-surface px-3 text
  * `target` supplies shared sessions and free slots when known.
  */
 export function MeetDrawer({
-  open, onOpenChange, name, target, counter, onSubmit,
+  open, onOpenChange, name, target, counter, onSubmit, sessionEnd,
 }: {
   open: boolean;
   onOpenChange(open: boolean): void;
@@ -22,8 +22,19 @@ export function MeetDrawer({
   target?: NetworkUser;
   counter?: boolean;
   onSubmit(v: { note: string; proposal: MeetProposal }): Promise<void>;
+  /** Session end time lookup: sessions that already ended cannot be proposed (server rejects past slots). */
+  sessionEnd?: (id: string) => string | undefined;
 }) {
-  const sessions = useMemo(() => (target?.shared ?? []).filter((s) => s.type === "session"), [target]);
+  const sessions = useMemo(() => {
+    const now = Date.now();
+    return (target?.shared ?? []).filter((s) => {
+      if (s.type !== "session") return false;
+      const end = sessionEnd?.(s.id);
+      return !end || Date.parse(end) > now;
+    });
+    // recompute when the drawer opens so "now" is fresh
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target, sessionEnd, open]);
   const slots = target?.freeSlots ?? [];
   const defaultMode: Mode = sessions.length ? "session" : slots.length ? "slot" : "place";
 
@@ -44,6 +55,15 @@ export function MeetDrawer({
     // reset only when opening for a (new) person
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, target?.user.id]);
+
+  // Session end times can arrive after the drawer opened: drop a session that turned out to be over.
+  useEffect(() => {
+    if (!open || mode !== "session" || sessions.some((s) => s.id === sessionId)) return;
+    if (sessions[0]) { setSessionId(sessions[0].id); return; }
+    setMode(slots.length ? "slot" : "place");
+    setNote((n) => (n.startsWith("Catch up after ") ? "Quick coffee?" : n));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessions, open]);
 
   useEffect(() => {
     if (!open || counter) return;

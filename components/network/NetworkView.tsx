@@ -25,7 +25,8 @@ export function NetworkView() {
   const params = useSearchParams();
   const net = useApi(apiKey("network", userId, confId), () => api.network(userId, confId), { pollMs: 5000 });
   const intros = useApi(apiKey("intros", userId, confId), () => api.intros(userId, confId));
-  const lookup = useSessionLookup(confId, net.data);
+  const sessions = useSessionLookup(confId, net.data);
+  const lookup = sessions.title;
   const [drawer, setDrawer] = useState<DrawerState>(null);
 
   // ?meet=<userId> opens the drawer once the network has loaded.
@@ -164,6 +165,7 @@ export function NetworkView() {
         onOpenChange={closeDrawer}
         name={drawerName}
         target={drawerTarget}
+        sessionEnd={sessions.end}
         counter={drawer?.kind === "counter"}
         onSubmit={async (v) => {
           if (drawer?.kind === "request") await sendRequest(drawer.toUserId, v);
