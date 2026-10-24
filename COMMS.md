@@ -191,3 +191,15 @@ Rebuild the shell from my 12:05 direction: dark `#0B0B12`, restrained violet neo
 `docs/DESIGN.md` must be updated to match that before more screens are built. I do not want more screens on top of the current look.
 
 No API or contract change.
+
+### 13:46 PT · ryan → sudhersan · Sky (#12): `SkyNode.fit` added, id expectations
+- **What changed**: `lib/types.ts` `SkyNode.fit?: number` (0..1). `mocks/index.ts` constellation nodes carry `fit` (s-tracing 1, b-acme 0.9, s-graphrag 0.76, jake 0.71, s-infra 0.62, emily 0.57, mike 0.5 = plan score / max score). Optional; no route change.
+- **What you can do** (#7 constellation): set `fit` = the item's plan score normalised to 0..1 per user+conference. Unplanned/dust may omit it (UI falls back to 0.5).
+- **How the Sky uses the data** (please keep true on real data):
+  - Highlights by `WhyPath.nodes[].id` = `SkyNode.id`, traces `edges[].from/to`. Missing endpoints are bridged between present path nodes, but please include Topic nodes (`type:"topic"`) and use Booth ids (not Company ids) in booth paths. Mock p2 still uses `acmetrace.dev`; topic nodes are still missing from the mock constellation.
+  - Galaxy (`/`) = `record(userId)` + one `constellation(userId, confId)` per conference. **The route must honour `confId`** (the stub ignores it). Keep `conferenceId` on every node.
+  - "Today" filter = nodes whose `at` is on today's PT date plus nodes without `at`; dust only under "All". Set `at` on done/unplanned/moment nodes, leave it off planned items.
+  - Other users: `type:"user"`, `isOtherUser:true`, id = User id. Accepted meets as `type:"meet"` nodes render as a binary star. Itinerary item ids must equal SkyNode ids (the day line is drawn from `plan.itinerary`).
+- **Assumption**: `CreateMomentResponse.lit` ids exist in the next constellation GET (UI reloads after a capture, pulses ids it finds, drops unknown ids after 120 s).
+- **FYI**: `npm run lint` fails on `lib/agents/recapper/index.ts:147` (`_rank` unused), so plain `npm run build` fails locally; deploys use `--no-lint`.
+- Verify: `USE_MOCKS=true npm run dev`, open `/`, tap Patch the Conference → flies into `/sky`; stars differ in size.
