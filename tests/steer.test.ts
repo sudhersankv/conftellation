@@ -190,6 +190,19 @@ describe("POST /api/users/:id/onboarding", () => {
     expect(p.itinerary.every((s) => s.to <= T("16:00"))).toBe(true);
   });
 
+  it("does not let add_goal adopt another user's goal id", async () => {
+    const [before] = await q<{ text: string; w: number }>(`MATCH (g:Goal {id:'g-role'}) RETURN g.text AS text, g.weight AS w`);
+    const { status, body } = await steer({
+      ops: [{ op: "add_goal", text: "stolen goal", kind: "learn", goalId: "g-role", weight: 0.2, topics: ["hiring"] }],
+    }, "emily");
+    expect(status).toBe(200);
+    expect(body.ops).toEqual([]);
+    const [after] = await q<{ text: string; w: number }>(`MATCH (g:Goal {id:'g-role'}) RETURN g.text AS text, g.weight AS w`);
+    expect(after).toEqual(before);
+    const [link] = await q<{ n: number }>(`MATCH (:User {id:'emily'})-[:HAS_GOAL]->(:Goal {id:'g-role'}) RETURN count(*) AS n`);
+    expect(link.n).toBe(0);
+  });
+
   it("does not merge person ids when user ids slug the same", async () => {
     expect(attendeePersonId("Alex Kim", "alex-kim")).not.toBe(attendeePersonId("Alex Kim", "alex kim"));
     expect(attendeePersonId("Alex Kim", "alex kim")).toContain("alex%20kim");

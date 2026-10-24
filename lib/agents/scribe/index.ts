@@ -62,10 +62,6 @@ export async function capture(input: CaptureInput): Promise<CreateMomentResponse
   const { userId, confId, kind } = input;
   const nowIso = isoInZone(new Date(input.now ?? Date.now()), PT);
   const text = input.text?.trim() || null;
-  if (kind === "met" && !input.personId && !input.newPersonName?.trim()) throw new ScribeError("met needs personId or newPersonName");
-  if ((kind === "note" || kind === "voice") && !text && !input.mediaUrl) throw new ScribeError(`${kind} needs text`);
-  if (kind === "photo" && !input.mediaUrl) throw new ScribeError("photo needs a file");
-
   const id = input.momentId ?? newMomentId();
   const [exists, existing] = await Promise.all([
     userExists(userId),
@@ -76,6 +72,9 @@ export async function capture(input: CaptureInput): Promise<CreateMomentResponse
     if (existing.userId !== userId || existing.conferenceId !== confId) throw new ScribeError(`moment ${id} belongs to another capture`, 409);
     return storedMoment(userId, id);
   }
+  if (kind === "met" && !input.personId && !input.newPersonName?.trim()) throw new ScribeError("met needs personId or newPersonName");
+  if ((kind === "note" || kind === "voice") && !text && !input.mediaUrl) throw new ScribeError(`${kind} needs text`);
+  if (kind === "photo" && !input.mediaUrl) throw new ScribeError("photo needs a file");
 
   const [explicit, confTopics, knownPerson] = await Promise.all([
     input.targetId ? targetById(input.targetId) : Promise.resolve(null),

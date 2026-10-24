@@ -14,7 +14,8 @@ export function parseLine(raw: string, validIds: ReadonlySet<string>): BriefLine
   // A citation in the middle must not let more words through ("Fact [p1]. Invented sentence.").
   if (/[A-Za-z0-9]/.test(after)) return null;
   const stripped = raw.replace(CITE, " ");
-  const sentences = stripped.split(/[.!?]+/).map((s) => s.replace(/[^A-Za-z0-9]+/g, "")).filter(Boolean);
+  // Terminal punctuation only: "Next.js" and "v2.0" stay one sentence; "Fact. Invented" does not.
+  const sentences = stripped.split(/[.!?]+(?=\s+[A-Z0-9]|$)/).map((s) => s.replace(/[^A-Za-z0-9]+/g, "")).filter(Boolean);
   if (sentences.length !== 1) return null;
   const text = raw.replace(CITE, "").replace(/\s+([.,;:!?])/g, "$1").replace(/\s+/g, " ").trim();
   return text ? { text, pathId: ids[ids.length - 1] } : null;
