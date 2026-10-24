@@ -1,5 +1,7 @@
 # Conftellations demo: flow + script
 
+**The one idea to repeat:** every conference gets its own **conf brain** (a conftellation): what you planned, what you did, who you met, what you learned, all one graph. The app is a window onto it: the calendar is the brain as a plan, the Conftellation page is the brain as a trace, the brief is the brain written up, Ask is the brain answering, and your record is every brain you have ever built.
+
 Two recordings: **PC (3:30)** for the full story, **Phone (1:00)** for capture + the two-phone meet. Live app: https://conftellations.fly.dev. Demo clock is pinned to 13:05 PT on Oct 24, so the plan, graph and captures agree no matter when you record.
 
 ## Before you hit record
@@ -31,11 +33,11 @@ Two recordings: **PC (3:30)** for the full story, **Phone (1:00)** for capture +
 ## PC recording (3:30)
 
 **0:00 Pain (20 s)** — on the Conferences page, don't click yet.
-> "Every conference ends the same way: a camera roll of slides, a pocket of badges, and a trip report due Monday. Every event's app is different, locked to that one event, and forgets you when it's over. Conftellations is an attendee-owned conference brain: one graph that grows across every conference you attend."
+> "Every conference ends the same way: a camera roll of slides, a pocket of badges, and a trip report due Monday. Every event's app is different, locked to that one event, and forgets you when it's over. Conftellations gives you a conf brain for each conference you attend: one graph of what you planned, what you did, who you met and what you learned. It's yours, and it carries to the next one."
 
 **0:20 Scout: live web data (35 s)** — `Conferences` in the sidebar.
 - Point at the cards: "Nine real conferences, scraped from their public schedule pages: KubeCon with 591 sessions and 985 speakers, PyTorch, AgntCon. Each card says when it was collected."
-- Type **`PyTorch Conference 2026`** in the box (a name, not a link) → Pull agenda.
+- Type **`PyTorch Conference 2026`** in the box (a name, not a link) → Pull agenda. (It matches the catalogue and returns in a second; to show a real Bright Data search on camera, type a conference that is NOT in the list, e.g. `All Things Open 2026`, and expect 20–60 s.)
 > "You don't even need the URL. Scout searches with Bright Data, finds the schedule page, and reads it into sessions, speakers and sponsors. This one's already in the graph, so it comes back in a second; the first import of KubeCon took about a minute, zero credits, because Scout prefers the platforms' own feeds and only falls back to the Unlocker for plain websites."
 - Click **Open plan** on Patch the Conference.
 
@@ -52,7 +54,7 @@ Two recordings: **PC (3:30)** for the full story, **Phone (1:00)** for capture +
 - Show the proposal panel (−1 session, moves…) → click **Undo** → "and it's reversible."
 
 **2:00 The Conftellation (35 s)** — `Conftellation` in the sidebar (Trace mode).
-> "This is Sam's conference brain for today: goals on top, time left to right, and the thick line is what he actually did. Planned things are outlined; done things are filled."
+> "This is Sam's conf brain for today, the conftellation: goals on top, time left to right, and the thick line is what he actually did. Planned things are outlined; done things are filled. Not a knowledge graph of everything, just his path."
 - Click **Replay day** (let it run ~5 s while you talk).
 - Click **Web** → "the same graph as a web: Sam, his goals, the sessions and people, and the companies that fit his problem. Everything else fades to background."
 - Click the yellow **Fix agent tracing** goal node → drawer shows its neighbours → close.

@@ -143,3 +143,22 @@ export function conferenceStatus(c: Pick<Conference, "startDate" | "endDate" | "
   if (start && start <= today) return "live";
   return "upcoming";
 }
+
+// "Paste a name": a conference already in the catalogue should win over a web search.
+const NAME_STOP = new Set(["conference", "conf", "the", "and", "of", "summit", "con", "event", "events", "schedule", "agenda"]);
+const NAME_ALIAS: Record<string, string[]> = { na: ["north", "america"], eu: ["europe"], us: ["united", "states"], uk: ["united", "kingdom"] };
+function nameTokens(s: string): string[] {
+  return s.toLowerCase().replace(/[+&]/g, " ").replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).filter(Boolean)
+    .flatMap((t) => NAME_ALIAS[t] ?? [t]).filter((t) => !NAME_STOP.has(t));
+}
+/** The catalogue conference whose name contains every significant token of `name` (year must match if given), else null. */
+export async function conferenceByName(name: string): Promise<Conference | null> {
+  const want = nameTokens(name);
+  if (want.length === 0) return null;
+  const rows = await q<ConfRow>(`MATCH (c:Conference) RETURN ${CONF_FIELDS}`);
+  const hits = rows.filter((r) => { const have = new Set(nameTokens(r.name ?? "")); return want.every((t) => have.has(t)); });
+  if (hits.length === 0) return null;
+  // Prefer the closest name (fewest extra tokens), then the latest start date.
+  hits.sort((a, b) => nameTokens(a.name ?? "").length - nameTokens(b.name ?? "").length || String(b.startDate ?? "").localeCompare(String(a.startDate ?? "")));
+  return toConference(hits[0]);
+}

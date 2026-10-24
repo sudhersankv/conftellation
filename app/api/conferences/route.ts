@@ -5,7 +5,7 @@ import * as mocks from "@/mocks";
 import { error, handle, json, useMocks } from "@/lib/http";
 import { BadInput, importConference } from "@/lib/agents/scout";
 import { NotFound, findScheduleUrl } from "@/lib/agents/scout/find";
-import { conferenceCatalogue, conferenceStatus } from "@/lib/queries/conferences";
+import { conferenceByName, conferenceCatalogue, conferenceCounts, conferenceStatus } from "@/lib/queries/conferences";
 import type { AddConferenceRequestV2, AddConferenceResponse, ConferenceSummary, ConferencesResponse } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -41,7 +41,15 @@ export const POST = handle(async (req: Request) => {
   if (!rawUrl && name.length < 3) return error("name is too short to search for", 422);
   let target = rawUrl;
   try {
-    if (!target) target = (await findScheduleUrl(name)).url;
+    if (!target) {
+      // A name that matches a conference already in the catalogue wins over a web search (no credits, no duplicates).
+      const known = await conferenceByName(name);
+      if (known) {
+        console.log(`[scout] "${name}" → catalogue hit ${known.id}`);
+        return json<AddConferenceResponse>({ conference: known, counts: await conferenceCounts(known.id), cached: true });
+      }
+      target = (await findScheduleUrl(name)).url;
+    }
     const r = await importConference(target);
     console.log(`[scout] ${name ? `"${name}" → ` : ""}${target} → ${r.response.conference.id} cached=${r.response.cached} path=${r.path ?? "-"} ${r.ms}ms bd=${r.brightDataRequests}` +
       (r.enrich ? ` enriched=${r.enrich.enriched} failed=${r.enrich.failed.length} skipped=${r.enrich.skipped.length}` : ""));

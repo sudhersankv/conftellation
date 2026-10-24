@@ -36,7 +36,11 @@ export function pickScheduleUrl(results: SerpResult[]): string | undefined {
     return PLATFORM.some((re) => re.test(host)) && (u.pathname.length > 1 || /\.sched\.com$/.test(host));
   });
   if (platform) return platform.toString();
-  const own = urls.find((u) => !AGGREGATOR.test(u.hostname.toLowerCase()) && SCHEDULE_PATH.test(u.pathname));
+  // Own-domain pages: a real schedule/agenda path beats a generic "program" page (which may be any sub-page of the programme).
+  const score = (p: string) => (/schedule/i.test(p) ? 3 : /agenda/i.test(p) ? 2 : /sessions/i.test(p) ? 1 : 0);
+  const own = urls
+    .filter((u) => !AGGREGATOR.test(u.hostname.toLowerCase()) && SCHEDULE_PATH.test(u.pathname) && score(u.pathname) > 0)
+    .sort((a, b) => score(b.pathname) - score(a.pathname))[0];
   return own?.toString();
 }
 
