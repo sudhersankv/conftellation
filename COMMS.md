@@ -250,3 +250,19 @@ Sudhersan decided to rebuild the UI completely. Please stop all UI work and do n
 - ui/overhaul deletes app/(sky)/**, components/sky, components/shell, lib/ui/sky*; keeps session-context, use-api, format, middleware.
 - Four agents are building /, /add, /goals, /me, /plan, /graph, /sessions/[id], /people/[id], /network, /brief in parallel on ui/* branches, merged into ui/overhaul, then one PR to main.
 - Ownership change (CLAUDE.md): UI is now Sudhersan's. Ryan: demo prep (#20), rehearsal, backup video, FalkorDB Browser query, and testing the deployed app on two phones once ui/overhaul lands (~15:45 PT).
+
+### 13:43 PT · sudhersan → ryan · route GET /api/users/:id/constellation is live (#7)
+- **GET** `api.constellation(userId, confId?, { now? })`: real Sky (Q11). Omit `confId` for every conference the user ATTENDS. `?now=<ISO>` (or `DEMO_NOW`) is the same clock as plan/feedback — pass `session.nowIso()`. Unknown user, or a conference with nothing to draw → **200** `{nodes:[], links:[], coverage:[]}`.
+- **Contract, additive:** `SkyNode.fit?: number` (0..1). Planned session/person/booth: plan `score` / best score of that **type** at that conference (top of each type is 1). Goal `fit` is its weight, clamped to 0..1. Unscored stars omit `fit`.
+- Every node on a plan why-path, and on a stored brief/trip path, is in `nodes` with the same id (topics included). `conferenceId` is set on every node except the user anchor and `isOtherUser` stars. States: planned, done, unplanned, skipped, dust, anchor. A check-in shows up as `done` on the next GET. Capture `lit` ids (moment, target, person, goal) are in that response. Other users on your non-dust stars are `type:"user"`, `isOtherUser:true`. Dust ≤300 per conference; whole response ≤800 nodes.
+- **Mocks** (your path/Sky id note): booth path `p2` includes `b-acme`; topic nodes `agent tracing`, `agent memory`, `ai infrastructure`, `hiring` are in the mock sky; goals, problems, moments and persons carry `conferenceId`. `why()` can set the edge type (`SPEAKS_AT` on Jake).
+- **Client:** third arg `{ now?: string }` is optional. `api.constellation(userId, confId)` still works.
+- **Assumption:** `fit` is normalised within a type, not across the whole plan. Path highlight still matches `from`/`to` and ignores direction.
+- **Coordinator:** no reseed for this route. The sky is built on each GET. Brief/trip lines light up only when those Summary nodes exist (the existing `DEMO_MODE=true` seed). Scout's timezone reseed is separate and still stands.
+- Verify: `npx vitest run tests/constellation.test.ts tests/contract.test.ts`. `curl "localhost:3001/api/users/sam/constellation?confId=ptc-2026&now=2026-10-24T13:10:00-07:00"`.
+
+### 13:55 PT · sudhersan → ryan · constellation review fixes (#7)
+- **`SkyNode.conferenceIds?: string[]`** (additive): set only when the same id belongs to more than one attended conference. `conferenceId` stays the primary (newest, unless a stronger state such as `done` came from another). Galaxy fly-in can keep filtering on `conferenceId`; use `conferenceIds` when you want the star in every conference it belongs to.
+- Check-in on a **planned** star sets `state:"done"` on the next GET. A capture after a skip stays visible (`done` or `unplanned`, not `skipped`). Every moment has a `CAPTURED` link from the user, including when it also has `AT` or `MET`. The mock sky's `m2` has that link.
+- `?confId=` must be a conference the user `ATTENDS`; otherwise **200** empty, same as an unknown user. Other-user stars are attendees only. A person skip stores `conferenceId` on the edge and only hides that person in that conference's sky.
+- No reseed. Still built on each GET.

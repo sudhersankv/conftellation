@@ -63,7 +63,7 @@ export const api = {
   /** `userId` is required by the route (demo caller). Omit it and the share is rejected. */
   shareMoment: (momentId: string, to: string[] | "network", userId?: string) =>
     call<Moment>(`/api/moments/${momentId}/share${q({ userId })}`, post(userId ? { to, userId } : { to })),
-  constellation: (userId: string, confId?: string) => call<ConstellationResponse>(`/api/users/${userId}/constellation${q({ confId })}`),
+  constellation: (userId: string, confId?: string, opts: { now?: string } = {}) => call<ConstellationResponse>(`/api/users/${userId}/constellation${q({ confId, now: opts.now })}`),
   brief: (userId: string, confId: string, opts: { date?: string; regenerate?: boolean } = {}) =>
     call<BriefResponse>(`/api/users/${userId}/brief${q({ confId, date: opts.date, regenerate: opts.regenerate ? "1" : undefined })}`),
   tripReport: (userId: string, confId: string, opts: { regenerate?: boolean } = {}) =>

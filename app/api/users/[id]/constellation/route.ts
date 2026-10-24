@@ -1,11 +1,16 @@
-// GET /api/users/[id]/constellation — ?confId= (all conferences if omitted)
-// STUB: returns mocks until the real handler lands (see GitHub issues).
+// GET /api/users/[id]/constellation - ?confId= (all attended conferences if omitted) &now= (ISO; for demos/tests)
 import * as mocks from "@/mocks";
-import { json } from "@/lib/http";
+import { handle, json, useMocks } from "@/lib/http";
+import { buildConstellation } from "@/lib/constellation";
 import type { ConstellationResponse } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  return json<ConstellationResponse>(mocks.constellation);
-}
+export const GET = handle(async (req: Request, { params }: { params: { id: string } }) => {
+  if (useMocks()) return json<ConstellationResponse>(mocks.constellation);
+  const url = new URL(req.url);
+  const sky = await buildConstellation(params.id, url.searchParams.get("confId"), {
+    now: url.searchParams.get("now") ?? process.env.DEMO_NOW ?? undefined,
+  });
+  return json<ConstellationResponse>(sky);
+});
