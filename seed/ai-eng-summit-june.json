@@ -5,7 +5,8 @@
     "url": "https://www.ai.engineer",
     "startDate": "2026-06-03",
     "endDate": "2026-06-05",
-    "city": "San Francisco"
+    "city": "San Francisco",
+    "timezone": "America/Los_Angeles"
   },
   "provenance": { "source": "https://www.ai.engineer", "collectedAt": "2026-06-02T16:00:00Z", "via": "seed" },
   "sessions": [

@@ -171,3 +171,13 @@ Verify on my side: `npm run typecheck`, then every screen against mocks. Reply b
 - Demo user: `?as=emily` (middleware sets cookie `ptc_user`, then drops the param); `ptc_conf` cookie holds the conference id. Client-only; the API still takes `userId` in the URL (assumption 1).
 - Assumption: both routes keep accepting `now` as a query param on GET plan and POST feedback. If you move it into the feedback body, tell me.
 - Verify: `npm run dev`, open `/plan?now=2026-10-24T13:10:00-07:00`, Network tab shows `.../plan?confId=ptc-2026&now=...`.
+
+### 13:40 PT · sudhersan → ryan · route POST /api/conferences is live
+- **POST** `api.addConference(url)`: real Scout. Body `{url}`. `AddConferenceResponse` unchanged (`conference`, `counts`, `cached`). An already-imported URL (http/https, with or without a trailing slash) returns `cached:true` and does not refetch. Missing `{url}` → 400 `{error}`. `not a URL`, no timed agenda, or a Sessionize URL with no public code → 422 `{error}`. `maxDuration` is 300. `USE_MOCKS=true` still returns the mock.
+- **GET** `api.conference(id)` is real too. Unknown id → 404 `{error}`. `ConferenceDetail` gains optional `sponsors?: Company[]` (every sponsor, tier order; enriched rows have `description` and `via:"unlocker"`). Mock includes `sponsors`.
+- **Contract, additive:** `Conference.timezone?: string` (IANA). KubeCon NA 2026 resolves to `America/Denver` (Salt Lake City). Seeded PTC, AI Engineer Summit, and GitHub Universe, plus the PTC mock, are `America/Los_Angeles`. Use this field when it is set. `Via` gains `"web"` (sponsor names taken from the conference site before enrichment). Session `start`/`end` stay ISO with the venue offset.
+- **No UI call-site change** beyond reading `timezone` and `sponsors` when present. `lib/client.ts` already has `addConference` and `conference`.
+- Prewarm cache is in this PR: **26 Bright Data requests** (23 unlocker + 3 SERP), under the cap of 30. 22 LLM memos and 2 plain HTTP pages (KubeCon home, Sessionize All) do not count.
+- **Coordinator, demo graph only** (cache is already warm; do not prewarm): `$env:FALKORDB_GRAPH='conftellations'; $env:CACHE_ONLY='true'; npx tsx scripts/import-conference.ts` — default URL is KubeCon NA. First run `cached=false`, id `kubecon-cloudnativecon-north-america-2026`, Bright Data requests=0. A second run is `cached=true`. Seeded PTC / June / GitHub Universe pick up `timezone` only after a reseed; this import does not reseed them.
+- **Assumption:** onboarding still creates `ATTENDS`. Scout does not. This import does not touch the demo graph until that command runs.
+- Verify: `npx vitest run tests/scout.test.ts`.

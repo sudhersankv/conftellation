@@ -24,13 +24,18 @@ export async function embed(texts: string[]): Promise<number[][]> {
   if (texts.length === 0) return [];
   if (isFakeEmbed()) return texts.map(fakeEmbed);
   const model = process.env.OPENAI_EMBED_MODEL ?? "text-embedding-3-small";
-  const out: number[][] = [];
-  for (let i = 0; i < texts.length; i += BATCH) {
-    const batch = texts.slice(i, i + BATCH).map((t) => t.slice(0, 8000) || " ");
-    const res = await openai().embeddings.create({ model, input: batch });
-    out.push(...res.data.sort((a, b) => a.index - b.index).map((d) => d.embedding));
-  }
-  return out;
+  const batches: string[][] = [];
+  for (let i = 0; i < texts.length; i += BATCH) batches.push(texts.slice(i, i + BATCH).map((t) => t.slice(0, 8000) || " "));
+  const out: number[][][] = new Array(batches.length);
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(4, batches.length) }, async () => {
+    while (next < batches.length) {
+      const i = next++;
+      const res = await openai().embeddings.create({ model, input: batches[i] });
+      out[i] = res.data.sort((a, b) => a.index - b.index).map((d) => d.embedding);
+    }
+  }));
+  return out.flat();
 }
 
 export async function embedOne(text: string): Promise<number[]> {

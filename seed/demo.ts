@@ -23,7 +23,7 @@ export function loadGithubUniverse(): NormalizedConference {
   const exhibitors = readJson<RainFocusExhibitor[]>("raw/github-universe-2026-sponsors.json");
   const dates = sessions.flatMap((s) => s.times?.map((t) => t.utcStartTime.slice(0, 10).replace(/\//g, "-")) ?? []).sort();
   return rainfocusToNormalized({
-    conference: { id: "github-universe-2026", name: "GitHub Universe 2026", url: "https://githubuniverse.com", startDate: dates[0], endDate: dates[dates.length - 1], city: "San Francisco" },
+    conference: { id: "github-universe-2026", name: "GitHub Universe 2026", url: "https://githubuniverse.com", startDate: dates[0], endDate: dates[dates.length - 1], city: "San Francisco", timezone: "America/Los_Angeles" },
     sessions, exhibitors,
     source: "https://reg.githubuniverse.com/flow/github/universe26/attendee-portal/page/sessioncatalog",
     collectedAt: "2026-10-24T18:40:00Z",

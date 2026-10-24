@@ -1,0 +1,1791 @@
+{
+ "sessions": [
+  {
+   "id": "1302801",
+   "title": "Welcome + Opening Remarks",
+   "description": "",
+   "startsAt": "2026-11-10T09:00:00",
+   "endsAt": "2026-11-10T09:30:00",
+   "isServiceSession": false,
+   "isPlenumSession": false,
+   "speakers": [
+    "3e2472c2-8a1d-439b-9b13-030a77759ec9",
+    "a6af85ee-7f4c-44a8-82ba-54cca2777fad",
+    "a056f172-84b3-43ad-ab16-91d76db59966",
+    "7ba0e0db-b8be-4a8d-a88e-b410b88ec162",
+    "7e943a2f-806d-4213-b155-0558f77e184d"
+   ],
+   "categoryItems": [
+    496573
+   ],
+   "questionAnswers": [
+    {
+     "questionId": 142725,
+     "answerValue": "Jonathan Bryce, Chris Aniszczyk"
+    }
+   ],
+   "roomId": 82947,
+   "liveUrl": null,
+   "recordingUrl": null,
+   "status": "Accepted",
+   "isInformed": true,
+   "isConfirmed": false
+  },
+  {
+   "id": "1349401",
+   "title": "Pods in the Wild: Reinforcement Learning on Kubernetes with OpenRL",
+   "description": "What do wild dolphins, open-weight Gemma models, and Kubernetes have in common?\r\n\r\nPods, of course! \r\n\r\nBy training DolphinGemma on decades of marine acoustic data, researchers are actively decoding dolphin communication. This reflects a broader industry shift: transformative AI pairs domain-specifi",
+   "startsAt": "2026-11-10T09:32:00",
+   "endsAt": "2026-11-10T09:40:00",
+   "isServiceSession": false,
+   "isPlenumSession": false,
+   "speakers": [
+    "01baf53b-c05d-4a69-aff6-b2accebc9c51",
+    "e3175872-2944-4e2b-bd15-e5e53f335565"
+   ],
+   "categoryItems": [
+    496573
+   ],
+   "questionAnswers": [],
+   "roomId": 82947,
+   "liveUrl": null,
+   "recordingUrl": null,
+   "status": "Accepted",
+   "isInformed": true,
+   "isConfirmed": false
+  },
+  {
+   "id": "1301696",
+   "title": "Engineering Kubernetes for the Next Era of Workloads",
+   "description": "AI changed what Kubernetes has to handle: container images in the tens of gigabytes, clusters approaching 100,000 nodes, and accelerators a device count can’t describe. At AWS we hit those limits early, and when we do, we fix them upstream. This keynote covers three layers. In containerd, parallel l",
+   "startsAt": "2026-11-10T09:42:00",
+   "endsAt": "2026-11-10T09:47:00",
+   "isServiceSession": false,
+   "isPlenumSession": false,
+   "speakers": [
+    "d96c413a-8318-4289-a250-06d98504be45"
+   ],
+   "categoryItems": [
+    496573,
+    514809
+   ],
+   "questionAnswers": [],
+   "roomId": 82947,
+   "liveUrl": null,
+   "recordingUrl": null,
+   "status": "Accepted",
+   "isInformed": true,
+   "isConfirmed": true
+  },
+  {
+   "id": "1363682",
+   "title": "Building the Next Generation of AI with Open Source",
+   "description": "Join us to hear how NVIDIA is deepening its commitment to open source and working alongside the Kubernetes community to build the future of AI Factories—together. We’ll share how an open, community-driven approach is helping make accelerated computing easier to build, operate, and scale.",
+   "startsAt": "2026-11-10T09:49:00",
+   "endsAt": "2026-11-10T09:54:00",
+   "isServiceSession": false,
+   "isPlenumSession": false,
+   "speakers": [
+    "f60918ea-21c8-49c8-9517-c47b9e60b7ec"
+   ],
+   "categoryItems": [
+    496573
+   ],
+   "questionAnswers": [],
+   "roomId": 82947,
+   "liveUrl": null,
+   "recordingUrl": null,
+   "status": "Accepted",
+   "isInformed": true,
+   "isConfirmed": false
+  },
+  {
+   "id": "1362673",
+   "title": "One Kubernetes, Different Environments: Closing the Portability Gaps",
+   "description": "What does portability really mean when Kubernetes spans containers, virtual machines, and increasingly diverse infrastructure? This keynote will discuss how VM API and the Workload Conformance Working Group are tackling different sides of that challenge and building more consistent infrastructure AP",
+   "startsAt": "2026-11-10T09:56:00",
+   "endsAt": "2026-11-10T10:01:00",
+   "isServiceSession": false,
+   "isPlenumSession": false,
+   "speakers": [
+    "dabd9a72-e883-4a66-9ff5-1471e84661c5"
+   ],
+   "categoryItems": [
+    496573
+   ],
+   "questionAnswers": [],
+   "roomId": 82947,
+   "liveUrl": null,
+   "recordingUrl": null,
+   "status": "Accepted",
+   "isInformed": true,
+   "isConfirmed": false
+  },
+  {
+   "id": "1367757",
+   "title": "Agent Substrate: Open Layers for Agentic Systems",
+   "description": "Running agentic workloads on Kubernetes presents several challenges.  Agent Substrate is a new project, built on and with Kubernetes, which enables you to securely run huge numbers of agents on Kubernetes with ultra low latency.",
+   "startsAt": "2026-11-10T10:03:00",
+   "endsAt": "2026-11-10T10:10:00",
+   "isServiceSession": false,
+   "isPlenumSession": false,
+   "speakers": [
+    "756718a2-db38-4ee4-a883-a27c0a57c5b4",
+    "e43ba721-5786-41d9-a27b-b4eb3a16cd72",
+    "a5fe3552-966f-4ed2-8472-b6c02a19b34e",
+    "1a06ab21-9ad3-4eeb-877c-9249ea11e645",
+    "7d78f731-572e-4db8-85f2-7dd5c3bfbae6"
+   ],
+   "categoryItems": [
+    496573
+   ],
+   "questionAnswers": [],
+   "roomId": 82947,
+   "liveUrl": null,
+   "recordingUrl": null,
+   "status": "Accepted",
+   "isInformed": true,
+   "isConfirmed": false
+  },
+  {
+   "id": "1295993",
+   "title": "The Harness Is the New Runtime",
+   "description": "Agent harnesses are the dominant pattern for agentic AI on the desktop and will become the dominant runtime for agents on Kubernetes. The hard part is the move: bringing the harness onto your cluster with end user experience intact while adopting Kubernetes primitives for sandboxed execution, checkp",
+   "startsAt": "2026-11-10T10:12:00",
+   "endsAt": "2026-11-10T10:17:00",
+   "isServiceSession": false,
+   "isPlenumSession": false,
+   "speakers": [
+    "42ca2e0f-ba6c-4092-81a0-73eeca098181",
+    "cd0fdc7b-d298-48e8-b70d-c3f8a4c29c6b"
+   ],
+   "categoryItems": [
+    496573,
+    514809
+   ],
+   "questionAnswers": [],
+   "roomId": 82947,
+   "liveUrl": null,
+   "recordingUrl": null,
+   "status": "Accepted",
+   "isInformed": true,
+   "isConfirmed": false
+  },
+  {
+   "id": "1301749",
+   "title": "Sandbox Your Agents",
+   "description": "AI Agents offer unequalled automation tooling for rapid software development, but with unfettered power comes great headaches, namely how to scope and secure them in cloud native stacks. A problematic agent with too much access, either through choice or a lack of knowledge, can take down entire prod",
+   "startsAt": "2026-11-10T10:19:00",
+   "endsAt": "2026-11-10T10:24:00",
+   "isServiceSession": false,
+   "isPlenumSession": false,
+   "speakers": [
+    "c84ee9c8-4982-4f94-8056-99b0737adafd"
+   ],
+   "categoryItems": [
+    496573,
+    514809
+   ],
+   "questionAnswers": [],
+   "roomId": 82947,
+   "liveUrl": null,
+   "recordingUrl": null,
+   "status": "Accepted",
+   "isInformed": true,
+   "isConfirmed": false
+  },
+  {
+   "id": "1304040",
+   "title": "Registration + Badge Pick-Up",
+   "description": "Got your badge? Next, make sure to visit any Info Desk for an ID check and a 21+ wristband to redeem your drink tickets at event receptions.\r\n\r\nInfo Desk ID Check Hours:\r\nSunday, November 8 | 8:00 AM - 5:00 PM\r\nMonday, November 9 | 7:00 AM - 7:00 PM*\r\nTuesday, November 10 | 7:30 AM - 6:15 PM*\r\n\r\n *I",
+   "startsAt": "2026-11-08T08:00:00",
+   "endsAt": "2026-11-08T17:00:00",
+   "isServiceSession": false,
+   "isPlenumSession": false,
+   "speakers": [],
+   "categoryItems": [
+    496289
+   ],
+   "questionAnswers": [
+    {
+     "questionId": 137119,
+     "answerValue": "https://www.google.com/maps/d/edit?mid=17D29-f7uLLhY9xe5G6HcK0yByoRPMOs&ll=40.76530435558402%2C-111.89561170388541&z=20"
+    }
+   ],
+   "roomId": 87690,
+   "liveUrl": null,
+   "recordingUrl": null,
+   "status": "Accepted",
+   "isInformed": true,
+   "isConfirmed": false
+  }
+ ],
+ "speakers": [
+  {
+   "id": "7e943a2f-806d-4213-b155-0558f77e184d",
+   "firstName": "Bassam",
+   "lastName": "Tabbara",
+   "bio": "Bassam is Upbound’s Founder and CEO. Prior to Upbound, he was the CTO and Co-Founder of Symform and then CTO of their acquirer, Quantum. Bassam’s decades of experience further manifested very successf",
+   "tagLine": null,
+   "profilePicture": "https://cdn.sessionize.com/image/5431-400o400o1-UR12yBwTdvMBQr8oBCqLdd.jpg",
+   "isTopSpeaker": false,
+   "links": [],
+   "sessions": [
+    1302801
+   ],
+   "fullName": "Bassam Tabbara",
+   "categoryItems": [],
+   "questionAnswers": [
+    {
+     "questionId": 128829,
+     "answerValue": "Upbound"
+    },
+    {
+     "questionId": 128830,
+     "answerValue": "Founder & CEO"
+    }
+   ]
+  },
+  {
+   "id": "a6af85ee-7f4c-44a8-82ba-54cca2777fad",
+   "firstName": "Chris",
+   "lastName": "Aniszczyk",
+   "bio": "building a better world through open collaboration",
+   "tagLine": "building a better world through open collaboration",
+   "profilePicture": "https://cdn.sessionize.com/image/e607-400o400o1-46gETgg2LpFuBJEgLTTjxc.jpg",
+   "isTopSpeaker": true,
+   "links": [
+    {
+     "title": "LinkedIn",
+     "url": "https://www.linkedin.com/in/caniszczyk/",
+     "linkType": "LinkedIn"
+    },
+    {
+     "title": "Company Website",
+     "url": "https://aniszczyk.org",
+     "linkType": "Company_Website"
+    }
+   ],
+   "sessions": [
+    1302801
+   ],
+   "fullName": "Chris Aniszczyk",
+   "categoryItems": [],
+   "questionAnswers": [
+    {
+     "questionId": 128829,
+     "answerValue": "The Linux Foundation"
+    },
+    {
+     "questionId": 128830,
+     "answerValue": "CTO, Cloud and Infrastructure"
+    },
+    {
+     "questionId": 140808,
+     "answerValue": "https://events.linuxfoundation.org/wp-content/uploads/2022/02/linux-foundation-vert-color.svg"
+    }
+   ]
+  },
+  {
+   "id": "dabd9a72-e883-4a66-9ff5-1471e84661c5",
+   "firstName": "Dilpreet",
+   "lastName": "Bindra",
+   "bio": "Dilpreet Bindra is the Senior Director of Engineering for the VMware Cloud Foundation (VCF) division at Broadcom, where he leads the delivery of runtime platforms, automation, and modern cloud-native ",
+   "tagLine": null,
+   "profilePicture": "https://cdn.sessionize.com/image/6b85-400o400o1-WLFHhutS5iPpTnQgSXXDug.jpg",
+   "isTopSpeaker": true,
+   "links": [],
+   "sessions": [
+    1362673
+   ],
+   "fullName": "Dilpreet Bindra",
+   "categoryItems": [],
+   "questionAnswers": [
+    {
+     "questionId": 128829,
+     "answerValue": "Broadcom"
+    },
+    {
+     "questionId": 128830,
+     "answerValue": "Sr. Director Engineering, VCF Division"
+    },
+    {
+     "questionId": 140808,
+     "answerValue": "https://events.linuxfoundation.org/wp-content/uploads/2026/06/Broadcom_VMware_by_Broadcom_Black_RGB.svg"
+    }
+   ]
+  },
+  {
+   "id": "e43ba721-5786-41d9-a27b-b4eb3a16cd72",
+   "firstName": "Dmitry",
+   "lastName": "Berkovich",
+   "bio": ".",
+   "tagLine": "Senior Staff Engineer, Google",
+   "profilePicture": "https://cdn.sessionize.com/image/5b9e-400o400o1-UCbAdJgpvmydi2DkijCqtm.jpg",
+   "isTopSpeaker": true,
+   "links": [
+    {
+     "title": "LinkedIn",
+     "url": "https://www.linkedin.com/in/dberkov",
+     "linkType": "LinkedIn"
+    },
+    {
+     "title": "Company Website",
+     "url": "https://google.com",
+     "linkType": "Company_Website"
+    }
+   ],
+   "sessions": [
+    1367757,
+    1248040
+   ],
+   "fullName": "Dmitry Berkovich",
+   "categoryItems": [],
+   "questionAnswers": [
+    {
+     "questionId": 128829,
+     "answerValue": "Google"
+    },
+    {
+     "questionId": 128830,
+     "answerValue": "Software Engineer "
+    },
+    {
+     "questionId": 140808,
+     "answerValue": "https://events.linuxfoundation.org/wp-content/uploads/google-logo-web.svg"
+    }
+   ]
+  },
+  {
+   "id": "1a06ab21-9ad3-4eeb-877c-9249ea11e645",
+   "firstName": "Eitan",
+   "lastName": "Yarmush",
+   "bio": "Devoted network engineer and doggy dad. I spend my time hiking, painting, problem solving, and taking care of my new pup. Trying to make the infra space just a little better :)",
+   "tagLine": "Principal Software Engineer at Solo.io",
+   "profilePicture": "https://cdn.sessionize.com/image/a7e6-400o400o1-f7hy3gkekeedz6H3jKXEe3.jpg",
+   "isTopSpeaker": true,
+   "links": [
+    {
+     "title": "LinkedIn",
+     "url": "https://www.linkedin.com/in/eitan-yarmush-82890595/",
+     "linkType": "LinkedIn"
+    },
+    {
+     "title": "Company Website",
+     "url": "https://solo.io",
+     "linkType": "Company_Website"
+    },
+    {
+     "title": "Sessionize",
+     "url": "https://sessionize.com/eitan",
+     "linkType": "Sessionize"
+    }
+   ],
+   "sessions": [
+    1367757,
+    1247753,
+    1294782
+   ],
+   "fullName": "Eitan Yarmush",
+   "categoryItems": [],
+   "questionAnswers": [
+    {
+     "questionId": 128829,
+     "answerValue": "Solo.io"
+    },
+    {
+     "questionId": 128830,
+     "answerValue": "Software Architect "
+    },
+    {
+     "questionId": 140808,
+     "answerValue": "https://events.linuxfoundation.org/wp-content/uploads/2020/01/Logo-Dark-on-Transparent-Background.svg"
+    }
+   ]
+  },
+  {
+   "id": "42ca2e0f-ba6c-4092-81a0-73eeca098181",
+   "firstName": "Idit",
+   "lastName": "Levine",
+   "bio": "Idit Levine is the founder and CEO of Solo.io, where she is dedicated to simplifying agentic AI and empowering organizations to embrace cloud-native technologies. With a strong background in distribut",
+   "tagLine": null,
+   "profilePicture": "https://cdn.sessionize.com/image/5d39-400o400o1-KLA33jLCwutUfJQs8L9Yem.png",
+   "isTopSpeaker": true,
+   "links": [],
+   "sessions": [
+    1295993
+   ],
+   "fullName": "Idit Levine",
+   "categoryItems": [],
+   "questionAnswers": [
+    {
+     "questionId": 128829,
+     "answerValue": "Solo.io"
+    },
+    {
+     "questionId": 128830,
+     "answerValue": "CEO"
+    },
+    {
+     "questionId": 140808,
+     "answerValue": "https://events.linuxfoundation.org/wp-content/uploads/2020/01/Logo-Dark-on-Transparent-Background.svg"
+    }
+   ]
+  },
+  {
+   "id": "756718a2-db38-4ee4-a883-a27c0a57c5b4",
+   "firstName": "Jaana",
+   "lastName": "Dogan",
+   "bio": "Jaana is one of the tech leads leading Google's ML/AI systems, specifically focusing on agentic serving and distributed runtimes, including new storage and compute infrastructure. ",
+   "tagLine": "Software Engineer, Google",
+   "profilePicture": "https://cdn.sessionize.com/image/e35b-400o400o1-WMpLZecb2yUW4dCSiAV1zC.jpeg",
+   "isTopSpeaker": true,
+   "links": [
+    {
+     "title": "X (Twitter)",
+     "url": "https://x.com/rakyll",
+     "linkType": "Twitter"
+    },
+    {
+     "title": "Blog",
+     "url": "https://rakyll.org",
+     "linkType": "Blog"
+    }
+   ],
+   "sessions": [
+    1367757
+   ],
+   "fullName": "Jaana Dogan",
+   "categoryItems": [],
+   "questionAnswers": [
+    {
+     "questionId": 128829,
+     "answerValue": "Google"
+    },
+    {
+     "questionId": 128830,
+     "answerValue": "Software Engineer"
+    },
+    {
+     "questionId": 140808,
+     "answerValue": "https://events.linuxfoundation.org/wp-content/uploads/google-logo-web.svg"
+    }
+   ]
+  },
+  {
+   "id": "c84ee9c8-4982-4f94-8056-99b0737adafd",
+   "firstName": "Jessica",
+   "lastName": "Forrester",
+   "bio": "Jessica Forrester is a Senior Distinguished Engineer and the Chief Architect for AI Catalyst Engineering at Red Hat, working at the intersection of AI and cloud native as new technologies move into th",
+   "tagLine": "Senior Distinguished Engineer & Chief Architect AI Catalyst Engineering, Red Hat",
+   "profilePicture": "https://cdn.sessionize.com/image/929e-400o400o1-WMHHWy7SzES5fNcBcBea2V.jpg",
+   "isTopSpeaker": true,
+   "links": [],
+   "sessions": [
+    1301749
+   ],
+   "fullName": "Jessica Forrester",
+   "categoryItems": [],
+   "questionAnswers": [
+    {
+     "questionId": 128829,
+     "answerValue": "Red Hat"
+    },
+    {
+     "questionId": 128830,
+     "answerValue": "Senior Distinguished Engineer"
+    },
+    {
+     "questionId": 140808,
+     "answerValue": "https://events.linuxfoundation.org/wp-content/uploads/2020/10/RedHat-new.svg"
+    }
+   ]
+  },
+  {
+   "id": "3e2472c2-8a1d-439b-9b13-030a77759ec9",
+   "firstName": "Jonathan",
+   "lastName": "Bryce",
+   "bio": "Jonathan Bryce is the Executive Director of Cloud & Infrastructure at the Linux Foundation, where he leads both the Cloud Native Computing Foundation (CNCF) and the OpenInfra Foundation—two of the lar",
+   "tagLine": null,
+   "profilePicture": "https://cdn.sessionize.com/image/f0af-400o400o1-N7pZDMKGtWFrBLBuw7FkLs.jpg",
+   "isTopSpeaker": true,
+   "links": [],
+   "sessions": [
+    1302801
+   ],
+   "fullName": "Jonathan Bryce",
+   "categoryItems": [],
+   "questionAnswers": [
+    {
+     "questionId": 128829,
+     "answerValue": "The Linux Foundation"
+    },
+    {
+     "questionId": 128830,
+     "answerValue": "Executive Director, Cloud and Infrastructure"
+    },
+    {
+     "questionId": 140808,
+     "answerValue": "https://events.linuxfoundation.org/wp-content/uploads/2022/02/linux-foundation-vert-color.svg"
+    }
+   ]
+  },
+  {
+   "id": "cd0fdc7b-d298-48e8-b70d-c3f8a4c29c6b",
+   "firstName": "Keith",
+   "lastName": "Babo",
+   "bio": "Keith Babo is the Chief Product Officer at Solo.io, where he leads product strategy and execution, enabling enterprises to build and scale the next generation of cloud-native and agentic infrastructur",
+   "tagLine": "Chief Product Officer - Solo.io",
+   "profilePicture": "https://cdn.sessionize.com/image/ed48-400o400o1-aS6phS7puNKkUATunmTjKq.jpg",
+   "isTopSpeaker": true,
+   "links": [
+    {
+     "title": "LinkedIn",
+     "url": "https://www.linkedin.com/in/babo/",
+     "linkType": "LinkedIn"
+    },
+    {
+     "title": "Company Website",
+     "url": "https://www.solo.io/",
+     "linkType": "Company_Website"
+    }
+   ],
+   "sessions": [
+    1295993
+   ],
+   "fullName": "Keith Babo",
+   "categoryItems": [],
+   "questionAnswers": [
+    {
+     "questionId": 128829,
+     "answerValue": "Solo.io"
+    },
+    {
+     "questionId": 128830,
+     "answerValue": "Chief Product Officer"
+    },
+    {
+     "questionId": 140808,
+     "answerValue": "https://events.linuxfoundation.org/wp-content/uploads/2020/01/Logo-Dark-on-Transparent-Background.svg"
+    }
+   ]
+  },
+  {
+   "id": "a056f172-84b3-43ad-ab16-91d76db59966",
+   "firstName": "Kevin",
+   "lastName": "Cochrane",
+   "bio": "Kevin Cochrane is a 25+ year pioneer of the digital experience space. Kevin co-founded his first start-up, Interwoven, in 1996, pioneered open source content management at Alfresco in 2006, and built ",
+   "tagLine": null,
+   "profilePicture": "https://cdn.sessionize.com/image/5d37-400o400o1-Sbx8GTRa9R4AvYEgZhwu5S.png",
+   "isTopSpeaker": true,
+   "links": [],
+   "sessions": [
+    1302801
+   ],
+   "fullName": "Kevin Cochrane",
+   "categoryItems": [],
+   "questionAnswers": [
+    {
+     "questionId": 128829,
+     "answerValue": "Vultr"
+    },
+    {
+     "questionId": 128830,
+     "answerValue": "CMO"
+    },
+    {
+     "questionId": 140808,
+     "answerValue": "https://events.linuxfoundation.org/wp-content/uploads/2026/07/Vultr_new_logo__on-white-1.ai_.svg"
+    }
+   ]
+  },
+  {
+   "id": "7d78f731-572e-4db8-85f2-7dd5c3bfbae6",
+   "firstName": "Luiz",
+   "lastName": "Scheidegger",
+   "bio": "Luiz is an engineer at Anthropic on the Claude Managed Agents team, building the sandboxing infrastructure that runs Claude agents. Before that he was Head of Engineering at Lindy.ai and an engineer a",
+   "tagLine": "Member of Technical Staff, Anthropic",
+   "profilePicture": "https://cdn.sessionize.com/image/bb37-400o400o1-pdYHsskxEZdnf9Dv4xWjfm.jpg",
+   "isTopSpeaker": true,
+   "links": [],
+   "sessions": [
+    1367757
+   ],
+   "fullName": "Luiz Scheidegger",
+   "categoryItems": [],
+   "questionAnswers": [
+    {
+     "questionId": 128829,
+     "answerValue": "Anthropic"
+    },
+    {
+     "questionId": 128830,
+     "answerValue": "Member of Technical Staff"
+    },
+    {
+     "questionId": 140808,
+     "answerValue": "https://events.linuxfoundation.org/wp-content/uploads/2026/03/Anthropic-wordmark-Slate.svg"
+    }
+   ]
+  },
+  {
+   "id": "d96c413a-8318-4289-a250-06d98504be45",
+   "firstName": "Mike",
+   "lastName": "Stefaniak",
+   "bio": "Mike Stefaniak is a Senior Manager of Product at AWS, where he leads product strategy for containers. His team focuses on simplifying Kubernetes for platform engineers and application developers at sc",
+   "tagLine": "Senior Manager, Product, AWS",
+   "profilePicture": "https://cdn.sessionize.com/image/d7f1-400o400o1-GXuAfdajiE1xZSHEn933fx.jpg",
+   "isTopSpeaker": true,
+   "links": [
+    {
+     "title": "LinkedIn",
+     "url": "https://www.linkedin.com/in/mike-stefaniak/",
+     "linkType": "LinkedIn"
+    },
+    {
+     "title": "Company Website",
+     "url": "https://aws.amazon.com/",
+     "linkType": "Company_Website"
+    }
+   ],
+   "sessions": [
+    1301696
+   ],
+   "fullName": "Mike Stefaniak",
+   "categoryItems": [],
+   "questionAnswers": [
+    {
+     "questionId": 128829,
+     "answerValue": "AWS"
+    },
+    {
+     "questionId": 128830,
+     "answerValue": "Senior Manager of Product"
+    },
+    {
+     "questionId": 140808,
+     "answerValue": "https://events.linuxfoundation.org/wp-content/uploads/2020/01/AWS_logo_RGB_1c_Gray850-4.svg"
+    }
+   ]
+  },
+  {
+   "id": "e3175872-2944-4e2b-bd15-e5e53f335565",
+   "firstName": "Ravin",
+   "lastName": "Kumar",
+   "bio": "Ravin is a Research Engineer at Google, with a long history in the hacker community, as a responsible member of his local hacker space attending DEFCON and other security conferences for the last 10 y",
+   "tagLine": "Research Engineer",
+   "profilePicture": "https://cdn.sessionize.com/image/774d-400o400o1-MLtdPzzGEPytVJbfoZAfix.jpg",
+   "isTopSpeaker": true,
+   "links": [
+    {
+     "title": "LinkedIn",
+     "url": "https://www.linkedin.com/in/ravinakumar/",
+     "linkType": "LinkedIn"
+    },
+    {
+     "title": "Company Website",
+     "url": "https://deepmind.google/",
+     "linkType": "Company_Website"
+    }
+   ],
+   "sessions": [
+    1349401
+   ],
+   "fullName": "Ravin Kumar",
+   "categoryItems": [],
+   "questionAnswers": [
+    {
+     "questionId": 128829,
+     "answerValue": "Google Deepmind"
+    },
+    {
+     "questionId": 128830,
+     "answerValue": "Staff Research Engineer"
+    },
+    {
+     "questionId": 140808,
+     "answerValue": "https://events.linuxfoundation.org/wp-content/uploads/google-logo-web.svg"
+    }
+   ]
+  },
+  {
+   "id": "7ba0e0db-b8be-4a8d-a88e-b410b88ec162",
+   "firstName": "Robert",
+   "lastName": "Nishihara",
+   "bio": "Robert Nishihara is one of the creators of Ray, the world’s leading open source AI compute engine. Ray is used by companies across the board from Canva to Runway to Coinbase to Pinterest to scale thei",
+   "tagLine": "Co-founder, Anyscale",
+   "profilePicture": "https://cdn.sessionize.com/image/115f-400o400o1-p7bZNNoGH3msAKsgpxKWSg.jpg",
+   "isTopSpeaker": true,
+   "links": [
+    {
+     "title": "X (Twitter)",
+     "url": "https://x.com/robertnishihara",
+     "linkType": "Twitter"
+    },
+    {
+     "title": "LinkedIn",
+     "url": "https://www.linkedin.com/in/robert-nishihara-b6465444/",
+     "linkType": "LinkedIn"
+    },
+    {
+     "title": "Company Website",
+     "url": "https://www.anyscale.com/",
+     "linkType": "Company_Website"
+    }
+   ],
+   "sessions": [
+    1302801,
+    1250150
+   ],
+   "fullName": "Robert Nishihara",
+   "categoryItems": [],
+   "questionAnswers": [
+    {
+     "questionId": 128829,
+     "answerValue": "Anyscale"
+    },
+    {
+     "questionId": 128830,
+     "answerValue": "Co-founder"
+    },
+    {
+     "questionId": 140808,
+     "answerValue": "https://events.linuxfoundation.org/wp-content/uploads/2024/08/Anyscale_logo_black_blue.svg"
+    }
+   ]
+  },
+  {
+   "id": "01baf53b-c05d-4a69-aff6-b2accebc9c51",
+   "firstName": "Sunil",
+   "lastName": "Arora",
+   "bio": "Sunil Arora is a software engineer on the GKE team at Google Cloud and a long-time Kubernetes contributor. He was an original author and lead maintainer of Kubebuilder, has made foundational contribut",
+   "tagLine": "Google, Software Engineer",
+   "profilePicture": "https://cdn.sessionize.com/image/aae5-400o400o1-UazndFYakAk5fc6gyiQz4d.png",
+   "isTopSpeaker": true,
+   "links": [
+    {
+     "title": "X (Twitter)",
+     "url": "https://x.com/_sunil_",
+     "linkType": "Twitter"
+    },
+    {
+     "title": "Company Website",
+     "url": "http://www.google.com",
+     "linkType": "Company_Website"
+    },
+    {
+     "title": "Sessionize",
+     "url": "https://sessionize.com/sunil-arora",
+     "linkType": "Sessionize"
+    }
+   ],
+   "sessions": [
+    1349401
+   ],
+   "fullName": "Sunil Arora",
+   "categoryItems": [],
+   "questionAnswers": [
+    {
+     "questionId": 128829,
+     "answerValue": "Google"
+    },
+    {
+     "questionId": 128830,
+     "answerValue": "Software Engineer"
+    },
+    {
+     "questionId": 140808,
+     "answerValue": "https://events.linuxfoundation.org/wp-content/uploads/google-logo-web.svg"
+    }
+   ]
+  },
+  {
+   "id": "a5fe3552-966f-4ed2-8472-b6c02a19b34e",
+   "firstName": "Tim",
+   "lastName": "Hockin",
+   "bio": "Tim has spent most of his career at Google, where he works on Kubernetes and Google Kubernetes Engine (GKE).  He is one of the technical leads of the Kubernetes project, and has been part of it since ",
+   "tagLine": "Distinguished Engineer, Google",
+   "profilePicture": "https://cdn.sessionize.com/image/b3ef-400o400o1-nwXJhysu3oJncCZ38fkQBL.jpg",
+   "isTopSpeaker": true,
+   "links": [
+    {
+     "title": "Sessionize",
+     "url": "https://sessionize.com/tim-hockin",
+     "linkType": "Sessionize"
+    }
+   ],
+   "sessions": [
+    1367757,
+    1248040
+   ],
+   "fullName": "Tim Hockin",
+   "categoryItems": [],
+   "questionAnswers": [
+    {
+     "questionId": 128829,
+     "answerValue": "Google"
+    },
+    {
+     "questionId": 128830,
+     "answerValue": "Distinguished Engineer"
+    },
+    {
+     "questionId": 140808,
+     "answerValue": "https://events.linuxfoundation.org/wp-content/uploads/google-logo-web.svg"
+    }
+   ]
+  },
+  {
+   "id": "f60918ea-21c8-49c8-9517-c47b9e60b7ec",
+   "firstName": "Warren",
+   "lastName": "Barkley",
+   "bio": "",
+   "tagLine": null,
+   "profilePicture": "https://cdn.sessionize.com/image/a6b0-400o400o1-VpEaf1fiVJPMgJj96pUcu6.jpg",
+   "isTopSpeaker": true,
+   "links": [],
+   "sessions": [
+    1363682
+   ],
+   "fullName": "Warren Barkley",
+   "categoryItems": [],
+   "questionAnswers": [
+    {
+     "questionId": 128829,
+     "answerValue": "NVIDIA"
+    },
+    {
+     "questionId": 128830,
+     "answerValue": "Vice President of Product Management"
+    },
+    {
+     "questionId": 140808,
+     "answerValue": "https://events.linuxfoundation.org/wp-content/uploads/2026/07/nvidia-logo-horz.svg"
+    }
+   ]
+  }
+ ],
+ "questions": [
+  {
+   "id": 128829,
+   "question": "Company",
+   "questionType": "Short_Text",
+   "sort": 32
+  },
+  {
+   "id": 128830,
+   "question": "Speaker Title",
+   "questionType": "Short_Text",
+   "sort": 31
+  },
+  {
+   "id": 137003,
+   "question": "Presentation Slides",
+   "questionType": "File_upload",
+   "sort": 55
+  },
+  {
+   "id": 137004,
+   "question": "GitHub Repository",
+   "questionType": "Web_address",
+   "sort": 56
+  },
+  {
+   "id": 137005,
+   "question": "Project Demo",
+   "questionType": "Web_address",
+   "sort": 57
+  },
+  {
+   "id": 137006,
+   "question": "Website",
+   "questionType": "Web_address",
+   "sort": 58
+  },
+  {
+   "id": 137119,
+   "question": "Location Map",
+   "questionType": "Web_address",
+   "sort": 76
+  },
+  {
+   "id": 138119,
+   "question": "Company Override",
+   "questionType": "Short_Text",
+   "sort": 85
+  },
+  {
+   "id": 140808,
+   "question": "Company URL",
+   "questionType": "Web_address",
+   "sort": 86
+  },
+  {
+   "id": 142725,
+   "question": "Speaker Name Display",
+   "questionType": "Short_Text",
+   "sort": 78
+  },
+  {
+   "id": 142883,
+   "question": "Event Logo",
+   "questionType": "Web_address",
+   "sort": 79
+  }
+ ],
+ "categories": [
+  {
+   "id": 128813,
+   "title": "All Sessions",
+   "items": [
+    {
+     "id": 465809,
+     "name": "AI Inference + Agentic",
+     "sort": 1
+    },
+    {
+     "id": 465818,
+     "name": "Application Development + Delivery",
+     "sort": 2
+    },
+    {
+     "id": 465817,
+     "name": "Cloud Native Experience",
+     "sort": 3
+    },
+    {
+     "id": 465813,
+     "name": "Cloud Native Novice",
+     "sort": 4
+    },
+    {
+     "id": 465808,
+     "name": "Connectivity",
+     "sort": 5
+    },
+    {
+     "id": 465810,
+     "name": "Data Processing + Storage",
+     "sort": 6
+    },
+    {
+     "id": 465816,
+     "name": "Emerging + Advanced",
+     "sort": 7
+    },
+    {
+     "id": 465815,
+     "name": "Observability",
+     "sort": 8
+    },
+    {
+     "id": 465812,
+     "name": "Operations + Performance",
+     "sort": 9
+    },
+    {
+     "id": 465811,
+     "name": "Platform Engineering",
+     "sort": 10
+    },
+    {
+     "id": 465814,
+     "name": "Security",
+     "sort": 11
+    },
+    {
+     "id": 496153,
+     "name": "Maintainer Track",
+     "sort": 12
+    },
+    {
+     "id": 496282,
+     "name": "⚡ Lightning Talks",
+     "sort": 13
+    },
+    {
+     "id": 496283,
+     "name": "📚 Tutorials",
+     "sort": 14
+    },
+    {
+     "id": 496284,
+     "name": "🚨 Contribfest",
+     "sort": 15
+    },
+    {
+     "id": 496285,
+     "name": "🪧 Poster Sessions",
+     "sort": 16
+    },
+    {
+     "id": 496286,
+     "name": "Experiences",
+     "sort": 17
+    },
+    {
+     "id": 496287,
+     "name": "Inclusion + Accessibility",
+     "sort": 18
+    },
+    {
+     "id": 515265,
+     "name": "Project Opportunities",
+     "sort": 19
+    },
+    {
+     "id": 496288,
+     "name": "Project Lightning Talks",
+     "sort": 20
+    },
+    {
+     "id": 514861,
+     "name": "Project Pavilion Tours",
+     "sort": 21
+    },
+    {
+     "id": 520089,
+     "name": "Project Pavilion Stage",
+     "sort": 22
+    },
+    {
+     "id": 496289,
+     "name": "Registration",
+     "sort": 23
+    },
+    {
+     "id": 496290,
+     "name": "Solutions Showcase",
+     "sort": 24
+    },
+    {
+     "id": 496291,
+     "name": "Sponsor-hosted Co-located Events",
+     "sort": 25
+    },
+    {
+     "id": 496573,
+     "name": "Keynote Sessions",
+     "sort": 26
+    },
+    {
+     "id": 496574,
+     "name": "CNCF-hosted Co-located Events",
+     "sort": 27
+    },
+    {
+     "id": 496575,
+     "name": "Breaks",
+     "sort": 28
+    },
+    {
+     "id": 512413,
+     "name": "Cloud Native Theater",
+     "sort": 29
+    },
+    {
+     "id": 518734,
+     "name": "Sponsor Demo Theater",
+     "sort": 30
+    }
+   ],
+   "sort": 1,
+   "type": "session"
+  },
+  {
+   "id": 128814,
+   "title": "Audience Level",
+   "items": [
+    {
+     "id": 465820,
+     "name": "Beginner",
+     "sort": 1
+    },
+    {
+     "id": 465819,
+     "name": "Advanced",
+     "sort": 2
+    },
+    {
+     "id": 465822,
+     "name": "Any Level",
+     "sort": 3
+    }
+   ],
+   "sort": 3,
+   "type": "session"
+  },
+  {
+   "id": 136945,
+   "title": "SubTopic",
+   "items": [
+    {
+     "id": 496281,
+     "name": "AI Inference + Agentic",
+     "sort": 1
+    },
+    {
+     "id": 496271,
+     "name": "Application Development + Delivery",
+     "sort": 2
+    },
+    {
+     "id": 496272,
+     "name": "Cloud Native Experience",
+     "sort": 3
+    },
+    {
+     "id": 496280,
+     "name": "Cloud Native Novice",
+     "sort": 4
+    },
+    {
+     "id": 496273,
+     "name": "Connectivity",
+     "sort": 5
+    },
+    {
+     "id": 496274,
+     "name": "Data Processing + Storage",
+     "sort": 6
+    },
+    {
+     "id": 496275,
+     "name": "Emerging + Advanced",
+     "sort": 7
+    },
+    {
+     "id": 496276,
+     "name": "Observability",
+     "sort": 8
+    },
+    {
+     "id": 496277,
+     "name": "Operations + Performance",
+     "sort": 9
+    },
+    {
+     "id": 496278,
+     "name": "Platform Engineering",
+     "sort": 10
+    },
+    {
+     "id": 496279,
+     "name": "Security",
+     "sort": 11
+    },
+    {
+     "id": 512406,
+     "name": "EnvoyCon",
+     "sort": 12
+    },
+    {
+     "id": 512407,
+     "name": "Istio Day",
+     "sort": 13
+    },
+    {
+     "id": 512408,
+     "name": "Cloud Native University",
+     "sort": 14
+    },
+    {
+     "id": 512409,
+     "name": "KyvernoCon",
+     "sort": 15
+    },
+    {
+     "id": 512410,
+     "name": "KubeVirt Summit",
+     "sort": 16
+    },
+    {
+     "id": 512411,
+     "name": "Kubeflow Summit",
+     "sort": 17
+    },
+    {
+     "id": 512412,
+     "name": "llm-d",
+     "sort": 18
+    },
+    {
+     "id": 515763,
+     "name": "BoF",
+     "sort": 19
+    },
+    {
+     "id": 522039,
+     "name": "Network Nook",
+     "sort": 20
+    }
+   ],
+   "sort": 72,
+   "type": "session"
+  },
+  {
+   "id": 136946,
+   "title": "CNCF Projects",
+   "items": [
+    {
+     "id": 497600,
+     "name": "AI Gateway",
+     "sort": 1
+    },
+    {
+     "id": 497671,
+     "name": "API Machinery",
+     "sort": 2
+    },
+    {
+     "id": 497672,
+     "name": "Apps",
+     "sort": 3
+    },
+    {
+     "id": 497673,
+     "name": "Architecture",
+     "sort": 4
+    },
+    {
+     "id": 497674,
+     "name": "Atlantis",
+     "sort": 5
+    },
+    {
+     "id": 497629,
+     "name": "Auth",
+     "sort": 6
+    },
+    {
+     "id": 497630,
+     "name": "Autoscaling",
+     "sort": 7
+    },
+    {
+     "id": 497631,
+     "name": "Backstage",
+     "sort": 8
+    },
+    {
+     "id": 497632,
+     "name": "Batch",
+     "sort": 9
+    },
+    {
+     "id": 497650,
+     "name": "Buildpacks",
+     "sort": 10
+    },
+    {
+     "id": 497651,
+     "name": "Cadence Workflow",
+     "sort": 11
+    },
+    {
+     "id": 497652,
+     "name": "Cedar",
+     "sort": 12
+    },
+    {
+     "id": 497653,
+     "name": "Cilium",
+     "sort": 13
+    },
+    {
+     "id": 497675,
+     "name": "CLI",
+     "sort": 14
+    },
+    {
+     "id": 497676,
+     "name": "Cloud Provider",
+     "sort": 15
+    },
+    {
+     "id": 497677,
+     "name": "Cluster Lifecycle",
+     "sort": 16
+    },
+    {
+     "id": 497678,
+     "name": "CoHDI",
+     "sort": 17
+    },
+    {
+     "id": 497633,
+     "name": "Containerd",
+     "sort": 18
+    },
+    {
+     "id": 497634,
+     "name": "Contributor Experience",
+     "sort": 19
+    },
+    {
+     "id": 497635,
+     "name": "Copacetic",
+     "sort": 20
+    },
+    {
+     "id": 497636,
+     "name": "CoreDNS",
+     "sort": 21
+    },
+    {
+     "id": 497654,
+     "name": "Cortex",
+     "sort": 22
+    },
+    {
+     "id": 497655,
+     "name": "cri-o",
+     "sort": 23
+    },
+    {
+     "id": 497656,
+     "name": "Crossplane",
+     "sort": 24
+    },
+    {
+     "id": 497657,
+     "name": "Dapr",
+     "sort": 25
+    },
+    {
+     "id": 497601,
+     "name": "Data Protection",
+     "sort": 26
+    },
+    {
+     "id": 497602,
+     "name": "Developer Experience",
+     "sort": 27
+    },
+    {
+     "id": 497603,
+     "name": "Device Management",
+     "sort": 28
+    },
+    {
+     "id": 497604,
+     "name": "Docs",
+     "sort": 29
+    },
+    {
+     "id": 497605,
+     "name": "Dragonfly",
+     "sort": 30
+    },
+    {
+     "id": 497606,
+     "name": "Emissary-ingress",
+     "sort": 31
+    },
+    {
+     "id": 497607,
+     "name": "Envoy",
+     "sort": 32
+    },
+    {
+     "id": 497608,
+     "name": "etcd",
+     "sort": 33
+    },
+    {
+     "id": 497679,
+     "name": "Falco",
+     "sort": 34
+    },
+    {
+     "id": 497680,
+     "name": "Flatcar Container Linux",
+     "sort": 35
+    },
+    {
+     "id": 497681,
+     "name": "Fluentd",
+     "sort": 36
+    },
+    {
+     "id": 497682,
+     "name": "Flux",
+     "sort": 37
+    },
+    {
+     "id": 497637,
+     "name": "Harbor",
+     "sort": 38
+    },
+    {
+     "id": 497638,
+     "name": "Helm",
+     "sort": 39
+    },
+    {
+     "id": 497639,
+     "name": "in-toto",
+     "sort": 40
+    },
+    {
+     "id": 497640,
+     "name": "Infrastructure",
+     "sort": 41
+    },
+    {
+     "id": 497658,
+     "name": "Inspektor Gadget",
+     "sort": 42
+    },
+    {
+     "id": 497659,
+     "name": "Jaeger",
+     "sort": 43
+    },
+    {
+     "id": 497660,
+     "name": "k0s",
+     "sort": 44
+    },
+    {
+     "id": 497661,
+     "name": "K3s",
+     "sort": 45
+    },
+    {
+     "id": 497609,
+     "name": "k8gb",
+     "sort": 46
+    },
+    {
+     "id": 497610,
+     "name": "Kairos",
+     "sort": 47
+    },
+    {
+     "id": 497611,
+     "name": "Karmada",
+     "sort": 48
+    },
+    {
+     "id": 497612,
+     "name": "Kepler",
+     "sort": 49
+    },
+    {
+     "id": 497683,
+     "name": "Keycloak",
+     "sort": 50
+    },
+    {
+     "id": 497684,
+     "name": "KitOps",
+     "sort": 51
+    },
+    {
+     "id": 497641,
+     "name": "KServe",
+     "sort": 52
+    },
+    {
+     "id": 497642,
+     "name": "kube-burner",
+     "sort": 53
+    },
+    {
+     "id": 497662,
+     "name": "KubeEdge",
+     "sort": 54
+    },
+    {
+     "id": 497663,
+     "name": "Kubeflow",
+     "sort": 55
+    },
+    {
+     "id": 497685,
+     "name": "KubeVirt",
+     "sort": 56
+    },
+    {
+     "id": 497686,
+     "name": "Kyverno",
+     "sort": 57
+    },
+    {
+     "id": 497643,
+     "name": "Lima",
+     "sort": 58
+    },
+    {
+     "id": 497644,
+     "name": "Linkerd",
+     "sort": 59
+    },
+    {
+     "id": 497664,
+     "name": "Litmus",
+     "sort": 60
+    },
+    {
+     "id": 497665,
+     "name": "Longhorn",
+     "sort": 61
+    },
+    {
+     "id": 497613,
+     "name": "Meshery",
+     "sort": 62
+    },
+    {
+     "id": 497614,
+     "name": "Metal3.io",
+     "sort": 63
+    },
+    {
+     "id": 497615,
+     "name": "Multicluster",
+     "sort": 64
+    },
+    {
+     "id": 497616,
+     "name": "Network",
+     "sort": 65
+    },
+    {
+     "id": 497687,
+     "name": "Node",
+     "sort": 66
+    },
+    {
+     "id": 497688,
+     "name": "Node Lifecycle",
+     "sort": 67
+    },
+    {
+     "id": 497645,
+     "name": "Open Cluster Management",
+     "sort": 68
+    },
+    {
+     "id": 497646,
+     "name": "Open Policy Agent (OPA)",
+     "sort": 69
+    },
+    {
+     "id": 497666,
+     "name": "OpenChoreo",
+     "sort": 70
+    },
+    {
+     "id": 497667,
+     "name": "OpenCost",
+     "sort": 71
+    },
+    {
+     "id": 497689,
+     "name": "OpenEverest",
+     "sort": 72
+    },
+    {
+     "id": 497668,
+     "name": "OpenFeature",
+     "sort": 73
+    },
+    {
+     "id": 497647,
+     "name": "OpenFGA",
+     "sort": 74
+    },
+    {
+     "id": 497690,
+     "name": "OpenKruise",
+     "sort": 75
+    },
+    {
+     "id": 497669,
+     "name": "Operational Resilience",
+     "sort": 76
+    },
+    {
+     "id": 497648,
+     "name": "Operator Framework",
+     "sort": 77
+    },
+    {
+     "id": 497691,
+     "name": "ORAS",
+     "sort": 78
+    },
+    {
+     "id": 497617,
+     "name": "OSCAL Compass",
+     "sort": 79
+    },
+    {
+     "id": 497618,
+     "name": "OVN-Kubernetes",
+     "sort": 80
+    },
+    {
+     "id": 497619,
+     "name": "Release",
+     "sort": 81
+    },
+    {
+     "id": 497620,
+     "name": "Rook",
+     "sort": 82
+    },
+    {
+     "id": 497670,
+     "name": "Scheduling",
+     "sort": 83
+    },
+    {
+     "id": 497649,
+     "name": "Security",
+     "sort": 84
+    },
+    {
+     "id": 497621,
+     "name": "SPIFFE",
+     "sort": 85
+    },
+    {
+     "id": 497622,
+     "name": "Storage",
+     "sort": 86
+    },
+    {
+     "id": 497623,
+     "name": "Strimzi",
+     "sort": 87
+    },
+    {
+     "id": 497624,
+     "name": "Tekton",
+     "sort": 88
+    },
+    {
+     "id": 497625,
+     "name": "Velero",
+     "sort": 89
+    },
+    {
+     "id": 497626,
+     "name": "Vitess",
+     "sort": 90
+    },
+    {
+     "id": 497627,
+     "name": "Volcano",
+     "sort": 91
+    },
+    {
+     "id": 497628,
+     "name": "Workloads Foundation",
+     "sort": 92
+    },
+    {
+     "id": 498151,
+     "name": "Argo",
+     "sort": 93
+    },
+    {
+     "id": 498153,
+     "name": "Istio",
+     "sort": 94
+    },
+    {
+     "id": 498152,
+     "name": "Podman Container Tools",
+     "sort": 95
+    },
+    {
+     "id": 498154,
+     "name": "Kubernetes",
+     "sort": 96
+    },
+    {
+     "id": 498155,
+     "name": "OpenTelemetry",
+     "sort": 97
+    },
+    {
+     "id": 498156,
+     "name": "HAMi",
+     "sort": 98
+    },
+    {
+     "id": 498157,
+     "name": "Kagent",
+     "sort": 99
+    },
+    {
+     "id": 511067,
+     "name": "KubeStellar",
+     "sort": 100
+    },
+    {
+     "id": 517207,
+     "name": "Hive Commons",
+     "sort": 101
+    }
+   ],
+   "sort": 73,
+   "type": "session"
+  },
+  {
+   "id": 136947,
+   "title": "End User Programming",
+   "items": [
+    {
+     "id": 496398,
+     "name": "End User Talk",
+     "sort": 1
+    }
+   ],
+   "sort": 74,
+   "type": "session"
+  },
+  {
+   "id": 144172,
+   "title": "Solutions Showcase Programming",
+   "items": [
+    {
+     "id": 522573,
+     "name": "Learning Lounge",
+     "sort": 1
+    }
+   ],
+   "sort": 75,
+   "type": "session"
+  },
+  {
+   "id": 142047,
+   "title": "Is Sponsored Keynote",
+   "items": [
+    {
+     "id": 514809,
+     "name": "Sponsored",
+     "sort": 1
+    }
+   ],
+   "sort": 77,
+   "type": "session"
+  }
+ ],
+ "rooms": [
+  {
+   "id": 82947,
+   "name": "Salt Palace | Level 1 | Hall DE",
+   "sort": 0
+  },
+  {
+   "id": 87690,
+   "name": "Salt Palace | 200 South Entrance (South)",
+   "sort": 22
+  }
+ ]
+}
