@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Maximize2, Play, Square, X } from "lucide-react";
+import { ArrowRight, Maximize2, MessageCircleQuestion, Play, Square, X } from "lucide-react";
 import type { SkyNode, SkyNodeType } from "@/lib/types";
 import { api } from "@/lib/client";
 import { apiKey, useApi } from "@/lib/ui/use-api";
@@ -14,6 +14,7 @@ import { cn } from "@/lib/ui/cn";
 import { buttonClass, Drawer, EmptyState, ErrorState } from "@/components/ui";
 import { CREAM, INK, NODE_COLOR, YELLOW, titleCase } from "./palette";
 import type { CanvasHandle } from "./ConstellationCanvas";
+import { AskPanel } from "@/components/ask/AskPanel";
 
 const TraceView = dynamic(() => import("./TraceView").then((m) => m.TraceView), { ssr: false, loading: () => <CanvasLoading /> });
 
@@ -91,6 +92,7 @@ export function GraphView() {
   const [wrapRef, size] = useSize<HTMLDivElement>();
   const canvas = useRef<CanvasHandle>(null);
   const [selected, setSelected] = useState<SkyNode | null>(null);
+  const [askOpen, setAskOpen] = useState(false);
   const [revealed, setRevealed] = useState<Set<string> | null>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -202,12 +204,17 @@ export function GraphView() {
 
         {/* Controls (top-right) */}
         <div className="absolute right-3 top-3 flex flex-col items-end gap-2 md:flex-row md:items-center">
+          <div className="flex gap-1.5">
+            <button type="button" aria-pressed={askOpen} aria-expanded={askOpen} onClick={() => setAskOpen((o) => !o)} className={pill(askOpen, "px-2.5 md:px-3")}>
+              <MessageCircleQuestion className="size-3.5" aria-hidden />Ask
+            </button>
           {!all && (
             <div className="flex gap-1.5" role="radiogroup" aria-label="View">
               <button type="button" role="radio" aria-checked={trace} onClick={() => setParam("view", null)} className={pill(trace, "px-2.5 md:px-3")}>Trace</button>
               <button type="button" role="radio" aria-checked={!trace} onClick={() => setParam("view", "web")} className={pill(!trace, "px-2.5 md:px-3")}>Web</button>
             </div>
           )}
+          </div>
           <div className="flex gap-1.5" role="radiogroup" aria-label="Scope">
             <button type="button" role="radio" aria-checked={!all} onClick={() => setParam("all", null)} className={pill(!all, "px-2.5 md:px-3")}>
               <span className="md:hidden">Conf</span><span className="hidden md:inline">This conference</span>
@@ -239,6 +246,13 @@ export function GraphView() {
             </button>
           </div>
         </div>
+
+        {/* Ask bar (collapsible): answer lines navigate to graphHref(...), which this page highlights via ?hl= */}
+        {askOpen && (
+          <div className="absolute inset-x-3 top-[176px] z-20 md:left-auto md:right-3 md:top-14 md:w-[460px]">
+            <AskPanel userId={userId} confId={conf} compact />
+          </div>
+        )}
 
         {/* Highlight pill */}
         {highlight.size > 0 && (
