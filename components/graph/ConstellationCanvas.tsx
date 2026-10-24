@@ -215,7 +215,7 @@ export function ConstellationCanvas({ nodes, links, width, height, highlight, re
     const rv = revRef.current;
     const hl = hlRef.current;
     const sel = selRef.current;
-    const zoomed = scale >= (phone ? 1.6 : 0.9);
+    const zoomed = scale >= (phone ? 1.6 : 0.7); // label culling below keeps this readable
     const fs = 12.5 / scale;
     const padX = 6 / scale, padY = 3 / scale, h = fs + 2 * padY;
     ctx.textAlign = "center";
