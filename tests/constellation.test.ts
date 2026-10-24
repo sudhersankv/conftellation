@@ -166,6 +166,12 @@ describe("GET /api/users/:id/constellation", () => {
     expect(left.map((e) => e.c)).toEqual(["ai-eng-summit-2026"]);
   });
 
+  it("a legacy skip with no conference still hides that star", async () => {
+    await q(`MATCH (u:User {id:'sam'}), (s:Session {id:'s-scrape'}) MERGE (u)-[r:SKIPPED]->(s) SET r.conferenceId = null`);
+    const { body } = await sky();
+    expect(body.nodes.find((n) => n.id === "s-scrape")?.state).toBe("skipped");
+  });
+
   it("a user with a capture but no attendance is not an other-user star", async () => {
     await q(
       `MERGE (o:User {id:'ghost'}) SET o.name = 'Ghost'
