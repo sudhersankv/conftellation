@@ -3,25 +3,17 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --sky-abyss: #05071a; --sky-ink: #0e1433; --sky-nebula: #1c2452; --sky-hairline: #2a3366;
+  --text-star: #f2f0ff; --text-dust: #8c93b8;
+  --polaris: #a78bfa; --sun: #ffc861; --ember: #ff8a5b; --aurora: #5eeaa8;
+  --comet: #5ce1e6; --moment: #ffffff; --flare: #ff6b8b;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1); --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --topbar-h: 56px; --tabbar-h: 64px;
+  color-scheme: dark;
 }
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+html, body { background: var(--sky-abyss); color: var(--text-star); }
+body { font-family: var(--font-geist-sans), system-ui, sans-serif; overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 2px solid var(--polaris); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }

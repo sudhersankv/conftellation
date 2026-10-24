@@ -19,8 +19,10 @@ export function momentForm(fields: CreateMomentFields): FormData {
 
 async function call<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init);
-  const body = await res.json();
-  if (!res.ok) throw new Error(body?.error ?? `HTTP ${res.status}`);
+  const isJson = (res.headers.get("content-type") ?? "").includes("application/json");
+  const body = (isJson ? await res.json().catch(() => null) : null) as { error?: string } | null;
+  if (!res.ok) throw new Error(body?.error ?? `HTTP ${res.status} from ${url}`);
+  if (!isJson) throw new Error(`Expected JSON from ${url}, got ${res.headers.get("content-type") || "no content type"}`);
   return body as T;
 }
 const post = (body: unknown): RequestInit => ({
@@ -37,10 +39,10 @@ export const api = {
   addConference: (url: string) => call<AddConferenceResponse>("/api/conferences", post({ url })),
   conference: (id: string) => call<ConferenceDetail>(`/api/conferences/${encodeURIComponent(id)}`),
   onboarding: (userId: string, body: OnboardingRequest) => call<OnboardingResponse>(`/api/users/${userId}/onboarding`, post(body)),
-  plan: (userId: string, confId: string) => call<PlanResponse>(`/api/users/${userId}/plan${q({ confId })}`),
+  plan: (userId: string, confId: string, opts: { now?: string } = {}) => call<PlanResponse>(`/api/users/${userId}/plan${q({ confId, now: opts.now })}`),
   /** Pass `ops` (e.g. a previous response's `undo`) to apply them directly without the LLM. */
   steer: (userId: string, confId: string, text: string, ops?: SteerOp[]) => call<SteerResponse>(`/api/users/${userId}/steer`, post({ confId, text, ops })),
-  feedback: (userId: string, body: FeedbackRequest) => call<PlanResponse>(`/api/users/${userId}/feedback`, post(body)),
+  feedback: (userId: string, body: FeedbackRequest, opts: { now?: string } = {}) => call<PlanResponse>(`/api/users/${userId}/feedback${q({ now: opts.now })}`, post(body)),
   search: (confId: string, q_: string) => call<SearchResponse>(`/api/search${q({ confId, q: q_ })}`),
   /** Build `form` with momentForm({ confId, kind, ... }) (fields: CreateMomentFields). */
   createMoment: (userId: string, form: FormData) => call<CreateMomentResponse>(`/api/users/${userId}/moments`, { method: "POST", body: form }),

@@ -15,16 +15,30 @@
     "falkor:ping": "tsx scripts/falkor-ping.ts"
   },
   "dependencies": {
+    "@radix-ui/react-tabs": "^1.2.1",
+    "@radix-ui/react-toggle-group": "^1.2.1",
+    "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
+    "d3-force": "^3.0.0",
     "falkordb": "^6.9.2",
+    "lucide-react": "^1.61.0",
+    "motion": "^14.6.0",
     "next": "14.2.35",
     "openai": "^7.43.0",
     "react": "^18",
     "react-dom": "^18",
     "react-force-graph-2d": "^1.29.2",
-    "zod": "^4.6.7"
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "sonner": "^2.0.8",
+    "tailwind-merge": "^3.7.0",
+    "vaul": "^1.1.2",
+    "zod": "^4.6.7",
+    "zustand": "^5.0.16"
   },
   "devDependencies": {
     "@brightdata/cli": "^0.4.0",
+    "@types/d3-force": "^3.0.10",
     "@types/node": "^22.20.5",
     "@types/react": "^18",
     "@types/react-dom": "^18",
