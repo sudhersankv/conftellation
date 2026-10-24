@@ -2,7 +2,7 @@
 // App shell: left sidebar on md+, bottom nav on phones, top bar with conference + user switcher.
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, GitBranch, Users, FileText, Plus, UserCircle2 } from "lucide-react";
+import { CalendarDays, GitBranch, Users, FileText, ListChecks, Plus, UserCircle2 } from "lucide-react";
 import { cn } from "@/lib/ui/cn";
 import { DEMO_USERS, useSession, userName } from "@/lib/ui/session-context";
 import { apiKey, useApi } from "@/lib/ui/use-api";
@@ -11,13 +11,14 @@ import { Avatar } from "@/components/ui/Misc";
 import { Logo } from "@/components/shell/Logo";
 
 const NAV = [
-  { href: "/plan", label: "Plan", icon: CalendarDays },
-  { href: "/graph", label: "Conftellation", icon: GitBranch },
-  { href: "/network", label: "Network", icon: Users },
-  { href: "/brief", label: "Brief", icon: FileText },
+  { href: "/plan", label: "Plan", short: "Plan", icon: CalendarDays },
+  { href: "/sessions", label: "Sessions", short: "Sessions", icon: ListChecks },
+  { href: "/graph", label: "Conftellation", short: "Graph", icon: GitBranch },
+  { href: "/network", label: "Network", short: "Network", icon: Users },
+  { href: "/brief", label: "Brief", short: "Brief", icon: FileText },
 ] as const;
 
-function NavLink({ href, label, icon: Icon, active, vertical }: { href: string; label: string; icon: typeof CalendarDays; active: boolean; vertical?: boolean }) {
+function NavLink({ href, label, short, icon: Icon, active, vertical }: { href: string; label: string; short?: string; icon: typeof CalendarDays; active: boolean; vertical?: boolean }) {
   return (
     <Link
       href={href}
@@ -25,12 +26,12 @@ function NavLink({ href, label, icon: Icon, active, vertical }: { href: string; 
       className={cn(
         "flex items-center font-heading font-bold transition duration-fast",
         vertical
-          ? cn("mx-auto my-1.5 flex-col justify-center gap-0.5 rounded-2xl border-2 px-2.5 py-1 text-[11px]", active ? "border-border bg-accent text-ink shadow-hardSm" : "border-transparent text-muted")
+          ? cn("mx-auto my-1.5 flex-col justify-center gap-0.5 rounded-2xl border-2 px-1.5 py-1 text-[11px]", active ? "border-border bg-accent text-ink shadow-hardSm" : "border-transparent text-muted")
           : cn("gap-2.5 rounded-full border-2 px-3.5 py-2 text-sm", active ? "border-border bg-ink text-cream" : "border-transparent text-text hover:border-border hover:bg-accent/40"),
       )}
     >
       <Icon className={cn("shrink-0", vertical ? "size-5" : "size-4")} aria-hidden />
-      {label}
+      {vertical ? short ?? label : label}
     </Link>
   );
 }
@@ -78,7 +79,7 @@ function ConferenceSwitcher({ compact }: { compact?: boolean }) {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`) || (href === "/plan" && pathname.startsWith("/sessions")) || (href === "/network" && pathname.startsWith("/people"));
+  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`) || (href === "/network" && pathname.startsWith("/people"));
   const sideCls = (on: boolean) => cn("flex items-center gap-2.5 rounded-full border-2 px-3.5 py-2 font-heading text-sm font-bold transition duration-fast", on ? "border-border bg-ink text-cream" : "border-transparent text-text hover:border-border hover:bg-accent/40");
   return (
     <div className="min-h-dvh md:flex">
@@ -110,7 +111,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-[calc(var(--nav-h)+env(safe-area-inset-bottom)+20px)] pt-5 md:px-10 md:pb-12 md:pt-10">{children}</main>
 
         {/* Bottom nav (phone) */}
-        <nav className="fixed inset-x-0 bottom-0 z-30 grid h-[calc(var(--nav-h)+env(safe-area-inset-bottom))] grid-cols-5 border-t-2 border-border bg-surface px-1 pb-[env(safe-area-inset-bottom)] md:hidden">
+        <nav className="fixed inset-x-0 bottom-0 z-30 grid h-[calc(var(--nav-h)+env(safe-area-inset-bottom))] grid-cols-6 border-t-2 border-border bg-surface px-1 pb-[env(safe-area-inset-bottom)] md:hidden">
           {NAV.map((n) => <NavLink key={n.href} {...n} active={isActive(n.href)} vertical />)}
           <NavLink href="/me" label="Me" icon={UserCircle2} active={isActive("/me")} vertical />
         </nav>
