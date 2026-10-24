@@ -6,7 +6,7 @@ export interface PathNode { id: string; label: NodeLabel; name: string }
 export interface PathEdge { from: string; to: string; type: EdgeType }
 export interface RawPath { nodes: PathNode[]; edges: PathEdge[] }
 
-const PATH = (p: string) => `
+export const PATH = (p: string) => `
   [n IN nodes(${p}) | {id:n.id, label:labels(n)[0], name:coalesce(n.name, n.title, n.text, n.label, n.id)}] AS nodes,
   [r IN relationships(${p}) | {from:startNode(r).id, to:endNode(r).id, type:type(r)}] AS edges`;
 

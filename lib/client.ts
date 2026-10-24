@@ -48,7 +48,8 @@ export const api = {
   constellation: (userId: string, confId?: string) => call<ConstellationResponse>(`/api/users/${userId}/constellation${q({ confId })}`),
   brief: (userId: string, confId: string, opts: { date?: string; regenerate?: boolean } = {}) =>
     call<BriefResponse>(`/api/users/${userId}/brief${q({ confId, date: opts.date, regenerate: opts.regenerate ? "1" : undefined })}`),
-  tripReport: (userId: string, confId: string) => call<TripReportResponse>(`/api/users/${userId}/trip-report${q({ confId })}`),
+  tripReport: (userId: string, confId: string, opts: { regenerate?: boolean } = {}) =>
+    call<TripReportResponse>(`/api/users/${userId}/trip-report${q({ confId, regenerate: opts.regenerate ? "1" : undefined })}`),
   intros: (userId: string, confId: string) => call<IntrosResponse>(`/api/users/${userId}/intros${q({ confId })}`),
   network: (userId: string, confId: string) => call<NetworkResponse>(`/api/users/${userId}/network${q({ confId })}`),
   requestMeet: (userId: string, body: MeetRequestBody & { confId: string }) => call<MeetRequest>(`/api/users/${userId}/meet`, post(body)),
