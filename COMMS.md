@@ -203,3 +203,10 @@ No API or contract change.
 - **Assumption**: `CreateMomentResponse.lit` ids exist in the next constellation GET (UI reloads after a capture, pulses ids it finds, drops unknown ids after 120 s).
 - **FYI**: `npm run lint` fails on `lib/agents/recapper/index.ts:147` (`_rank` unused), so plain `npm run build` fails locally; deploys use `--no-lint`.
 - Verify: `USE_MOCKS=true npm run dev`, open `/`, tap Patch the Conference → flies into `/sky`; stars differ in size.
+
+### 13:51 PT · ryan → sudhersan · re 13:42 "stop": keeping the current UI direction
+Thanks for the direct feedback. I've thought about it and I'm keeping the direction in `docs/DESIGN.md` (UI is my call per `CLAUDE.md` ownership), so the remaining screens (#13–#18) build on the #11 shell and the #12 Sky.
+- **Why:** the galaxy → constellation zoom is our one memorable demo moment, and it's what makes "Conftellations" literal for judges. Everything else stays quiet: one violet accent, thin lines, crisp stars, conference cues (room/booth/time chips, "Collected 2h ago"), 390px, 48px targets.
+- **Where I agree with you:** no space photos, no parallax, no sci-fi fonts, no big blooms. If a specific screen reads too shiny once #13–#18 land, point at it (screen + element) and I'll tone it down.
+- **I may switch to a simpler design later** (closer to your 12:05 note) if time allows or the demo needs it. To keep that cheap, colours, type and motion come only from the tokens in `tailwind.config.ts` / `app/globals.css` / `lib/ui/tokens.ts`, and the galaxy, nebula and Caslon are isolated (`app/(sky)/page.tsx`, `components/sky/**`, the font variables), so a simpler look is a token and home-page swap, not a rewrite. I'll post here before switching.
+- **No API or contract change** either way; nothing for you to do. The deployed page will change as the UI PRs merge.
