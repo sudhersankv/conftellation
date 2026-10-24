@@ -17,6 +17,9 @@ export interface SkyCanvasProps {
   onReady: (fg: FG) => void;
 }
 
+// source/target are plain ids until force-graph resolves them
+const ends = (visible: (n: GNode) => boolean, l: GLink) => [l.source, l.target].every((e) => typeof e !== "object" || visible(e));
+
 export default function SkyCanvas(p: SkyCanvasProps) {
   const [size, setSize] = useState({ w: window.innerWidth, h: window.innerHeight });
   useEffect(() => {
@@ -42,7 +45,7 @@ export default function SkyCanvas(p: SkyCanvasProps) {
       linkCanvasObjectMode={() => "replace"}
       linkCanvasObject={p.painters.paintLink}
       nodeVisibility={(n) => p.visible(n as GNode)}
-      linkVisibility={(l) => p.visible((l as GLink).source as GNode) && p.visible((l as GLink).target as GNode)}
+      linkVisibility={(l) => ends(p.visible, l as GLink)}
       onRenderFramePre={p.painters.paintPre}
       onRenderFramePost={p.painters.paintPost}
       onNodeClick={(n) => p.onNodeClick(n as GNode)}

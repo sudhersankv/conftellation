@@ -66,7 +66,7 @@ export function SkyStage() {
   const ctl = useRef({
     cachedPos: new Map<string, Map<string, Pos>>(), defs: [] as LinkDef[], kind: "none" as "none" | "galaxy" | "conference",
     builtFor: null as string | null, framedFor: null as string | null, scopedFor: null as string | null, galaxyData: null as unknown,
-    pending: [] as { id: string; at: number }[], wantGalaxy: false, pendingFocus: null as string | null, fitted: null as unknown,
+    pending: [] as { id: string; at: number }[], wantGalaxy: false, pendingFocus: null as string | null, pendingFly: null as string | null, fitted: null as unknown,
     exitTimer: undefined as ReturnType<typeof setTimeout> | undefined,
   }).current;
 
@@ -112,7 +112,22 @@ export function SkyStage() {
     ctl.fitted = hl; hl.t0 = performance.now();
     if (![...scene.byId.values()].some((n) => hl.nodes.has(n._orig))) return;
     fg.resumeAnimation();
-    fg.zoomToFit(scene.reduced ? 0 : 700, 80, (n) => hl.nodes.has((n as GNode)._orig));
+    // like zoomToFit but never closer than 2.2x: a two-star path would otherwise fill the screen
+    const bb = fg.getGraphBbox((n) => hl.nodes.has((n as GNode)._orig) && scene.visible(n as GNode));
+    const ms = scene.reduced ? 0 : 700, pad = 80;
+    const k = Math.min(2.2, (window.innerWidth - 2 * pad) / Math.max(1, bb.x[1] - bb.x[0]), (window.innerHeight - 2 * pad - 160) / Math.max(1, bb.y[1] - bb.y[0]));
+    fg.centerAt((bb.x[0] + bb.x[1]) / 2, (bb.y[0] + bb.y[1]) / 2 + 30 / k, ms);
+    fg.zoom(k, ms);
+  };
+  // all rings in view, leaving room for the title above and the labels + add pill below
+  const fitGalaxy = (fg: FG, ms: number) => {
+    const sl = [...scene.slots.values()];
+    if (!sl.length) return;
+    const x0 = Math.min(...sl.map((v) => v.x - 165 * v.s)), x1 = Math.max(...sl.map((v) => v.x + 165 * v.s));
+    const y0 = Math.min(...sl.map((v) => v.y - 165 * v.s)), y1 = Math.max(...sl.map((v) => v.y + 165 * v.s));
+    const k = Math.min((window.innerWidth - 32) / (x1 - x0), (window.innerHeight - 64 - 170) / (y1 - y0), 1.2);
+    fg.centerAt((x0 + x1) / 2, (y0 + y1) / 2 + 53 / k, ms);
+    fg.zoom(k, ms);
   };
   const prune = () => {
     clearTimeout(ctl.exitTimer);
@@ -192,12 +207,13 @@ export function SkyStage() {
       const g = buildGalaxy(data.record, data.byConf, slots, ctl.cachedPos);
       ctl.kind = "galaxy"; ctl.galaxyData = data;
       pushGraph(g.nodes, g.defs, "galaxy", true);
+      if (ctl.pendingFly) { const id = ctl.pendingFly; ctl.pendingFly = null; setTimeout(() => F.current.onFly(id), 400); }
       setSummary(`${data.record.conferences.length} conferences in your sky`);
       whenFg((f) => {
         applyForces(f, "galaxy");
         const slot = fromConf ? slots.get(fromConf) : undefined;
         if (o.handoff && cam && slot) { f.centerAt(slot.x + slot.s * cam.c.x, slot.y + slot.s * cam.c.y, 0); f.zoom(cam.k / slot.s, 0); }
-        if (o.fit) setTimeout(() => whenFg((f2) => f2.zoomToFit(o.animate && !scene.reduced ? 1100 : 0, 60)), 60);
+        if (o.fit) setTimeout(() => whenFg((f2) => fitGalaxy(f2, o.animate && !scene.reduced ? 1100 : 0)), 60);
       });
     };
     if (o.animate && scene.reduced) crossFade(run); else setTimeout(run, 0);
@@ -228,8 +244,9 @@ export function SkyStage() {
 
   const onFly = (id: string) => {
     useSky.setState({ flyTarget: null });
-    if (scene.mode !== "galaxy") { if (id !== confId) setConfId(id); return; }
+    if (scene.mode !== "galaxy") { if (id !== scene.confId) setConfId(id); return; }
     if (scene.fly) return;
+    if (!galaxy.data || !scene.slots.has(id)) { ctl.pendingFly = id; return; } // flown once the galaxy has been laid out
     if (scene.reduced) { crossFade(() => handoff(id)); return; }
     scene.fly = { conf: id, t0: performance.now() };
     fgRef.current?.resumeAnimation();

@@ -18,6 +18,8 @@ import { apiKey, useApi } from "@/lib/ui/use-api";
 
 const CARD_TYPES = new Set(["session", "person", "booth", "company", "user", "goal", "problem", "moment", "meet", "topic"]);
 
+// the drawer title already shows node.label
+const Title = ({ text, label, className = "text-title" }: { text: string; label: string; className?: string }) => (text === label ? null : <p className={className}>{text}</p>);
 const Stack = ({ children }: { children: ReactNode }) => <div className="flex flex-col gap-3">{children}</div>;
 
 function Body({ node }: { node: SkyNode }) {
@@ -38,7 +40,7 @@ function Body({ node }: { node: SkyNode }) {
     const s: Session | undefined = item?.session ?? detail.data?.sessions.find((x) => x.id === node.id);
     return (
       <Stack>
-        <p className="text-title">{item?.title ?? s?.title ?? node.label}</p>
+        <Title text={item?.title ?? s?.title ?? node.label} label={node.label} />
         {s && <div className="flex flex-wrap gap-2"><Chip kind="time">{fmtRange(s.start, s.end)}</Chip>{s.room && <Chip kind="room">{s.room}</Chip>}</div>}
         {s && s.speakers.length > 0 && <p className="text-meta text-dust">{s.speakers.map((p) => p.name).join(", ")}</p>}
         <PathButton paths={why} />
@@ -49,7 +51,7 @@ function Body({ node }: { node: SkyNode }) {
   if (t === "person") {
     return (
       <Stack>
-        <p className="text-title">{item?.title ?? node.label}</p>
+        <Title text={item?.title ?? node.label} label={node.label} />
         {item?.subtitle && <p className="text-meta text-dust">{item.subtitle}</p>}
         <PathButton paths={why} />
         <Button onClick={() => go(`/people/${encodeURIComponent(node.id)}`)}>Open profile</Button>
@@ -60,7 +62,7 @@ function Body({ node }: { node: SkyNode }) {
     const b: Booth | undefined = item?.booth ?? detail.data?.booths.find((x) => x.id === node.id || x.companyId === node.id);
     return (
       <Stack>
-        <p className="text-title">{b?.company.name ?? item?.title ?? node.label}</p>
+        <Title text={b?.company.name ?? item?.title ?? node.label} label={node.label} />
         {b && <div><Chip kind="booth">{b.label}{b.hall ? ` · ${b.hall}` : ""}</Chip></div>}
         {b?.company.description && <p className="line-clamp-2 text-body">{b.company.description}</p>}
         <PathButton paths={why} />
@@ -69,12 +71,12 @@ function Body({ node }: { node: SkyNode }) {
   }
   if (t === "user") {
     if (network.error && !network.data) return <ErrorState what="attendees" onRetry={network.reload} />;
-    if (!network.data) return <Stack><p className="text-title">{node.label}</p><Skeleton rows={2} /></Stack>;
+    if (!network.data) return <Stack><Skeleton rows={2} /></Stack>;
     const nu = network.data.users.find((u) => u.user.id === node.id);
     const pid = nu?.user.personId;
     return (
       <Stack>
-        <p className="text-title">{nu?.user.name ?? node.label}</p>
+        <Title text={nu?.user.name ?? node.label} label={node.label} />
         {nu && <p className="text-meta text-dust">{nu.overlap} in common{nu.shared.length ? `: ${nu.shared.map((x) => x.title).join(", ")}` : ""}</p>}
         <Button disabled={!pid} onClick={() => pid && go(`/people/${encodeURIComponent(pid)}`)}>{pid ? "Open profile" : "Profile not available"}</Button>
       </Stack>
@@ -84,23 +86,20 @@ function Body({ node }: { node: SkyNode }) {
     const c = coverage.find((x) => x.goalId === node.id);
     return (
       <Stack>
-        <p className="font-name text-title font-normal italic">{node.label}</p>
         {c && <p className="text-meta text-dust">{c.covered} of {c.planned} covered</p>}
       </Stack>
     );
   }
   if (t === "moment") {
     const target = links.find((l) => l.source === node.id && l.type === "AT")?.target;
-    const name = node.label.charAt(0).toUpperCase() + node.label.slice(1);
     return (
       <Stack>
-        <p className="text-title">{name}</p>
         {node.at && <p className="text-meta tabular-nums text-dust">{fmtTime(node.at)}</p>}
         {target && <Button variant="ghost" onClick={() => go(`/sessions/${encodeURIComponent(target)}`)}>Open session</Button>}
       </Stack>
     );
   }
-  return <Stack><p className="text-title">{node.label}</p></Stack>;
+  return null;
 }
 
 export function StarCard() {
@@ -108,7 +107,7 @@ export function StarCard() {
   const node = useSkyView((s) => s.nodes.find((n) => n.id === id));
   const show = !!node && CARD_TYPES.has(node.type) && !(node.type === "user" && !node.isOtherUser) && node.state !== "dust";
   return (
-    <Drawer open={show} onOpenChange={(o) => { if (!o) useSky.getState().focus(null); }} title={node?.label ?? "Star"} snapPoints={[0.4, 0.9]}>
+    <Drawer open={show} onOpenChange={(o) => { if (!o) useSky.getState().focus(null); }} title={node ? (node.type === "moment" ? node.label.charAt(0).toUpperCase() + node.label.slice(1) : node.label) : "Star"} snapPoints={[0.4, 0.9]}>
       {show && node && <Body node={node} />}
     </Drawer>
   );
