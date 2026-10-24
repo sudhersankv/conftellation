@@ -68,6 +68,22 @@ describe("GET /api/users/:id/constellation", () => {
     expect(body.coverage.find((c) => c.goalId === "g-tracing")!.planned).toBeGreaterThan(0);
   });
 
+  it("a sponsor offering a goal topic is a company star with its OFFERS link to that topic", async () => {
+    const { body } = await sky();
+    checkShape(body);
+    const co = body.nodes.find((n) => n.id === "acmetrace.dev");
+    expect(co, "Acme Trace in the sky").toBeDefined();
+    expect(co!.type).toBe("company");
+    expect(co!.conferenceId).toBe("ptc-2026");
+    const byId = new Map(body.nodes.map((n) => [n.id, n]));
+    const offers = body.links.filter((l) => l.source === "acmetrace.dev" && l.type === "OFFERS" && byId.get(l.target)?.type === "topic");
+    expect(offers.length).toBeGreaterThan(0);
+    // the offered topic hangs off one of Sam's goals or problems
+    const owners = new Set(["g-tracing", "g-infra", "g-role", "pr-tracing"]);
+    expect(offers.some((o) => body.links.some((l) => l.type === "ABOUT" && l.target === o.target && owners.has(l.source)))).toBe(true);
+    expect(body.links.some((l) => l.source === "acmetrace.dev" && l.target === "b-acme" && l.type === "HAS_BOOTH")).toBe(true);
+  });
+
   it("lit ids from a capture are in the next constellation, and the target lights up", async () => {
     const form = new FormData();
     form.append("confId", "ptc-2026");

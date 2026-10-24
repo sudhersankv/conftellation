@@ -121,6 +121,26 @@ export async function skyDust(confId: string, limit: number) {
   return { sessions, booths };
 }
 
+export interface SkyCompany {
+  companyId: string; companyName: string; conferenceId: string; topicId: string; topicName: string;
+  ownerId: string; ownerLabel: "Goal" | "Problem"; boothId: string | null; boothLabel: string | null;
+}
+
+/** Companies at these conferences (sponsor or booth) that OFFER a topic one of the user's goals/problems is ABOUT. */
+export async function skyRelevantCompanies(userId: string, confIds: string[]): Promise<SkyCompany[]> {
+  if (!confIds.length) return [];
+  return q<SkyCompany>(
+    `MATCH (:User {id:$userId})-[:HAS_GOAL|HAS_PROBLEM]->(g)-[:ABOUT]->(t:Topic)<-[:OFFERS]-(co:Company)
+     WHERE g:Goal OR g:Problem
+     MATCH (c:Conference) WHERE c.id IN $confIds AND ((co)-[:SPONSORS]->(c) OR (co)-[:HAS_BOOTH]->(:Booth)<-[:HAS_BOOTH]-(c))
+     OPTIONAL MATCH (co)-[:HAS_BOOTH]->(b:Booth)<-[:HAS_BOOTH]-(c)
+     RETURN DISTINCT co.id AS companyId, coalesce(co.name, co.id) AS companyName, c.id AS conferenceId,
+            t.id AS topicId, coalesce(t.name, t.id) AS topicName, g.id AS ownerId, labels(g)[0] AS ownerLabel,
+            b.id AS boothId, b.label AS boothLabel`,
+    { userId, confIds },
+  );
+}
+
 /** Paths cited by stored briefs/trip reports, so a tapped brief line can light up in the Sky. */
 export async function skySummaryPaths(userId: string, confIds: string[]): Promise<{ conferenceId: string; paths: WhyPath[] }[]> {
   const rows = await q<{ conferenceId: string; json: string }>(

@@ -1,13 +1,16 @@
 // Q11: flatten the user's graph into the Sky. Every node a plan/brief why-path mentions is included (same ids),
 // so the UI can trace any WhyPath; capture `lit` ids (moment, target, person, goal) are always present.
 import { runPlanner } from "@/lib/agents/planner";
-import { skyBase, skyDust, skyMet, skyMoments, skyOthers, skySharedMoments, skySkipped, skySummaryPaths } from "@/lib/queries/constellation";
+import {
+  skyBase, skyDust, skyMet, skyMoments, skyOthers, skyRelevantCompanies, skySharedMoments, skySkipped, skySummaryPaths,
+} from "@/lib/queries/constellation";
 import type { ConstellationResponse, EdgeType, NodeLabel, PlanItem, SkyLink, SkyNode, SkyNodeType, WhyPath } from "@/lib/types";
 
 export const MAX_NODES = 800;
 export const MAX_DUST_PER_CONF = 300;
 const MAX_OTHER_USERS = 12;
 const LABEL_MAX = 48;
+const RELEVANT_FIT = 0.6; // a company offering a goal/problem topic, with no planner score of its own
 
 const TYPE: Partial<Record<NodeLabel, SkyNodeType>> = {
   Conference: "conference", Session: "session", Person: "person", Company: "company", Booth: "booth", Topic: "topic",
@@ -55,12 +58,13 @@ export async function buildConstellation(userId: string, confId: string | null, 
   const confIds = base.conferences.map((c) => c.id);
   if (!confIds.length) return emptyConstellation();
 
-  const [plans, moments, met, skipped, summaries] = await Promise.all([
+  const [plans, moments, met, skipped, summaries, relevant] = await Promise.all([
     Promise.all(confIds.map((c) => runPlanner(userId, c, { write: false, now: opts.now }).then((r) => r.plan))),
     skyMoments(userId, confIds),
     skyMet(userId, confIds),
     skySkipped(userId, confIds),
     skySummaryPaths(userId, confIds),
+    skyRelevantCompanies(userId, confIds),
   ]);
 
   const nodes = new Map<string, SkyNode>();
@@ -237,6 +241,21 @@ export async function buildConstellation(userId: string, confId: string | null, 
 
   // ----- brief / trip report paths -----
   for (const s of summaries) pathNodes(s.paths, s.conferenceId);
+
+  // ----- relevant companies: sponsors/exhibitors offering a topic of a goal or problem (booth or not) -----
+  for (const r of relevant) {
+    add({ id: r.topicId, type: "topic", label: short(r.topicName), state: "planned", goalId: r.ownerId, conferenceId: r.conferenceId });
+    add({ id: r.companyId, type: "company", label: short(r.companyName), state: "planned", goalId: r.ownerId, conferenceId: r.conferenceId, fit: RELEVANT_FIT });
+    pin(r.topicId, 2);
+    pin(r.companyId, 2);
+    link(r.ownerId, r.topicId, "ABOUT");
+    link(r.companyId, r.topicId, "OFFERS");
+    if (r.boothId) {
+      add({ id: r.boothId, type: "booth", label: short(r.boothLabel ? `${r.companyName} · ${r.boothLabel}` : r.companyName), state: "planned", goalId: r.ownerId, conferenceId: r.conferenceId });
+      pin(r.boothId, 2);
+      link(r.companyId, r.boothId, "HAS_BOOTH");
+    }
+  }
 
   // ----- skipped (hidden in the Sky, present so steer can animate them out) -----
   for (const x of skipped) {
