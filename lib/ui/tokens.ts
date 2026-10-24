@@ -10,7 +10,7 @@ export const STAR = {
 /** Base alpha per state (DESIGN §6.2); skipped is hidden. */
 export const STATE_ALPHA = { planned: 0.6, done: 1, unplanned: 1, skipped: 0, dust: 0.25, anchor: 1 } as const satisfies Record<SkyNodeState, number>;
 export const MOTION = { tap: 120, sheet: 320, light: 900, fly: 1100, replay: 8000 } as const;
-export const EASE = { expo: [0.16, 1, 0.3, 1], inOut: [0.65, 0, 0.35, 1] } as const; // for motion/react `ease`
+export const EASE: Record<"expo" | "inOut", [number, number, number, number]> = { expo: [0.16, 1, 0.3, 1], inOut: [0.65, 0, 0.35, 1] }; // for motion/react `ease`
 const LABEL_TYPE: Record<NodeLabel, SkyNodeType> = {
   Conference: "conference", Session: "session", Person: "person", Company: "company", Booth: "booth", Topic: "topic",
   User: "user", Goal: "goal", Problem: "problem", Moment: "moment", Meet: "meet", Steer: "topic", Summary: "topic",
