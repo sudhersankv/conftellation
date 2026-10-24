@@ -2,7 +2,7 @@
 // App shell: left sidebar on md+, bottom nav on phones, top bar with conference + user switcher.
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, GitBranch, Users, FileText, ListChecks, Plus, UserCircle2 } from "lucide-react";
+import { CalendarDays, CalendarRange, GitBranch, Users, FileText, ListChecks, Plus, UserCircle2 } from "lucide-react";
 import { cn } from "@/lib/ui/cn";
 import { DEMO_USERS, useSession, userName } from "@/lib/ui/session-context";
 import { apiKey, useApi } from "@/lib/ui/use-api";
@@ -102,7 +102,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {NAV.map((n) => <NavLink key={n.href} {...n} active={isActive(n.href)} />)}
         </nav>
         <div className="mt-5 flex flex-col gap-1 border-t-2 border-dashed border-border pt-5">
-          <Link href="/add" aria-current={isActive("/add") ? "page" : undefined} className={sideCls(isActive("/add"))}><Plus className="size-4" />Add conference</Link>
+          <Link href="/add" aria-current={isActive("/add") || isActive("/conferences") ? "page" : undefined} className={sideCls(isActive("/add") || isActive("/conferences"))}><CalendarRange className="size-4" />Conferences</Link>
           <Link href="/me" aria-current={isActive("/me") ? "page" : undefined} className={sideCls(isActive("/me"))}><UserCircle2 className="size-4" />My record</Link>
         </div>
         <div className="mt-auto"><UserSwitcher /></div>
@@ -114,7 +114,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Link href="/" aria-label="Conftellations home" className="shrink-0"><LogoMark size={36} /></Link>
           <div className="flex min-w-0 items-center justify-end gap-1.5">
             <ConferenceSwitcher compact />
-            <Link href="/add" aria-current={isActive("/add") ? "page" : undefined} className={cn("grid size-10 shrink-0 place-items-center rounded-full border-2 border-border shadow-hardSm", isActive("/add") ? "bg-accent" : "bg-surface")} aria-label="Add conference"><Plus className="size-5" /></Link>
+            <Link href="/add" aria-current={isActive("/add") || isActive("/conferences") ? "page" : undefined} className={cn("grid size-10 shrink-0 place-items-center rounded-full border-2 border-border shadow-hardSm", isActive("/add") || isActive("/conferences") ? "bg-accent" : "bg-surface")} aria-label="Conferences: join or add one"><Plus className="size-5" /></Link>
             <UserSwitcher compact />
           </div>
         </header>

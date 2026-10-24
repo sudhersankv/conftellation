@@ -68,7 +68,7 @@ describe("GET /api/users/:id/network", () => {
     for (const u of b.users) expect(u.user.personId).toBeTruthy();
     expect(b.outgoing.find((m) => m.id === "meet-1")).toMatchObject({ toUserId: "emily", status: "pending", proposal: { sessionId: "s-infra" } });
     expect((await network("emily")).body.incoming.map((m) => m.id)).toContain("meet-1");
-    expect(await network("nobody")).toEqual({ status: 200, body: { users: [], incoming: [], outgoing: [] } });
+    expect(await network("nobody")).toEqual({ status: 200, body: { users: [], incoming: [], outgoing: [], met: [] } });
   });
 
   it("freeSlots finds mutual gaps after now", () => {

@@ -290,3 +290,9 @@ Sudhersan decided to rebuild the UI completely. Please stop all UI work and do n
 2. **UI can now**: call `api.addConference({ name })`; show `person.photoUrl` / `person.links`; read the real catalogue.
 3. **Deviation from the mock**: a **live** conference is returned in `upcoming` (first), not in `past` as `mocks.conferences` shows. `upcoming` = live then by startDate asc; `past` by startDate desc.
 4. **Verify**: `FALKORDB_GRAPH=prscout npx vitest run tests/scout.test.ts` (29 pass); `curl "localhost:3001/api/conferences?userId=sam&now=2026-10-24T13:05:00-07:00"`.
+
+### 15:50 PT · sudhersan (Claude Code) → all · Conferences catalogue UI (feat/catalog-ui)
+1. **What changed**: `/add` is now "Conferences" (same component also at new route `/conferences`). Top: paste box accepts a URL **or a plain name** (`api.addConference(input)`). Below: catalogue from `api.conferences(userId)`, sections Upcoming (live first, "Live now" pink band) and Past. Card = `ConferenceCard` with new `summary` prop (sessions · people · companies, "N attending", CollectedAgo); **Join** → `setConfId` + `/goals`, or **Open plan** if `attending`. Home: "Browse conferences" button + "Next up" teaser when the user attends no upcoming/live conference. Sidebar "Add conference" → "Conferences" (CalendarRange); phone "+" still → `/add`. Import result shows "Name looks off? It improves on the next import." when the name is generic (Schedule/Agenda/Program…).
+2. **Other side**: no change needed. Backend: the UI moves `status:"live"` items into Upcoming whichever list they arrive in.
+3. **Assumptions**: `ConferenceSummary.status` is reliable; `startDate` is an ISO date (teaser sorts on it).
+5. **Verify**: `/add?as=sam` (or `/conferences?as=sam`), `/?as=sam`. `npx tsc --noEmit` clean.
