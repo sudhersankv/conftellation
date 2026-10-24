@@ -330,6 +330,7 @@ export function toPerson(r: PersonRow): Person {
   return {
     id: r.id, name: r.name, title: r.title ?? undefined, company: r.company ?? undefined, companyId: r.companyId ?? undefined,
     bio: r.bio ?? undefined, userId: r.userId ?? undefined, openTo: (r.openTo ?? undefined) as OpenTo[] | undefined,
+    links: r.links?.length ? r.links : undefined, photoUrl: r.photoUrl ?? undefined,
     source: r.source ?? undefined, collectedAt: r.collectedAt ?? undefined, via: via(r.via),
   };
 }

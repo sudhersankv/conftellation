@@ -11,7 +11,7 @@ export interface SessionizeAll {
   }[];
   speakers: {
     id: string; fullName: string; bio?: string | null; tagLine?: string | null;
-    links?: { url: string }[]; questionAnswers?: { questionId: number; answerValue: string | null }[];
+    links?: { url: string }[]; profilePicture?: string | null; questionAnswers?: { questionId: number; answerValue: string | null }[];
   }[];
   questions?: { id: number; question: string }[];
   categories?: { id: number; title: string; items: { id: number; name: string }[] }[];
@@ -56,6 +56,7 @@ export function sessionizeToNormalized(opts: {
       title: answer(qTitle) ?? (tagTitle.join(", ") || undefined),
       bio: sp.bio ?? undefined,
       links: sp.links?.map((l) => l.url).filter(Boolean),
+      photoUrl: sp.profilePicture || undefined,
     });
   }
 

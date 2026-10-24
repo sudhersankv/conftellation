@@ -2,7 +2,7 @@
 // Input: session items in the "slim" shape (see seed/raw/github-universe-2026-sessions.slim.json).
 import type { SessionKind, Via } from "@/lib/types";
 import { isoInZone } from "@/lib/time";
-import type { NormCompany, NormSession, NormalizedConference } from "../normalized";
+import type { NormCompany, NormPerson, NormSession, NormalizedConference } from "../normalized";
 
 export interface RainFocusSlimSession {
   sessionID: string;
@@ -11,8 +11,31 @@ export interface RainFocusSlimSession {
   type?: string;
   abstract?: string;
   times?: { utcStartTime: string; utcEndTime: string; room?: string }[];
-  speakers?: { fullName: string; jobTitle?: string; companyName?: string }[];
+  speakers?: (RainFocusSpeaker & { speakerId?: string })[];
   attributes?: Record<string, string | string[] | undefined>;
+}
+
+/** Public speaker fields RainFocus publishes with a session (photo and profile links are optional per speaker). */
+export interface RainFocusSpeaker { fullName: string; jobTitle?: string; companyName?: string; bio?: string; photoURL?: string; linkedIn?: string; twitter?: string }
+
+/** "@jake" / "jake" / "https://twitter.com/jake" → a profile URL. */
+function twitterUrl(v?: string): string | undefined {
+  const t = v?.trim();
+  if (!t) return undefined;
+  if (/^https?:\/\//i.test(t)) return t;
+  const handle = t.replace(/^@/, "").replace(/^(?:www\.)?(?:twitter|x)\.com\//i, "");
+  return /^[A-Za-z0-9_]{1,30}$/.test(handle) ? `https://x.com/${handle}` : undefined;
+}
+
+export function rainfocusPerson(p: RainFocusSpeaker): NormPerson {
+  const linkedIn = p.linkedIn?.trim();
+  const links = [linkedIn && /^https?:\/\//i.test(linkedIn) ? linkedIn : linkedIn ? `https://www.linkedin.com/in/${linkedIn.replace(/^\/?(in\/)?/, "")}` : undefined, twitterUrl(p.twitter)]
+    .filter((l): l is string => Boolean(l));
+  return {
+    name: p.fullName.trim(), title: p.jobTitle, company: p.companyName, bio: p.bio,
+    photoUrl: p.photoURL && /^https?:\/\//i.test(p.photoURL) ? p.photoURL : undefined,
+    links: links.length ? links : undefined,
+  };
 }
 
 export interface RainFocusExhibitor { name: string; description?: string; externalLink?: string; code?: string }
@@ -61,7 +84,7 @@ export function rainfocusToNormalized(opts: {
         start: isoInZone(utc(t.utcStartTime), opts.timeZone),
         end: isoInZone(utc(t.utcEndTime), opts.timeZone),
         room: t.room,
-        speakers: (s.speakers ?? []).map((p) => ({ name: p.fullName.trim(), title: p.jobTitle, company: p.companyName })),
+        speakers: (s.speakers ?? []).map(rainfocusPerson),
         topics: [...new Set(topics)].slice(0, 4),
       };
     });
@@ -111,7 +134,10 @@ export const RAINFOCUS_SITES: RainFocusSite[] = [
 interface RawSession {
   sessionID: string; code?: string; title: string; type?: string; abstract?: string; published?: boolean | string;
   times?: { utcStartTime: string; utcEndTime: string; room?: string }[];
-  participants?: { fullName?: string; firstName?: string; lastName?: string; jobTitle?: string; companyName?: string; session?: { sessionID: string; published?: string }[] }[];
+  participants?: {
+    fullName?: string; firstName?: string; lastName?: string; jobTitle?: string; companyName?: string; bio?: string;
+    photoURL?: string; linkedIn?: string; twitter?: string; session?: { sessionID: string; published?: string }[];
+  }[];
   attributevalues?: { attribute_id: string; value: string }[];
 }
 
@@ -143,7 +169,10 @@ export async function fetchRainFocus(site: RainFocusSite, post: Post): Promise<N
       sessionID: s.sessionID, code: s.code, title: s.title, type: s.type, abstract: s.abstract, times: s.times,
       speakers: (s.participants ?? [])
         .filter((p) => !p.session || p.session.some((x) => x.sessionID === s.sessionID && x.published !== "false"))
-        .map((p) => ({ fullName: p.fullName ?? `${p.firstName ?? ""} ${p.lastName ?? ""}`.trim(), jobTitle: p.jobTitle, companyName: p.companyName })),
+        .map((p) => ({
+          fullName: p.fullName ?? `${p.firstName ?? ""} ${p.lastName ?? ""}`.trim(), jobTitle: p.jobTitle, companyName: p.companyName,
+          photoURL: p.photoURL, linkedIn: p.linkedIn, twitter: p.twitter,
+        })),
       attributes: (s.attributevalues ?? []).reduce<Record<string, string[]>>((a, v) => ((a[v.attribute_id] ??= []).push(v.value), a), {}),
     }));
   const exhibitors = site.exhibitorWidget ? (await search<RainFocusExhibitor>(post, site, "exhibitor", site.exhibitorWidget)).items : [];

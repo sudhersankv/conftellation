@@ -9,6 +9,7 @@ export interface NormPerson {
   company?: string;
   bio?: string;
   links?: string[];
+  photoUrl?: string; // public speaker photo from the conference platform
 }
 
 export interface NormSession {
