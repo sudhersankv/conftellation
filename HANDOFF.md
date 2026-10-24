@@ -14,14 +14,12 @@ Living, harness-agnostic handoff for whichever agent is driving (Claude Code, Cu
 
 ## 0. TL;DR
 
-- **What**: Conftellations, an attendee-owned conference brain. Hackathon: Patch the Conference (WeMakeDevs), **Sat Oct 24 2026, SF. Code freeze 16:45 PT, demo 17:30 PT.** Live: **https://conftellations.fly.dev** (auto-deploys on push to main). Main track FalkorDB, secondary Bright Data. Qodo reviews PRs.
-- **Team (since 14:45 PT)**: **Sudhersan** (Claude Code) owns ALL code, backend and UI. **Ryan** = demo prep (#20) only. Cursor is closed. One driver.
-- **Backend is complete on main** (every spec §11 route real, all Qodo High/Medium closed): planner (#4), steer + onboarding (#25, #34), brief + trip report (#24, #34), moments + share (#26, #34), community + record (#28), scout import + SSRF/DNS-rebinding hardening (#30, #35, #40), intros / network / meets / person / search with acting-user auth (#33, #39), constellation (#36). `npm run smoke <baseUrl>` runs the whole flow end to end as throwaway users and cleans up: **42/43 on the live deployment at 15:35 PT** (the one miss was a wrong expectation in the script, fixed).
-- **UI v2 is on main** (#42, deployed): calendar-first plan, connected graph, session page with notes/memo/capture/community, network + meets, brief + trip report, add/goals/home/me. Brief: `docs/DESIGN.md`. The galaxy UI is deleted.
-- **In flight (branches, not merged)**: `ui/polish` (neo-brutalist cream retheme: Space Grotesk/DM Sans, 2px ink borders, hard shadows, logo; plus Qodo #42 fixes: share needs userId, mediaSrc for photos, steer/graph pass the demo clock, capture-now button) and `ui/graph-polish` (readable Title-case node labels, outlined nodes on cream). Merge both into main by ~16:10 PT, verify build, deploy, smoke.
-- **Graph**: hosted FalkorDB, graph `conftellations`. KubeCon NA 2026 is imported (id `kubecon-cloudnativecon-north-america-2026`, ~590 sessions after a second cached import). Do not reseed. Test users with ids `ui-*` / `smoke-*` must be purged before the demo (query in §7).
-- **Contract notes for the UI**: `POST /api/meets/:id/respond` and `/meet` need the acting `userId` in the body; `POST /api/moments/:id/share` needs `userId`; private photos load via `mediaSrc(mediaUrl, { userId })`; conference ids may be up to 80 chars.
-- **Tests** use graph `<FALKORDB_GRAPH>_test`; parallel agents use `FALKORDB_GRAPH=prNN`. Never commit `.env.local`. LLM `gpt-5.4-nano`. Bright Data zones `cli_unlocker`.
+- **What**: Conftellations, an attendee-owned conference brain. Built at Patch the Conference (WeMakeDevs), Sat Oct 24 2026. Live: **https://conftellations.fly.dev** (auto-deploys on push to main; the Fly builder occasionally fails fetching Google Fonts in `next/font`: re-run the workflow). Main track FalkorDB, secondary Bright Data. Qodo reviews PRs.
+- **One driver**: Sudhersan via Claude Code owns all code. Agents run as worktrees under `.claude/worktrees` (gitignored); the machine has ~16 GB RAM and crashed twice with 4–5 agents + dev servers at once. Run at most 2–3 agents, no `next build`/`next dev` inside agents, single-worker vitest.
+- **Product (all live)**: Conferences catalogue (`/add`, `/conferences`: 4 upcoming + 5 past real conferences, Join → goals; paste a link OR a name, Scout resolves it with Bright Data SERP) → Goals → **Plan** (calendar; steer with proposal + Undo; Finalize; accepted meets as teal blocks; Capture now) → **Sessions** tab (my sessions; memo in Markdown + export) → **Conftellation** (`/graph`: Trace mode = my path through the day; Web = force graph with relevant companies; Ask box) → **Network** (overlap, meet requests, warm intros, People you've met across conferences with photos + LinkedIn/X/GitHub links) → **Brief** + trip report + Ask (GraphRAG, every line cites a path) → **Me** (record).
+- **Backend**: every spec §11 route is real plus `POST /ask`, `GET /conferences`, `network.met`. Qodo High/Medium closed on all PRs. `npm run smoke <baseUrl>` = end-to-end as throwaway users (43/43 on live). Demo clock pinned at **2026-10-24T13:05-07:00** (DEMO_NOW secret + NEXT_PUBLIC_DEMO_NOW build arg); `?now=off` disables per tab.
+- **Graph `conftellations`** (hosted FalkorDB): conferences ptc-2026 (live), ai-eng-summit-2026, schedule-2026 (= AgntCon + MCPCon NA 2026, renamed), pytorch-conference-2026, kubecon-cloudnativecon-europe-2026, kubecon-cloudnativecon-north-america-2025 (past), github-universe-2026, kubecon-cloudnativecon-north-america-2026, open-source-summit-japan-2026 (upcoming). Demo users have seeded visits/captures/briefs on past conferences (`seed/catalog-activity.ts`), community notes + crowd summaries (`seed/catalog-community.ts`), and speakers carry photos/links (`scripts/backfill-people.ts`). Never reseed. Purge test users with `npx tsx scripts/purge-test-users.ts`; fix Sam's goals with `scripts/fix-sam-goals.ts --apply`.
+- **Known rough edges**: Trace replay is stepwise; sched-imported speakers have odd company slugs (`@maintainer`); 41 KubeCon speakers have no Sessionize photo; "All conferences" is the Web graph, not a trace; people added by hand have no photo/links (by design: no LinkedIn scraping).
 
 ---
 
@@ -226,17 +224,10 @@ The backend load is heavy, so prioritise by spec §15 "never cut": Sky with why-
 
 ## 7. Next steps (in order)
 
-1. **Merge the polish branches**: `git merge -Xignore-cr-at-eol origin/ui/polish` then `origin/ui/graph-polish` into main. `npx tsc --noEmit`, `npx next build --no-lint`, push. Watch `gh run list` for the Fly deploy, then `npm run smoke https://conftellations.fly.dev` and screenshot every page at 390 and 1280.
-2. **Purge test users** from the demo graph (they appear in Sam's network):
-   ```cypher
-   MATCH (u:User) WHERE u.id STARTS WITH "ui-" OR u.id STARTS WITH "smoke-"
-   OPTIONAL MATCH (u)-[:HAS_GOAL|HAS_PROBLEM|CAPTURED|STEERED|HAS_SUMMARY|IS|PLAN_MEETS]->(x)
-   OPTIONAL MATCH (u)-[:ATTENDS]->(m:Meet)
-   DETACH DELETE x, m, u
-   ```
-3. **Demo path check on the deployed app** (spec §16): `/add` with the KubeCon URL (cached, ~1 s) → `/goals` → `/plan` → steer "leaving at 3pm, more tracing" → Undo → `/graph` → `/sessions/s-graphrag` check in + note → graph shows it lit → `?as=emily` on a second phone accepts Sam's meet (Sam must propose a **free slot or a later session**: a past session is refused with "slot is in the past") → `/brief` tap a line → `/graph?hl=` → trip report copy. Demo clock: append `?now=2026-10-24T13:05:00-07:00` once per tab (sticky).
-4. **Freeze at 16:45 PT.** Backup video, FalkorDB Browser query ready, e.g. `MATCH p=(u:User {id:"sam"})-[:HAS_GOAL]->(:Goal)-[:ABOUT]->(:Topic)<-[:ABOUT]-(s:Session) RETURN p LIMIT 25`.
-5. If anything is broken at 16:30: revert to the last green main (`git revert` the merge), redeploy with `fly deploy --remote-only --ha=false`.
+1. Wait for / verify `seed/catalog-community.ts` results: `curl "https://conftellations.fly.dev/api/sessions/<id>/community?userId=sam"` on a past-conference session shows ≥4 shared notes, a crowd summary with cited moment ids, and hot moments.
+2. Final pass: `npm run smoke https://conftellations.fly.dev`, `npx tsx scripts/purge-test-users.ts`, phone + desktop screenshots of every route.
+3. Nice-to-haves if time: smooth Trace replay; a trace view for "All conferences"; conference-name cleanup for sched-imported events is done in `scripts/catalog.ts` only (the generic adapter now handles it for new imports).
+4. If anything breaks: `git revert` the merge on main; Fly redeploys automatically. Manual: `fly deploy --remote-only --ha=false`.
 
 ---
 
@@ -323,3 +314,4 @@ Format: `HH:MM PT · agent · what changed (issue #, commit/PR)`
 - 16:30 PT · Claude Code · Retheme (ui/polish) + graph polish merged and deployed; smoke 43/43 live; demo clock pinned (DEMO_NOW + NEXT_PUBLIC_DEMO_NOW); conference switcher in shell; Sam's duplicate goals removed (scripts/fix-sam-goals.ts). Pending: Trace mode on ui/graph-polish.
 - 16:47 PT · Claude Code · FREEZE. main 318d971: Trace mode default on /graph, conference switcher, onboarding de-dup, demo clock. Live smoke 43/43. Demo notes in COMMS.md 16:30 entry.
 - 17:32 PT · Claude Code · Post-freeze additions deployed (7d2627e): real GraphRAG Ask (POST /ask) on /brief and /graph, relevant companies in the web, People you have met (network.met), /sessions tab, memo as Markdown + export. Fly build flaked once on next/font (Google Fonts fetch); re-run succeeded.
+- 19:05 PT · Claude Code · Session crashed twice (OOM). Recovered WIP from worktrees; merged scout-v2 (name import, clean names, photos/links, GET /conferences), catalog UI, people cards, catalogue data (4 real conferences, seeded visits), phone fixes + calendar meets, photo backfill. Community seeding in flight.
