@@ -4,7 +4,7 @@ import type {
   AddConferenceResponse, BriefResponse, CommunityResponse, ConferenceDetail, ConstellationResponse,
   CreateMomentResponse, FeedbackRequest, IntrosResponse, MeetRequest, MeetRequestBody, MeetRespondBody,
   Moment, NetworkResponse, OnboardingRequest, OnboardingResponse, PlanResponse, RecordResponse,
-  SearchResponse, SteerResponse, TripReportResponse, CreateMomentFields, PersonDetail, SteerOp,
+  SearchResponse, SteerResponse, TripReportResponse, CreateMomentFields, PersonDetail, SteerOp, AskResponse,
 } from "@/lib/types";
 
 /** Append the demo access query required by GET /api/uploads/:file. Private media needs the owner's userId; shared media may use momentId. */
@@ -78,4 +78,6 @@ export const api = {
   person: (personId: string, opts: { confId?: string; userId?: string } = {}) =>
     call<PersonDetail>(`/api/people/${encodeURIComponent(personId)}${q(opts)}`),
   record: (userId: string) => call<RecordResponse>(`/api/users/${userId}/record`),
+  /** Ask the conference brain. Grounded in graph paths; each line cites one. No history is kept. */
+  ask: (userId: string, confId: string, question: string) => call<AskResponse>(`/api/users/${userId}/ask`, post({ confId, question })),
 };

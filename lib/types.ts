@@ -336,3 +336,9 @@ export interface RecordConference {
 export interface RecordResponse { user: User; conferences: RecordConference[] }
 
 export interface ApiError { error: string }
+
+// ---------- Ask the brain (GraphRAG Q&A, no conversation state) ----------
+
+export interface AskRequest { confId: string; question: string }
+/** Every answer line cites a path in `paths` (same mechanism as the brief). `lines` empty → `summary` says what the graph had nothing on. */
+export interface AskResponse { question: string; lines: BriefLine[]; paths: WhyPath[]; summary?: string }

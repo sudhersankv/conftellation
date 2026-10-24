@@ -219,3 +219,9 @@ export const record: RecordResponse = {
     { conference: { id: "ai-eng-summit-2026", name: "AI Engineer Summit", url: "https://www.ai.engineer", startDate: "2026-06-03", endDate: "2026-06-05", city: "San Francisco" }, sessions: 4, people: 1, moments: 2, hasBrief: true, hasTrip: false },
   ],
 };
+
+export const ask: import("@/lib/types").AskResponse = {
+  question: "Which booth should I visit for tracing?",
+  lines: [{ text: "Acme Trace (Booth 14) offers agent tracing, your team's problem; you met Mike there at lunch.", pathId: "p2" }],
+  paths: [pBoothAcme],
+};
