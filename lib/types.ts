@@ -258,8 +258,10 @@ export interface NetworkUser {
 }
 export interface NetworkResponse { users: NetworkUser[]; incoming: MeetRequest[]; outgoing: MeetRequest[] }
 
-export interface MeetRequestBody { toUserId: string; note: string; proposal: MeetProposal }
-export interface MeetRespondBody { action: "accept" | "decline" | "counter"; proposal?: MeetProposal }
+/** `userId` (optional): the acting user; when set it must equal the sender in the URL. */
+export interface MeetRequestBody { toUserId: string; note: string; proposal: MeetProposal; userId?: string }
+/** `userId`: the acting user (else `x-user-id` header or the `ptc_user` cookie). Required by the API: 401 without one, 403 if not allowed. */
+export interface MeetRespondBody { action: "accept" | "decline" | "counter"; proposal?: MeetProposal; userId?: string }
 
 // ---------- Session community ----------
 

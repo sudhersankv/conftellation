@@ -22,3 +22,19 @@ export function handle<A extends unknown[]>(fn: (...args: A) => Promise<Response
     }
   };
 }
+
+const USER_ID = /^[a-z0-9-]{1,40}$/i;
+
+/**
+ * The acting demo user: `x-user-id` header, then `userId` in the JSON body, then `?userId=`, then the `ptc_user` cookie
+ * (middleware sets it from `?as=`). Null when none is present or the id is malformed. Demo identity, not authentication.
+ */
+export function callerId(req: Request, body?: unknown): string | null {
+  const fromBody = body && typeof body === "object" ? (body as { userId?: unknown }).userId : undefined;
+  const cookie = () => {
+    const raw = /(?:^|;\s*)ptc_user=([^;]*)/.exec(req.headers.get("cookie") ?? "")?.[1];
+    try { return raw ? decodeURIComponent(raw) : null; } catch { return null; } // malformed escape → no identity
+  };
+  const id = req.headers.get("x-user-id") || (typeof fromBody === "string" ? fromBody : "") || new URL(req.url).searchParams.get("userId") || cookie();
+  return id && USER_ID.test(id) ? id : null;
+}

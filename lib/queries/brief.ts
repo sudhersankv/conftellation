@@ -3,8 +3,11 @@ import { q } from "@/lib/falkor";
 import type { RawPath } from "./plan";
 
 /** `{nodes, edges}` of named path `p` as `alias` (null when the path is null, e.g. from an OPTIONAL MATCH). */
-const P = (p: string, alias: string) => `CASE WHEN ${p} IS NULL THEN null ELSE {
-  nodes: [n IN nodes(${p}) | {id:n.id, label:labels(n)[0], name:coalesce(n.name, n.title, n.text, n.label, n.id)}],
+/** `hideMoments`: name Moment nodes by kind, never text (for paths through another user's moments). */
+const P = (p: string, alias: string, hideMoments = false) => `CASE WHEN ${p} IS NULL THEN null ELSE {
+  nodes: [n IN nodes(${p}) | {id:n.id, label:labels(n)[0], name:${hideMoments
+    ? "CASE WHEN labels(n)[0] = 'Moment' THEN coalesce(n.kind, 'moment') ELSE coalesce(n.name, n.title, n.text, n.label, n.id) END"
+    : "coalesce(n.name, n.title, n.text, n.label, n.id)"}}],
   edges: [r IN relationships(${p}) | {from:startNode(r).id, to:endNode(r).id, type:type(r)}]
 } END AS ${alias}`;
 
@@ -99,15 +102,19 @@ export function problemPaths(a: Args) {
 
 export interface IntroRow { viaName: string; personId: string; name: string; sawAt: string; speaksOn: string; topic: string; saw: RawPath; speaks: RawPath }
 
-/** (d) Q5 warm intro: someone you met attended a session whose speaker talks on your problem. */
+/**
+ * (d) Q5 warm intro: someone you met here (MET edge for this conference) checked in at or shared a moment from a session whose
+ * speaker talks on your problem. Private notes never count, and Moment nodes in the path are named by kind.
+ */
 export function introPaths(a: Args) {
   return q<IntroRow>(
-    `MATCH saw = (u:User {id:$userId})-[:MET]->(a:Person)<-[:IS]-(au:User)-[:CAPTURED]->(m:Moment)-[:AT]->(s:Session)<-[:SPEAKS_AT]-(b:Person)
-     WHERE m.conferenceId = $confId AND NOT (u)-[:MET]->(b) AND NOT (u)-[:IS]->(b)
+    `MATCH saw = (u:User {id:$userId})-[met:MET]->(a:Person)<-[:IS]-(au:User)-[:CAPTURED]->(m:Moment)-[:AT]->(s:Session)<-[:SPEAKS_AT]-(b:Person)
+     WHERE met.conferenceId = $confId AND m.conferenceId = $confId AND (m.kind = 'checkin' OR m.shared = true)
+       AND NOT (u)-[:MET]->(b) AND NOT (u)-[:IS]->(b) AND au <> u
      MATCH speaks = (b)-[:SPEAKS_AT]->(s2:Session)-[:ABOUT]->(t:Topic)<-[:ABOUT]-(:Problem)<-[:HAS_PROBLEM]-(u)
      MATCH (:Conference {id:$confId})-[:HAS_SESSION]->(s2)
      RETURN a.name AS viaName, b.id AS personId, b.name AS name, s.title AS sawAt, s2.title AS speaksOn, t.name AS topic,
-            ${P("saw", "saw")}, ${P("speaks", "speaks")}
+            ${P("saw", "saw", true)}, ${P("speaks", "speaks")}
      LIMIT 6`,
     { ...a },
   );
