@@ -19,7 +19,7 @@ Living, harness-agnostic handoff for whichever agent is driving (Claude Code, Cu
 - **State**: **#2 done** (adapters), **#1 done** (demo graph seeded on the hosted instance with **real OpenAI embeddings**). All routes still serve mocks. 11 tests pass (`npm test`, ~20 s, seeds `_test` graph with the fake embedder).
 - **Working mode (user, 11:50 PT)**: go **module by module**, test each live before moving on, ask the user on use-case questions instead of assuming.
 - **LLM**: `OPENAI_MODEL=gpt-5.4-nano` (user's choice; verified live, ~2 s structured call). `lib/llm.ts` sends `reasoning_effort` (env `OPENAI_REASONING_EFFORT`, default `low`) instead of `temperature` for gpt-5*/o* models.
-- **Bright Data: BLOCKED.** Key is set but the account has **no zones** (`web_unlocker1` → "zone not found"; `bdata zones` → none) and `bdata budget` → 403 (key lacks permissions). Plain-HTTP platform imports (Sessionize, RainFocus, sched) don't need it.
+- **Bright Data: BLOCKED on the user.** Key is valid (`GET /zone/get_active_zones` → 200 `[]`) but the account has **no zones**, and the key is not admin: `POST /zone` and `bdata budget` → 403 "lacks the required permissions". Fix (user): either run `npx bdata login` (browser OAuth; auto-creates `cli_unlocker`), or give the key admin permissions at brightdata.com/cp/setting/users and then run `npx tsx scripts/bd-zones.ts --create` (creates `conftellations_unlocker` + `conftellations_serp`), then set `BRIGHTDATA_UNLOCKER_ZONE` / `BRIGHTDATA_SERP_ZONE`. Plain-HTTP platform imports (Sessionize, RainFocus, sched) don't need it.
 - **Your next task**: unblock Bright Data zones, then **#3** Scout (live demo = **KubeCon NA 2026 via Sessionize + Bright Data sponsor enrichment**), **#4** Planner, **#7** Constellation. See §7.
 
 ---
@@ -287,3 +287,4 @@ Format: `HH:MM PT · agent · what changed (issue #, commit/PR)`
 - 11:47 PT · Cursor · User added OpenAI + Bright Data keys to `.env.local`.
 - 11:53 PT · Cursor · #1 done: shared `upsertConference()` + identity rules, RainFocus adapter, `seed/ptc.json`, June conf, personal layer, `npm run seed` (real embeddings, ~45 s), `npm run inspect`, `tests/seed.test.ts`. `Via` widened (`rainfocus`, `ics`; COMMS note). 11/11 tests pass.
 - 11:56 PT · Cursor · Model → `gpt-5.4-nano` (verified live). Bright Data: no zones on account, budget 403. Decisions: KubeCon is the live import demo; fabricated PTC is fine; work module by module.
+- 11:59 PT · Cursor · Bright Data key can list zones (none) but can't create them (403). `scripts/bd-zones.ts` added. Waiting on user: `bdata login` or admin key.
