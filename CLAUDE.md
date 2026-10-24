@@ -26,7 +26,7 @@ If a task needs something the docs don't cover or conflicts with them, don't imp
 ## Git workflow (branch per issue, PRs)
 - **Stay in sync with the remote while you work.** Run `git fetch origin` before starting and at natural checkpoints (before each commit, before opening a PR, and roughly every 20-30 minutes of work). If `origin/main` has moved, integrate it (`git rebase origin/main`, or merge if the rebase gets messy) and re-run `npm run typecheck`. Check `COMMS.md` on every sync.
 - **One branch per issue, never commit to `main` directly.** Branch from an up-to-date `main`, named `<type>/<issue#>-<short-slug>` (for example `ui/12-sky-stage`, `fix/21-client-error-parsing`). One issue per branch; don't mix unrelated changes.
-- **Deliver by pull request.** Push the branch and open a PR to `main` with `gh pr create`: what changed, the issue it closes (`Closes #N`), how to verify, and a pointer to the `COMMS.md` entry if the other side is affected. Append that `COMMS.md` entry in the same branch/PR. Don't merge your own PR unless the user says to.
+- **Deliver by pull request.** Push the branch; Ryan opens and merges the PR (`gh` isn't installed). Never merge into `main` yourself. In your final message give the branch name, the compare link (`https://github.com/sudhersankv/conftellation/pull/new/<branch>`), and a suggested PR title/body (what changed, `Closes #N`, how to verify). Append the `COMMS.md` entry on the same branch.
 - Never force-push a shared branch or `main`. Never commit secrets (the repo is public).
 
 ## Working with the other agent (COMMS.md)
