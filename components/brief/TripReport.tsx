@@ -35,8 +35,11 @@ export function TripReport({ userId, confId }: { userId: string; confId: string 
   const regenerate = async () => {
     setRegen(true);
     try {
-      tr.mutate(await api.tripReport(userId, confId, { regenerate: true }));
-      toast.success("Trip report rewritten");
+      const prev = tr.data?.markdown;
+      const next = await api.tripReport(userId, confId, { regenerate: true });
+      tr.mutate(next);
+      if (prev && next.markdown === prev) toast("No change");
+      else toast.success("Trip report rewritten");
     } catch (e) {
       toast.error(`Couldn't regenerate: ${e instanceof Error ? e.message : String(e)}`);
     } finally {

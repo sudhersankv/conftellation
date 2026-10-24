@@ -24,8 +24,11 @@ export function BriefView() {
   const regenerate = async () => {
     setRegen(true);
     try {
-      brief.mutate(await api.brief(userId, confId, { regenerate: true }));
-      toast.success("Brief rewritten from today's paths");
+      const prev = brief.data?.generatedAt;
+      const next = await api.brief(userId, confId, { regenerate: true });
+      brief.mutate(next);
+      if (prev && next.generatedAt === prev) toast("No change");
+      else toast.success("Brief rewritten from today's paths");
     } catch (e) {
       toast.error(`Couldn't regenerate: ${e instanceof Error ? e.message : String(e)}`);
     } finally {

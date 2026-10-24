@@ -37,13 +37,13 @@ function Block({ slot, tz, goal, h, onOpen, past }: { slot: ItinerarySlot; tz: s
       title={`${item.title} · ${fmtRange(slot.from, slot.to, tz)}${room ? ` · ${room}` : ""}`}
       aria-label={`${TYPE_NAME[item.type]}: ${item.title}, ${fmtRange(slot.from, slot.to, tz)}`}
       className={cn(
-        "group flex h-full w-full min-w-0 flex-col overflow-hidden rounded-[6px] border text-left transition duration-fast",
-        isBlock ? "hatched cursor-default border-border bg-bg" : "border-border hover:border-borderStrong",
+        "group flex h-full w-full min-w-0 flex-col overflow-hidden rounded-[10px] border-2 text-left transition duration-fast",
+        isBlock ? "hatched cursor-default border-dashed border-border bg-bg" : "border-border hover:shadow-hardSm",
         !isBlock && (done ? "bg-surface2" : "bg-surface hover:bg-surface2"),
         tiny ? "justify-center px-2" : oneLine ? "justify-center px-2 py-0.5" : "px-2.5 py-1.5",
         past && !done && !isBlock && "opacity-60",
       )}
-      style={isBlock ? undefined : { borderLeftWidth: 3, borderLeftColor: typeColor(item.type) }}
+      style={isBlock ? undefined : { boxShadow: `inset 6px 0 0 ${typeColor(item.type)}`, paddingLeft: 14 }}
     >
       {oneLine ? (
         <div className="flex min-w-0 items-baseline gap-2 text-[11px] leading-4">
@@ -53,7 +53,7 @@ function Block({ slot, tz, goal, h, onOpen, past }: { slot: ItinerarySlot; tz: s
         </div>
       ) : (
         <>
-          <div className={cn("min-w-0 text-xs font-medium leading-[18px]", isBlock ? "capitalize text-muted" : "text-text", twoLineTitle ? "line-clamp-2" : "truncate")}>{item.title}</div>
+          <div className={cn("min-w-0 font-heading text-xs font-bold leading-[18px]", isBlock ? "capitalize text-muted" : "text-text", twoLineTitle ? "line-clamp-2" : "truncate")}>{item.title}</div>
           <div className="tabular mt-0.5 flex min-w-0 items-center gap-1.5 text-[11px] leading-4 text-muted">
             <span className="shrink-0">{fmtRange(slot.from, slot.to, tz)}</span>
             {room && !isBlock && <span className="min-w-0 truncate text-faint">· {room}</span>}
@@ -87,25 +87,25 @@ export function DayGrid({ slots, tz, goals, nowMin, onOpen }: Props) {
   const height = (endH - startH) * 60 * PX_PER_MIN;
   // Like Google Calendar: the grid scrolls on its own and opens at "now" (or the first slot), an hour of context above.
   const scroller = useRef<HTMLDivElement>(null);
-  const anchor = nowMin !== null && nowMin >= startH * 60 && nowMin <= endH * 60 ? Math.min(nowMin, first) : first;
+  const anchor = nowMin !== null && nowMin >= startH * 60 && nowMin <= endH * 60 ? nowMin : first;
   useEffect(() => {
     const el = scroller.current;
     if (el) el.scrollTop = Math.max(0, top(anchor - 45));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [anchor, startH]);
   return (
-    <div ref={scroller} className="scrollbar-thin relative flex max-h-[max(440px,calc(100dvh-300px))] overflow-y-auto rounded-lg border border-border bg-bg">
-      <div className="relative w-14 shrink-0 border-r border-border" style={{ height: height + 16 }}>
+    <div ref={scroller} className="scrollbar-thin relative flex max-h-[max(440px,calc(100dvh-300px))] overflow-y-auto rounded-xl border-2 border-border bg-surface shadow-hard">
+      <div className="relative w-14 shrink-0 border-r-2 border-border bg-surface2" style={{ height: height + 16 }}>
         {hours.map((h) => (
-          <div key={h} className="tabular absolute right-2 -translate-y-1/2 text-[11px] text-faint" style={{ top: top(h * 60) + 8 }}>{hourLabel(h)}</div>
+          <div key={h} className="tabular absolute right-2 -translate-y-1/2 font-heading text-[11px] font-bold text-muted" style={{ top: top(h * 60) + 8 }}>{hourLabel(h)}</div>
         ))}
       </div>
       <div className="relative min-w-0 flex-1" style={{ height: height + 16 }}>
         {hours.map((h) => (
-          <div key={h} className="absolute inset-x-0 border-t border-border/70" style={{ top: top(h * 60) + 8 }} />
+          <div key={h} className="absolute inset-x-0 border-t border-ink/15" style={{ top: top(h * 60) + 8 }} />
         ))}
         {hours.slice(0, -1).map((h) => (
-          <div key={`h${h}`} className="absolute inset-x-0 border-t border-dashed border-border/30" style={{ top: top(h * 60 + 30) + 8 }} />
+          <div key={`h${h}`} className="absolute inset-x-0 border-t border-dashed border-ink/10" style={{ top: top(h * 60 + 30) + 8 }} />
         ))}
         {laid.map(({ slot, start, end, lane, lanes }) => {
           const h = Math.max(14, (end - start) * PX_PER_MIN - 2);
@@ -121,8 +121,8 @@ export function DayGrid({ slots, tz, goals, nowMin, onOpen }: Props) {
         })}
         {nowMin !== null && nowMin >= startH * 60 && nowMin <= endH * 60 && (
           <div className="pointer-events-none absolute inset-x-0 z-10 flex items-center" style={{ top: top(nowMin) + 8 }} aria-label="Now">
-            <span className="-ml-1 size-2 rounded-full bg-danger" />
-            <span className="h-px flex-1 bg-danger" />
+            <span className="-ml-1.5 size-3 rounded-full border-2 border-border bg-danger" />
+            <span className="h-0.5 flex-1 bg-danger" />
           </div>
         )}
       </div>
@@ -155,12 +155,12 @@ export function DayList({ slots, tz, goals, nowMin, onOpen }: Props) {
                 disabled={isBlock}
                 onClick={() => onOpen(slot)}
                 className={cn(
-                  "min-h-[52px] min-w-0 flex-1 rounded-lg border border-border px-3 py-2 text-left transition duration-fast",
+                  "min-h-[52px] min-w-0 flex-1 rounded-xl border-2 border-border py-2 pl-4 pr-3 text-left shadow-hardSm transition duration-fast",
                   isBlock ? "hatched cursor-default" : item.status === "done" ? "bg-surface2" : "bg-surface active:bg-surface2",
                 )}
-                style={isBlock ? undefined : { borderLeft: `3px solid ${typeColor(item.type)}` }}
+                style={isBlock ? undefined : { boxShadow: `inset 6px 0 0 ${typeColor(item.type)}, 2px 2px 0 #111` }}
               >
-                <div className={cn("text-sm font-medium leading-5", isBlock ? "capitalize text-muted" : "text-text")}>{item.title}</div>
+                <div className={cn("font-heading text-sm font-bold leading-5", isBlock ? "capitalize text-muted" : "text-text")}>{item.title}</div>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
                   <span className="tabular text-xs text-muted">{fmtRange(slot.from, slot.to, tz)}</span>
                   {item.subtitle && !isBlock && <Chip kind={item.type === "booth" ? "booth" : "room"} className="h-5 px-1.5 text-[11px]">{item.subtitle}</Chip>}
@@ -186,8 +186,8 @@ function NowRule() {
   return (
     <div className="flex items-center gap-2 py-1" aria-label="Now">
       <span className="w-14 shrink-0 text-right text-[11px] font-medium text-[#D7263D]">Now</span>
-      <span className="size-1.5 rounded-full bg-danger" />
-      <span className="h-px flex-1 bg-danger/70" />
+      <span className="size-2.5 rounded-full border-2 border-border bg-danger" />
+      <span className="h-0.5 flex-1 bg-danger" />
     </div>
   );
 }
