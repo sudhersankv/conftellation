@@ -51,3 +51,67 @@ Closes gaps found while checking issues #11–#18 against the contract:
 - **#18 my notes**: `api.community(sessionId, userId?)`; `myMoments` is empty without `userId`.
 - **#13 steer**: `ops: []` = not understood → show `summary` as a hint, plan unchanged.
 - **#12 Sky**: highlight why-paths by `edges[].from/to`. Real paths use any `EdgeType` (mocks only use `ABOUT`).
+
+### 19:20 PT · ryan → sudhersan · UI direction in force, ownership, tooling
+Read your 12:05 and 12:11 notes; the `people`, `now`, `momentForm` and `community(sessionId, userId)` additions are what the UI needs, thanks. No change needed for them.
+- **UI direction lives in `docs/DESIGN.md` + `docs/UI_DEPENDENCIES.md`** (Ryan's decisions, 2026-10-24). It matches your note on: dark everywhere, violet accent, spec §12 colour mapping, crisp stars and thin lines, conference cues (room/booth chips, "collected Xh ago"), 390px / 5-second capture, subtle Scout/Planner/Steer/Scribe/Recapper status lines.
+- **It differs from your note on four visual points** (Ryan to reconcile with you; none changes any API): (1) `/` is a **galaxy** of all conferences with a fly-in, not a redirect to `/plan`; (2) a painted backdrop (static starfield, faint nebula washes) behind sheets; (3) Libre Caslon for screen titles and conference names; (4) base colour `#05071A`, not `#0B0B12`.
+- **Ownership update** (in `CLAUDE.md`): UI owns `app/(sky)/**`, `app/add`, `app/onboarding`, `app/layout.tsx`, `app/globals.css`, `tailwind.config.ts`, `components/**`, `lib/ui/**`. The create-next-app `app/page.tsx` goes away (it moves to `app/(sky)/page.tsx`; both can't exist). `app/api/**` stays outside `(sky)`. Please don't edit those UI files.
+- **package.json**: UI adds `motion vaul sonner lucide-react clsx tailwind-merge @radix-ui/*` (later `cmdk react-markdown remark-gfm zustand d3-force`). Pull before you run `npm install`. On a `package-lock.json` conflict, take either side and re-run `npm install`.
+- **Dev mode**: UI runs on mocks (`USE_MOCKS=true`). When you make a route real, keep an early `if (useMocks()) return json(mocks.x)` so fixtures stay one env var away, and **do not fall back to mocks when the real handler fails**: return `{error}` with a 4xx/5xx so we see it.
+
+### 19:24 PT · ryan → sudhersan · integration assumptions the UI is built on (please honour, or tell me)
+Numbered so you can reply by number. If something is infeasible, post the alternative; the UI adapts to what is documented here.
+
+**Identity and flow**
+1. No auth, no cookies on the server: `userId` is always in the URL. Demo users `sam` and `emily` (two phones, concurrent), conference `ptc-2026`. The UI switcher (`?as=emily`) is client-only.
+2. A user/conference with no data is **200 with empty-but-valid JSON**, never 404, for `plan`, `constellation`, `network`, `intros`, `record`, `brief`. 404 `{error}` is for unknown ids on `conferences/:id`, `people/:id`, `sessions/:id/community`.
+3. `POST /api/conferences` has no `userId`, so I assume **`ATTENDS` is created by onboarding** (it carries `confId`). Consequence: `record(userId)` (the galaxy list) only shows conferences the user onboarded to. UI goes `/add` → `/onboarding` directly. If you create `ATTENDS` somewhere else, tell me.
+4. Import is one long request (20–60 s). UI shows fixed step copy ("Reading the agenda…", "Finding speakers…", "Matching sponsors…"), not real progress. Please set `maxDuration` on the route and make `cached:true` return fast. Any failure → non-2xx `{error}`; the UI shows its own copy ("Couldn't read that page…").
+5. After `onboarding` the UI immediately calls `api.plan`. Assumption: **`GET plan` builds a plan on demand** if the user has goals but no `PLANS` yet (≲5 s), or onboarding does it. Either is fine, but `plan` must never be empty for an onboarded user.
+
+**Plan and steer**
+6. `itinerary` is time-ordered. `item.session` / `item.person` / `item.booth` are populated for the matching `type` (cards read them directly). Lunch and similar come as `type:"block"`; an accepted meet as `type:"meet"` with `item.id` = Meet id. **A booth run = consecutive `booth` slots, each `to` equal to the next `from`, in `Booth.order`**: the UI groups consecutive booth slots into one "Booth run" card, so keep them adjacent.
+7. `person.userId` set ⇒ the "Request meet" button is enabled. Set it for every Person linked by `IS` to a User.
+8. `why[0]` is the one shown; extra entries show as "+N more reason". `WhyPath.text` is rendered **verbatim**: one sentence, sentence case, no emoji, ≲110 chars.
+9. A check-in on a planned item flips that `PLANS` status to `done`; the next `plan`/`constellation` GET reflects it. `feedback skip` ⇒ the item is gone from `itinerary` **and** `byGoal` in the returned plan; `boost` raises its `score`.
+10. All datetimes are ISO with offset. The UI formats with an IANA zone. **Request:** add optional `Conference.timezone?: string` (you already hold it in `lib/time.ts`). Until then the UI assumes `America/Los_Angeles`.
+11. `steer` persists: a later `GET plan` reflects it, and `diff[].id` are plan item ids. Steer text the LLM cannot parse ⇒ `ops: []`, plan unchanged (as you documented).
+
+**Sky**
+12. **`WhyPath.nodes[].id` must equal `SkyNode.id`** (the Sky highlights by id; edges by `from`/`to`, direction ignored). So `constellation` should contain every node a returned path mentions, including `Topic` nodes (`type:"topic"`, any state). Missing ids are skipped silently, which leaves holes in the traced line.
+13. Every `SkyNode` except the user anchor and other users carries **`conferenceId`** (goals, problems, moments, topics too). The galaxy fly-in filters on it. A person seen at several conferences needs at least one.
+14. Size: ≲800 nodes per response. `dust` (the rest of the conference) can be capped at ~300 per conference, with short labels.
+15. `CreateMomentResponse.lit` ids must exist in the next `constellation` response (moment id, its target, the goal).
+16. Other users appear as `type:"user"`, `id` = User id. On tap the UI resolves them to a person page through `network.users[].user.personId`, so `User.personId` must be set for every user returned by `network`.
+
+**Meets (two phones, no push channel)**
+17. The UI **polls `api.network` every ~5 s** on Plan/Sky/Me to see incoming requests and status changes. Keep it fast (<300 ms). Accept must be visible to **both** users: a `meet` item in both itineraries, a `meet` node plus link in both constellations. `counter` returns `status:"countered"` with the new `proposal`.
+
+**Capture and search**
+18. `createMoment` is multipart (`momentForm`). Photos are downscaled client-side (≤1600 px JPEG). `mediaUrl` must be loadable by the browser (same-origin path or absolute URL). **Respond in <1 s**: return `{moment, lit}` first and do topic extraction/embedding after. The UI saves optimistically.
+19. `search` powers "Met someone" (250 ms debounce): people first. Must return `people` (speakers and other users' persons), matching **name prefix as well as vector**. Query shorter than 2 chars ⇒ all arrays empty. Target <1 s.
+
+**Brief**
+20. `brief?regenerate=1` bypasses the precompute and returns `precomputed:false`; the UI shows a pending state (up to ~10 s is OK). Every `line.pathId` exists in `paths` (the contract test checks this). A user with no check-ins yet gets **200 with `sections: []`** (UI shows "Your brief appears after your first check-in.").
+
+**Errors and provenance**
+21. Every failure path returns JSON `{error}` (wrap with `handle()`). `client.ts` currently calls `res.json()` before checking `res.ok`, so an HTML 500 shows up as a `SyntaxError`.
+22. Scraped items keep `source` + `collectedAt` (+ `via`). The UI renders "Collected 2h ago" as a link to `source`, so `via:"seed"` data needs a real-looking URL too.
+
+### 19:28 PT · ryan → sudhersan · requested additive contract changes + corrections that will interfere
+**Requested (additive, optional; I'll add the type + mock + client change in the UI PR that needs it unless you do it first; post here either way):**
+- `Conference.timezone?: string` (IANA), see #10 above.
+- `SkyNode.fit?: number` (0..1): the Sky sizes and brightens stars by it; without it the UI uses 0.5, so every star is the same size. For planned items: the normalised plan `score`.
+- `CreateMomentFields.clientId?: string`: the UI queues captures offline and retries on reconnect, so the same moment can arrive twice. If present, `MERGE` the Moment on it (use it as the Moment id) so a retry doesn't duplicate.
+- `SteerRequest.ops?: SteerOp[]`: when present, apply these directly and skip the LLM. The diff toast has **Undo**, which sends the inverse ops. Without this, Undo is disabled in the UI. Tell me if you'd rather not support it.
+
+**Corrections to existing code/mocks (these break features on real data, or are traps):**
+1. **`mocks/index.ts` paths vs Sky ids** (matters once #7 is real, and already for the UI on mocks): `pBoothAcme` (p2) uses the Company id `acmetrace.dev`, but the Sky node is the booth `b-acme`, so highlighting that path skips the booth. The `why()` helper makes every edge `ABOUT` and uses Topic nodes (`agent tracing`, `ai infrastructure`, `hiring`, `agent memory`) that are not in `mocks.constellation.nodes`. Fix proposal: booth paths use the Booth id (`label:"Booth"`); add the topic nodes to the mock constellation. Also goals, problems, moments and persons in the mock constellation lack `conferenceId` (see #13). **I won't touch `mocks/index.ts` for these**, to avoid merge conflicts with your #4/#7 work; do it in the #7 PR, or tell me to.
+2. **`lib/client.ts` `call()`**: parse JSON only when the response is JSON, so a proxy/HTML error becomes a readable `Error`. The UI's first PR will make this one-line fix and note it here. No action for you except #21.
+3. **Stub routes ignore the request** (`POST()` / `GET()` with no args). Real handlers must read `params`/`searchParams`/body; nothing in the stubs shows how, so don't copy the stub signature.
+4. **Mock times are fixed on 2026-10-24** (`T("13:00")`). "Next up" and the "now" marker are computed client-side; the UI will add a `?now=<ISO>` override for demos, so you need not make the backend clock-aware beyond `PlanResponse.now`.
+5. **Emily appears twice in the mock Sky** (`emily` as a `user` star, `emily-chen@tensorgrid` as a person in the plan). Fine under #16 above (the user star resolves to the person page), but keep the two ids distinct and consistent in the real data.
+6. **Don't reformat `mocks/index.ts` or `lib/types.ts`** when you edit them (append or change in place). The UI will also edit them (fixtures, additive fields), and whitespace changes cause conflicts.
+
+Verify on my side: `npm run typecheck`, then every screen against mocks. Reply by number here, or push a type/mock change and post the entry.
