@@ -22,6 +22,11 @@ describe("brief citation parser", () => {
     expect(parseLine("Known fact [p1] and then more.", ids)).toBeNull();
     expect(parseLine("Fact one [p1]. Fact two [p2].", ids)).toBeNull();
   });
+  it("keeps a cited sentence that names dotted tech", () => {
+    expect(parseLine("Meet the Next.js maintainers [p1].", ids)).toEqual({ text: "Meet the Next.js maintainers.", pathId: "p1" });
+    expect(parseLine("Shipped v2.0 today [p2].", ids)).toEqual({ text: "Shipped v2.0 today.", pathId: "p2" });
+    expect(parseLine("See e.g. the tracing talk [p3].", ids)).toEqual({ text: "See e.g. the tracing talk.", pathId: "p3" });
+  });
   it("drops rejected lines and sections left empty", () => {
     const out = parseSections(
       [

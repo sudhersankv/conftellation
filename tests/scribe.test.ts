@@ -114,6 +114,30 @@ describe("POST /api/users/:id/moments", () => {
     expect(new Uint8Array(await res.arrayBuffer()).length).toBe(7);
     expect((await share(body.moment.id, "network")).body.shared).toBe(true);
     expect((await open(`?momentId=${body.moment.id}`)).status).toBe(200);
+    expect((await share(body.moment.id, [])).body.shared).toBe(false);
+    expect((await share(body.moment.id, ["emily"])).status).toBe(200);
+    expect((await open("?userId=emily")).status).toBe(200);
+    expect((await open("?userId=mike")).status).toBe(403);
+    expect((await share(body.moment.id, [])).body.shared).toBe(false);
+    expect((await open("?userId=emily")).status).toBe(403);
+    expect((await open("?userId=sam")).status).toBe(200);
+  });
+
+  it("a conflicting or retried upload does not replace the original photo", async () => {
+    const file = new Blob([new Uint8Array([1, 2, 3, 4])], { type: "image/jpeg" });
+    const a = await capture({ kind: "photo", file, clientId: "c-photo-own", targetId: "s-tracing" });
+    expect(a.status, a.body.error).toBe(200);
+    const name = a.body.moment.mediaUrl!.split("/").pop()!;
+    const read = async () => new Uint8Array(await (await getUpload(req(`${a.body.moment.mediaUrl}?userId=sam`), { params: { file: name } })).arrayBuffer());
+    const before = await read();
+    const other = new Blob([new Uint8Array([9, 9, 9, 9, 9])], { type: "image/jpeg" });
+    const stolen = await capture({ kind: "photo", file: other, clientId: "c-photo-own", targetId: "s-tracing" }, { user: "emily" });
+    expect(stolen.status).toBe(409);
+    expect(await read()).toEqual(before);
+    const retry = await capture({ kind: "photo", file: other, clientId: "c-photo-own", targetId: "s-gpu" });
+    expect(retry.status, retry.body.error).toBe(200);
+    expect(retry.body.moment.mediaUrl).toBe(a.body.moment.mediaUrl);
+    expect(await read()).toEqual(before);
   });
 
   it("does not take over another user's moment or retarget a retry", async () => {
