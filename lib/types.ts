@@ -304,6 +304,7 @@ export interface CreateMomentFields {
   newPersonName?: string; // "met": new person
   newPersonCompany?: string;
   shared?: boolean;
+  clientId?: string; // [A-Za-z0-9_-]{1,80}; becomes the Moment id, so an offline retry doesn't duplicate
 }
 export interface CreateMomentResponse { moment: Moment; lit: string[] } // node ids that should light up in Sky
 
