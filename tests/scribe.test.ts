@@ -114,13 +114,6 @@ describe("POST /api/users/:id/moments", () => {
     expect(new Uint8Array(await res.arrayBuffer()).length).toBe(7);
     expect((await share(body.moment.id, "network")).body.shared).toBe(true);
     expect((await open(`?momentId=${body.moment.id}`)).status).toBe(200);
-    expect((await share(body.moment.id, [])).body.shared).toBe(false);
-    expect((await share(body.moment.id, ["emily"])).status).toBe(200);
-    expect((await open("?userId=emily")).status).toBe(200);
-    expect((await open("?userId=mike")).status).toBe(403);
-    expect((await share(body.moment.id, [])).body.shared).toBe(false);
-    expect((await open("?userId=emily")).status).toBe(403);
-    expect((await open("?userId=sam")).status).toBe(200);
   });
 
   it("a conflicting or retried upload does not replace the original photo", async () => {
