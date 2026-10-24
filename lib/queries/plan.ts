@@ -83,6 +83,19 @@ export async function sessionPaths(userId: string, confId: string): Promise<Sess
   );
 }
 
+export interface BoostPathRow extends RawPath { sessionId: string; topicId: string }
+
+/** Steer "more X": sessions about a topic the user BOOSTED. */
+export async function boostedTopicPaths(userId: string, confId: string): Promise<BoostPathRow[]> {
+  return q<BoostPathRow>(
+    `MATCH p = (u:User {id:$userId})-[:BOOSTED]->(t:Topic)<-[:ABOUT]-(s:Session)
+     MATCH (:Conference {id:$confId})-[:HAS_SESSION]->(s)
+     WHERE NOT (u)-[:SKIPPED]->(s)
+     RETURN s.id AS sessionId, t.id AS topicId, ${PATH("p")}`,
+    { userId, confId },
+  );
+}
+
 /** Vector similarity (1 - cosine distance) of each goal's embedding to sessions at the conference. */
 export async function sessionSimilarity(userId: string, confId: string): Promise<{ goalId: string; sessionId: string; sim: number }[]> {
   return q(

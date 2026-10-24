@@ -188,7 +188,10 @@ export type SteerOp =
   | { op: "booth_time"; minutes: number }
   | { op: "exclude"; kind: TargetKind; match: string; resolvedIds?: string[] }
   | { op: "boost"; kind: TargetKind; match: string; resolvedIds?: string[] }
-  | { op: "pin"; targetId: string };
+  | { op: "pin"; targetId: string }
+  /** Undo-only ops (the backend emits them in `SteerResponse.undo`). */
+  | { op: "unblock_time"; from: string; to: string }
+  | { op: "clear"; targetIds: string[] };
 
 export interface PlanDiff {
   added: { id: string; title: string; type: PlanItemType }[];
@@ -196,9 +199,11 @@ export interface PlanDiff {
   moved: { id: string; title: string; type: PlanItemType; from: string; to: string }[];
 }
 
-export interface SteerRequest { confId: string; text: string }
-/** `ops: []` means the text wasn't understood: show `summary` as a hint (e.g. "Didn't catch that. Try 'leaving at 3pm'."), plan unchanged. */
-export interface SteerResponse { ops: SteerOp[]; diff: PlanDiff; summary: string; plan: PlanResponse }
+/** `ops` present → applied directly, the LLM is skipped (Undo sends `SteerResponse.undo` back here). */
+export interface SteerRequest { confId: string; text: string; ops?: SteerOp[] }
+/** `ops: []` means the text wasn't understood: show `summary` as a hint (e.g. "Didn't catch that. Try 'leaving at 3pm'."), plan unchanged.
+ *  `undo`: ops that revert this steer; send them as `SteerRequest.ops` for the toast's Undo. */
+export interface SteerResponse { ops: SteerOp[]; diff: PlanDiff; summary: string; plan: PlanResponse; undo?: SteerOp[] }
 
 export interface FeedbackRequest { confId: string; targetId: string; kind: "skip" | "boost" }
 
@@ -280,6 +285,9 @@ export interface OnboardingRequest {
   goals: { text: string; kind: GoalKind; topics?: string[] }[];
   problems: string[];
   openTo: OpenTo[];
+  name?: string; // display name for a new user
+  availFrom?: string | null; // ISO; null/omitted = whole day
+  availTo?: string | null;
 }
 export interface OnboardingResponse { goals: Goal[]; problems: Problem[] }
 

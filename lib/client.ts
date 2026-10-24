@@ -4,7 +4,7 @@ import type {
   AddConferenceResponse, BriefResponse, CommunityResponse, ConferenceDetail, ConstellationResponse,
   CreateMomentResponse, FeedbackRequest, IntrosResponse, MeetRequest, MeetRequestBody, MeetRespondBody,
   Moment, NetworkResponse, OnboardingRequest, OnboardingResponse, PlanResponse, RecordResponse,
-  SearchResponse, SteerResponse, TripReportResponse, CreateMomentFields, PersonDetail,
+  SearchResponse, SteerResponse, TripReportResponse, CreateMomentFields, PersonDetail, SteerOp,
 } from "@/lib/types";
 
 /** Typed builder for the multipart body of api.createMoment. */
@@ -38,7 +38,8 @@ export const api = {
   conference: (id: string) => call<ConferenceDetail>(`/api/conferences/${encodeURIComponent(id)}`),
   onboarding: (userId: string, body: OnboardingRequest) => call<OnboardingResponse>(`/api/users/${userId}/onboarding`, post(body)),
   plan: (userId: string, confId: string) => call<PlanResponse>(`/api/users/${userId}/plan${q({ confId })}`),
-  steer: (userId: string, confId: string, text: string) => call<SteerResponse>(`/api/users/${userId}/steer`, post({ confId, text })),
+  /** Pass `ops` (e.g. a previous response's `undo`) to apply them directly without the LLM. */
+  steer: (userId: string, confId: string, text: string, ops?: SteerOp[]) => call<SteerResponse>(`/api/users/${userId}/steer`, post({ confId, text, ops })),
   feedback: (userId: string, body: FeedbackRequest) => call<PlanResponse>(`/api/users/${userId}/feedback`, post(body)),
   search: (confId: string, q_: string) => call<SearchResponse>(`/api/search${q({ confId, q: q_ })}`),
   /** Build `form` with momentForm({ confId, kind, ... }) (fields: CreateMomentFields). */
