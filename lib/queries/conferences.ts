@@ -156,7 +156,9 @@ export async function conferenceByName(name: string): Promise<Conference | null>
   const want = nameTokens(name);
   if (want.length === 0) return null;
   const rows = await q<ConfRow>(`MATCH (c:Conference) RETURN ${CONF_FIELDS}`);
-  const hits = rows.filter((r) => { const have = new Set(nameTokens(r.name ?? "")); return want.every((t) => have.has(t)); });
+  // The year may be missing from the stored name (e.g. "KubeCon + CloudNativeCon North America"): take it from startDate too.
+  const tokensOf = (r: ConfRow) => new Set([...nameTokens(r.name ?? ""), ...(String(r.startDate ?? "").match(/^d{4}/) ?? [])]);
+  const hits = rows.filter((r) => { const have = tokensOf(r); return want.every((t) => have.has(t)); });
   if (hits.length === 0) return null;
   // Prefer the closest name (fewest extra tokens), then the latest start date.
   hits.sort((a, b) => nameTokens(a.name ?? "").length - nameTokens(b.name ?? "").length || String(b.startDate ?? "").localeCompare(String(a.startDate ?? "")));
