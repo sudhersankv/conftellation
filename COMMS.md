@@ -172,6 +172,17 @@ Verify on my side: `npm run typecheck`, then every screen against mocks. Reply b
 - Assumption: both routes keep accepting `now` as a query param on GET plan and POST feedback. If you move it into the feedback body, tell me.
 - Verify: `npm run dev`, open `/plan?now=2026-10-24T13:10:00-07:00`, Network tab shows `.../plan?confId=ptc-2026&now=...`.
 
+### 13:12 PT · sudhersan → ryan · routes intros, network, meet, meets/:id/respond, people/:id, search are live (#9)
+- **No contract shape changes.** All six routes keep their types; each still honours `USE_MOCKS`.
+- `GET /api/users/:id/intros?confId=`: `warm_intro` (Q5: someone you met here checked in at a talk whose speaker also speaks on your problem/goal topic) and `met_before` (Q6). `path` is the real graph path (warm intro = user → MET → person → IS → user → CAPTURED → moment → AT → session → SPEAKS_AT → speaker, plus speaker → session → topic → problem → user). Demo: Sam gets "Emily, who you met, was at Priya Nair's talk; Priya speaks on agent tracing, your team's problem" and "You met Jake Morales at AI Engineer Summit in June". Unknown user/conference → 200 `{intros: []}`.
+- `GET /api/users/:id/network?confId=&now=`: ~130–160 ms warm on the demo graph (first call after boot ~500 ms). `users[]` = other attendees with plan/check-in overlap or shared goal topics, sorted by overlap; every `user.personId` set. `freeSlots` = up to 3 mutual gaps after `now` (≤30 min each), inside both availability windows, around both plans and accepted meets; pass the same `now` you use for plan. `incoming`/`outgoing` = all requests for this conference, any status. Unknown user → 200 empty.
+- `POST /api/users/:id/meet` body `{confId, toUserId, note, proposal}` → `MeetRequest` (pending). A second request to the same user while one is open updates it (same id). Self → 400, unknown user → 404.
+- `POST /api/meets/:id/respond` `{action, proposal?}`: `counter` needs `proposal` → `status:"countered"`; `decline`; `accept` → a `Meet` node (id = request id) both users `ATTENDS`; slot = `proposal.slot`, else 20 min right after `proposal.sessionId` ("Outside Stage B"), else the first mutual free slot. **Both users' next `GET plan` has a `type:"meet"` itinerary item** (`item.id` = meet id, `title` "Meet Emily Chen", `subtitle` = place, `why[0]` path user → Meet → other user). Unknown meet → 404.
+- `GET /api/people/:id?confId=&userId=`: sessions at `confId` (all if omitted), `why` (met before, warm intro, speaks on / works at a sponsor offering your goal topic) only when `userId` given, `metBefore` from MET edges at other conferences. `person.userId` set for users. Unknown → 404.
+- `GET /api/search?confId=&q=`: people first (name prefix / word prefix / company prefix among speakers, attendees, booth staff, then vector), sessions (title contains + vector), booths (company name + vector). `q` < 2 chars → all empty. ~300–550 ms with real embeddings.
+- For #7 constellation (whoever builds it): accepted meets are `(:User)-[:ATTENDS]->(:Meet {status:'accepted', conferenceId, slotFrom, slotTo, place, title})`, `(Meet)-[:AT]->(Session)` if proposed, `(Meet)-[:DURING]->(Conference)`.
+- Verify: `tests/network.test.ts`.
+
 ### 13:40 PT · sudhersan → ryan · route POST /api/conferences is live
 - **POST** `api.addConference(url)`: real Scout. Body `{url}`. `AddConferenceResponse` unchanged (`conference`, `counts`, `cached`). An already-imported URL (http/https, with or without a trailing slash) returns `cached:true` and does not refetch. Missing `{url}` → 400 `{error}`. `not a URL`, no timed agenda, or a Sessionize URL with no public code → 422 `{error}`. `maxDuration` is 300. `USE_MOCKS=true` still returns the mock.
 - **GET** `api.conference(id)` is real too. Unknown id → 404 `{error}`. `ConferenceDetail` gains optional `sponsors?: Company[]` (every sponsor, tier order; enriched rows have `description` and `via:"unlocker"`). Mock includes `sponsors`.
@@ -181,6 +192,20 @@ Verify on my side: `npm run typecheck`, then every screen against mocks. Reply b
 - **Coordinator, demo graph only** (cache is already warm; do not prewarm): `$env:FALKORDB_GRAPH='conftellations'; $env:CACHE_ONLY='true'; npx tsx scripts/import-conference.ts` — default URL is KubeCon NA. First run `cached=false`, id `kubecon-cloudnativecon-north-america-2026`, Bright Data requests=0. A second run is `cached=true`. Seeded PTC / June / GitHub Universe pick up `timezone` only after a reseed; this import does not reseed them.
 - **Assumption:** onboarding still creates `ATTENDS`. Scout does not. This import does not touch the demo graph until that command runs.
 - Verify: `npx vitest run tests/scout.test.ts`.
+
+### 13:40 PT · sudhersan → ryan · network meet rules tightened (#9)
+- No response-shape changes. `runPlanner`'s signature is unchanged.
+- `freeSlots` on `GET /api/users/:id/network` use **both** users' `availFrom`/`availTo`. Stored `user.blocks` (lunch and other itinerary blocks) are busy, along with planned slots and accepted meets.
+- Overlap counts a check-in (`kind:"checkin"`) or a shared moment, not a private note, and a stop that is both planned and captured counts once.
+- `POST /api/meets/:id/respond`: an explicit slot that is backwards, outside the conference day, already started, or overlapping either person's busy time → **400** `{error}`. A `proposal.sessionId` from another conference → **400**. `decline` or `counter` of an accepted request deletes the Meet node, so the next `GET plan` for both users omits it. `accept` of a declined request → **409**.
+- `POST /api/users/:id/meet`: if the other person already has an open (pending/countered) request for this pair and conference, that request is returned. One open request per pair. A repeat in the same direction still updates it.
+- Search still returns the same types. Vector neighbors are taken from a wider set before the conference filter, so another conference filling the old top 15 no longer hides this conference's hits.
+- **Coordinator**: no reseed. Behavior only; the demo graph already has the edges these routes read.
+- Verify: `npx vitest run tests/network.test.ts`.
+### 14:00 PT · sudhersan → ryan · accept needs a real slot (#9)
+- Still no response-shape change. `accept` now refuses to write a Meet with an empty time: if there is no explicit slot, no valid post-session gap, and no mutual free slot, the request stays as it was and the route returns **400** `{error:"no mutual free slot"}`.
+- The 20 minutes after a proposed session uses the same checks as an explicit slot: inside the conference day, not already started, inside both `availFrom`/`availTo` windows, and not overlapping either person's plans, blocks, or other accepted meets. A miss is **400** (`slot is outside availability` / `slot is already committed` / the earlier slot errors).
+- No UI change. No reseed.
 
 ### 13:42 PT · sudhersan → ryan · stop: do not continue from the current UI
 

@@ -2,6 +2,7 @@
 // score = goalScore + 0.1·(extra topics) + 0.5·boosted + 0.3·vectorSim  (+ people/booth bonuses below)
 import type { Booth, GoalPlan, Goal, GoalKind, ItinerarySlot, OpenTo, Person, PlanDiff, PlanItem, PlanResponse, Session, SessionKind, Via, WhyPath } from "@/lib/types";
 import { ms } from "@/lib/time";
+import { acceptedMeets } from "@/lib/queries/network";
 import { buildItinerary, type Block } from "./itinerary";
 import {
   boostedTopicPaths, boothPaths, boothsByIds, conferenceDay, peopleByIds, personPaths, sessionPaths, sessionSimilarity, sessionsByIds, userState, writePlans,
@@ -35,10 +36,11 @@ export async function runPlanner(userId: string, confId: string, opts: { now?: s
   const state = await userState(userId, confId);
   if (!state) throw new NotFound(`user ${userId} not found`);
   const now = opts.now ?? new Date().toISOString();
-  const [sPaths, sims, pPaths, bPaths, day, tBoosts] = await Promise.all([
+  const [sPaths, sims, pPaths, bPaths, day, tBoosts, meets] = await Promise.all([
     sessionPaths(userId, confId), sessionSimilarity(userId, confId), personPaths(userId, confId), boothPaths(userId, confId), conferenceDay(confId),
-    boostedTopicPaths(userId, confId),
+    boostedTopicPaths(userId, confId), acceptedMeets(userId, confId),
   ]);
+  const meetById = new Map(meets.map((m) => [m.id, m]));
   const goalById = new Map(state.goals.map((g) => [g.id, g]));
   const boosted = new Map(state.boosted.map((b) => [b.id, b]));
   const done = new Set([...state.doneIds, ...state.metToday]);
@@ -56,7 +58,10 @@ export async function runPlanner(userId: string, confId: string, opts: { now?: s
   applyIntentBonus(state, people, pMap);
 
   // ----- itinerary -----
-  const blocks: Block[] = state.blocks ? JSON.parse(state.blocks) : [];
+  const blocks: Block[] = [
+    ...(state.blocks ? (JSON.parse(state.blocks) as Block[]).map(({ from, to, label }) => ({ from, to, label })) : []),
+    ...meets.map((m) => ({ id: m.id, from: m.slotFrom, to: m.slotTo, label: "meet" })),
+  ];
   const slots = day.from && day.to
     ? buildItinerary({
         day: { from: day.from, to: day.to },
@@ -109,6 +114,11 @@ export async function runPlanner(userId: string, confId: string, opts: { now?: s
   const itinerary: ItinerarySlot[] = slots.map((s) => {
     if (s.kind === "session") return { from: s.from, to: s.to, item: sessionItem(sCand.get(s.id)!) };
     if (s.kind === "booth") return { from: s.from, to: s.to, item: boothItem(bCand.get(s.id)!) };
+    const mt = meetById.get(s.id);
+    if (mt) {
+      const why = withIds([{ text: `You agreed to meet ${mt.otherName}`, nodes: mt.nodes, edges: mt.edges } as WhyPath]);
+      return { from: s.from, to: s.to, item: { type: "meet", id: mt.id, title: `Meet ${mt.otherName}`, subtitle: mt.place ?? undefined, score: 0, status: "planned", why } };
+    }
     return { from: s.from, to: s.to, item: { type: "block", id: s.id, title: s.label, score: 0, status: "planned", why: [] } };
   });
 
@@ -126,7 +136,7 @@ export async function runPlanner(userId: string, confId: string, opts: { now?: s
 
   // ----- PLANS edges + diff -----
   const edges = [
-    ...itinerary.filter((s) => s.item.type !== "block").map((s) => ({
+    ...itinerary.filter((s) => s.item.type !== "block" && s.item.type !== "meet").map((s) => ({
       id: s.item.id, goalId: s.item.goalId ?? null, score: s.item.score, status: s.item.status, slotStart: s.from, slotEnd: s.to,
     })),
     ...byGoal.flatMap((g) => g.people).map((p) => ({ id: p.id, goalId: p.goalId ?? null, score: p.score, status: p.status, slotStart: null, slotEnd: null })),
