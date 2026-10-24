@@ -14,7 +14,7 @@ export const POST = handle(async (req: Request) => {
   try {
     const r = await importConference(body.url);
     console.log(`[scout] ${body.url} → ${r.response.conference.id} cached=${r.response.cached} path=${r.path ?? "-"} ${r.ms}ms bd=${r.brightDataRequests}` +
-      (r.enrich ? ` enriched=${r.enrich.enriched} failed=${r.enrich.failed.length}` : ""));
+      (r.enrich ? ` enriched=${r.enrich.enriched} failed=${r.enrich.failed.length} skipped=${r.enrich.skipped.length}` : ""));
     return json<AddConferenceResponse>(r.response);
   } catch (e) {
     if (e instanceof BadInput) return error(e.message, 422);

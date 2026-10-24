@@ -1,6 +1,6 @@
 # HANDOFF
 
-Living, harness-agnostic handoff for whichever agent is driving (Claude Code, Cursor, Codex…). First written 2026-10-24 ~11:45 PT by Claude Code when Sudhersan switched to Cursor; **Sudhersan returns to Claude Code at ~13:50 PT**. Read this first, then `CLAUDE.md` (rules and ownership), then `lib/types.ts` (the contract). Product spec: `conftellations-spec.md`. Parent issue: **#21**.
+Living, harness-agnostic handoff for whichever agent is driving (Claude Code, Cursor, Codex…). First written 2026-10-24 ~11:45 PT by Claude Code when Sudhersan switched to Cursor. **Sudhersan switches back to Claude Code at ~14:15 PT; this rewrite is the only context.** Read this first, then `CLAUDE.md` (rules and ownership), then `lib/types.ts` (the contract). Product spec: `conftellations-spec.md`. Parent issue: **#21**.
 
 ## Keeping this file alive (REQUIRED for every agent)
 
@@ -14,31 +14,30 @@ Living, harness-agnostic handoff for whichever agent is driving (Claude Code, Cu
 
 ## 0. TL;DR
 
-- **What**: Conftellations, an attendee-owned conference brain. Hackathon: Patch the Conference (WeMakeDevs), **Sat Oct 24 2026, SF. Code freeze 16:45 PT, demo 17:30 PT.** Main track FalkorDB, secondary Bright Data, Qodo reviews PRs.
-- **Team**: **Sudhersan** (`sudhersankv`, you/Cursor) = graph + backend + deploy. **Ryan** (`RyanV27`, his own agent) = UI. Ryan is setting up Qodo on the repo right now.
-- **State (12:37 PT)**: **#2 done** (adapters), **#1 done** (demo graph, real OpenAI embeddings), **#4 done** (Planner: `GET /plan` + `POST /feedback` real; seed writes Sam's PLANS). **#19 Fly deploy + CI** landed (`236380c`, by a parallel agent): **live at https://conftellations.fly.dev**, every push to `main` typechecks then deploys (newer pushes cancel older deploys).
-- **Git workflow changed (PR #22, 12:38 PT)**: branch per issue (`<type>/<issue#>-<slug>`), push the branch, Ryan opens/merges PRs, never commit to `main`. See `CLAUDE.md` "Git workflow". Other routes still serve mocks. 26 tests pass (`npm test`, ~45 s).
-- **Ryan's agent posted a 22-point integration list in `COMMS.md` (19:24 + 19:28 entries)**: read it before making any route real. Planner points are answered; open ones: `SkyNode.fit`, mock path/Sky id fixes (#7), `Conference.timezone?`, `CreateMomentFields.clientId?` (#6), `SteerRequest.ops?` for Undo (#5), `createMoment` <1 s, search name-prefix (#9).
-- **Working mode (user, 11:50 PT)**: go **module by module**, test each live before moving on, ask the user on use-case questions instead of assuming.
-- **LLM**: `OPENAI_MODEL=gpt-5.4-nano` (user's choice; verified live, ~2 s structured call). `lib/llm.ts` sends `reasoning_effort` (env `OPENAI_REASONING_EFFORT`, default `low`) instead of `temperature` for gpt-5*/o* models.
-- **Bright Data: working** (12:04 PT). User ran `npx bdata login`, which created zones `cli_unlocker` (unblocker) + `cli_browser`. `.env.local`: `BRIGHTDATA_UNLOCKER_ZONE=cli_unlocker`, `BRIGHTDATA_SERP_ZONE=cli_unlocker` (SERP via the unlocker zone works with `&brd_json=1`). Verified live: `unlock()` ~23 s/page, `serp()` ~18 s, 9 organic results. **Slow: pre-warm the cache before the demo.** Our API key still can't create zones (not admin); `scripts/bd-zones.ts` lists them.
-- **Contract additions (12:11 PT)**: `GET /api/people/:id` → `PersonDetail` (stub, real handler is backend work with #9), `PlanResponse.now?` (Planner/#4 must fill it: latest check-in else planned session containing now), `CreateMomentFields`, `community(sessionId, userId?)` (#10 must honour `userId`).
-- **UI direction** posted to Ryan in COMMS.md (12:05 PT): dark, sleek, Gen Z, restrained neon; constellation not galaxy; conference cues; surface Scout/Planner/Steer/Scribe/Recapper subtly.
-- **Your next task**: **#6** Scribe (capture; user said "tracking", assumed Scribe), **#7** Constellation, **#3** Scout (live demo = **KubeCon NA 2026 via Sessionize + Bright Data sponsor enrichment**). See §7.
+- **What**: Conftellations, an attendee-owned conference brain. Hackathon: Patch the Conference (WeMakeDevs), **Sat Oct 24 2026, SF. Code freeze 16:45 PT, demo 17:30 PT.** Demo URL: **https://conftellations.fly.dev**. Main track FalkorDB, secondary Bright Data. Qodo reviews PRs. CodeRabbit does not (the repo has under 10 stars).
+- **Team**: **Sudhersan** (`sudhersankv`) = graph + backend + deploy. **Ryan** (`RyanV27`) = UI. You are continuing Sudhersan's backend. Do not edit Ryan's UI files.
+- **main** is `9d5c76f` (Merge #37 `ui/12-sky-stage`). Local `D:\conftellation` `main` was at `9817ff6`, behind origin, and that checkout may be on another branch. **`git checkout main` and `git pull` before any work.**
+- **Live routes on main** (real handlers; `USE_MOCKS=true` still returns fixtures): plan + feedback (#4), steer + onboarding (#25), brief + trip report (#24), moments + share (#26), community + record (#28), `POST/GET` conferences (#30, scout High fixes #35), intros / network / meet / meet respond / person / search (#33; closed #29 was replaced, not merged). **`GET /api/users/:id/constellation` is still the mock stub.**
+- **Still open after a 20-minute wait (14:06 PT), rechecked 14:15 PT**: [#36](https://github.com/sudhersankv/conftellation/pull/36) `feat/7-constellation-2` (Qodo High and Medium still open on `67be2a6`). [#34](https://github.com/sudhersankv/conftellation/pull/34) `fix/qodo-high` (head `5bbc8cba` is past the Qodo review on `0501eb2`). Closed without merge: #31 `feat/7-constellation` (`484ba2e` is not on main). See §7.
+- **KubeCon NA 2026 is in graph `conftellations`** (read-only check ~14:12 PT): id `kubecon-cloudnativecon-north-america-2026`, 557 sessions, 701 people, 232 sponsors. The Sessionize probe was 574 sessions / 701 speakers / 242 sponsors. Treat the import as finished. Do not re-run it for the demo.
+- **Fly**: app `conftellations`, region `sjc`, auto-deploy on push to `main` (typecheck, then deploy; a newer push cancels the older run). Latest completed deploy **succeeded**: #37 (`9d5c76f`, run `40133157624`). That image includes network #33 and scout #35 (the #33 deploy itself was cancelled when #35 landed). Docker build is `next build --no-lint`. `falkordb` is externalized in `next.config.mjs`. A Windows `ENOENT` rename of `500.html` is a flake: delete `.next` and rebuild once.
+- **UI**: Sudhersan rejected the galaxy/nebula look (13:36 PT). The stop-note is on main (#32, `d7e0355`). Ryan replied at 13:51 PT that he is keeping `docs/DESIGN.md`, and #37 merged the Sky anyway. Do not revert it and do not edit those files. Qodo findings on #27 are Ryan's.
+- **Tests** use graph `<FALKORDB_GRAPH>_test`. Never commit `.env.local`. LLM is still `gpt-5.4-nano`. Bright Data zone for Unlocker and SERP is `cli_unlocker`.
+- **Your next task**: finish #36 (constellation), then #34 (remaining Qodo on steer/scribe/brief), then the network High that shipped on #33. Details in §7.
 
 ---
 
 ## 1. Repo & environment
 
 - Repo: https://github.com/sudhersankv/conftellation (**PUBLIC**: never commit secrets). Local: `D:\conftellation`, Windows 11, Node 22.16, npm 10.9, git, `gh` (logged in as sudhersankv), `flyctl` 0.4.111 (logged in, personal org), Docker 29.6 (Desktop was started, but we don't need it: FalkorDB is hosted).
-- Branch: `main`. Work on small branches → PR → `Closes #N`. Qodo reviews PRs.
+- Branch: `main` on the remote is ahead of the old local `main`. One branch per issue, PR, `Closes #N`. Backend PRs may be self-merged once tests, `npm run typecheck`, and Qodo are done (High and Medium fixed). Do not merge Ryan's UI PRs. Do not push straight to `main`.
 - Line endings: files were written with LF; git warns about CRLF. Harmless.
 
 ### Env
 - `.env.example` (committed) lists every variable.
 - `.env.local` (gitignored, exists locally) already has the **hosted FalkorDB** credentials:
   `FALKORDB_HOST/PORT/USERNAME/PASSWORD`, `FALKORDB_TLS=true`, `FALKORDB_GRAPH=conftellations`. It is the hackathon-provided temp instance (port 58007, TLS).
-- Still empty: `OPENAI_API_KEY`, `BRIGHTDATA_API_KEY`, `BRIGHTDATA_SERP_ZONE`, Studio ids. `DEMO_MODE=true`, `USE_MOCKS=false`.
+- OpenAI and Bright Data keys are set in `.env.local` (11:47 PT). Zones: `BRIGHTDATA_UNLOCKER_ZONE=cli_unlocker`, `BRIGHTDATA_SERP_ZONE=cli_unlocker` (12:04 PT). `DEMO_MODE=true`, `USE_MOCKS=false` as last recorded. Studio ids may still be empty. Never print this file.
 - Scripts and tests load `.env.local` via `dotenv`. Next loads it automatically.
 
 ### Commands
@@ -48,13 +47,15 @@ npm run falkor:ping     # connect, param query, vector index sanity check (passe
 npm run dev             # http://localhost:3001 (FalkorDB Browser would use 3000 locally)
 npm test                # vitest, tests/**/*.test.ts, uses graph "<FALKORDB_GRAPH>_test"
 npm run typecheck
-npm run seed            # NOT WRITTEN YET (issue #1): tsx seed/seed.ts
-npm run smoke           # NOT WRITTEN YET: tsx scripts/smoke.ts
+npm run seed            # tsx seed/seed.ts (exists; reseed wipes the graph)
+npm run smoke           # package.json points at scripts/smoke.ts; that file is not on main (9d5c76f)
 ```
 
 ---
 
 ## 2. What exists (done this session)
+
+The inventory below is the early-session snapshot (through the seed and planner). It is partly duplicated and it still says some later routes were stubs. **§0 is what is live.** Do not rebuild seed, planner, steer, scribe, recapper, community, scout, or network from this table.
 
 | Path | What |
 |---|---|
@@ -170,6 +171,9 @@ All plain HTTP on public pages. **No Bright Data needed for these two.**
 11. Deploy target: **Fly.io** (issue #19).
 12. Contracts and pipeline locked so UI work runs in parallel.
 13. (11:56 PT) LLM model `gpt-5.4-nano`. PTC data may be fabricated. Live import demo = KubeCon NA 2026 (Sessionize) + Bright Data sponsor enrichment. Work module by module, testing each, and ask on use-case questions.
+14. Backend PRs wait for a Qodo comment headed **“Code Review by Qodo”**, then High and Medium findings are fixed before merge. The earlier “PR Summary by Qodo” is not the review. CodeRabbit does not review (the repo has under 10 stars); its comment is a skip, not an approval.
+15. (13:36 PT) Sudhersan rejected the current UI look. Ryan must not extend the deployed placeholder or the galaxy/nebula app shell. Direction remains the 12:05 COMMS note: dark `#0B0B12`, restrained violet, crisp constellation, conference cues. The stop-note is on main (#32, `d7e0355`, from `docs/ui-direction-reset`). Ryan replied at 13:51 PT that he is keeping `docs/DESIGN.md`, and #37 merged the Sky anyway. Backend does not revert that merge and does not edit UI files.
+16. Self-merge of backend PRs is allowed once tests, build (`npm run typecheck`; CI deploys with `next build --no-lint`), and Qodo are done. One branch per issue. Do not push straight to `main`. Do not merge Ryan's UI PRs.
 
 ### Test strategy (agreed; also in #21)
 - **Primary seam: route handlers.** Call them directly with a `Request` against the `_test` graph seeded from a small fixture. Assert response + resulting graph state. No assertions on Cypher text or prompts.
@@ -222,16 +226,30 @@ The backend load is heavy, so prioritise by spec §15 "never cut": Sky with why-
 
 ---
 
-## 7. Next steps for Cursor (in order)
+## 7. Next steps (in order)
 
-1. ~~#2 adapters~~ **done**. ~~#1 seed~~ **done** (brief/trip/crowd precompute is part of #8; seed should call the planner for Sam once #4 lands).
-2. ~~#4 Planner~~ **done** (12:37 PT). ~~#19 Fly deploy + CI~~ **done**: app `conftellations`, `sjc`, 1 always-on `shared-cpu-1x` 1GB machine. Fly secrets copied from `.env.local` (USE_MOCKS=false). Manual redeploy: `fly deploy --remote-only --ha=false`; logs: `fly logs -a conftellations`. Docker build uses `next build --no-lint` (types still checked) so UI lint can't block deploys. No volume: new Bright Data cache entries and `public/uploads/` vanish on redeploy, so **commit pre-warmed cache files** in `seed/raw/cache/`. Two stray Fly deploy tokens exist (`fly tokens list -a conftellations` to revoke).
-3. **#6 Scribe** (`POST /api/users/:id/moments`, share): attach to explicit target else `plan.now` rule (latest check-in, else planned session containing now; reuse `nowTarget` in the planner). Honour Ryan's COMMS asks: respond <1 s (topic extraction/embedding after), `clientId` MERGE, `lit` ids must exist in the constellation. Check-in flips PLANS status to done.
-4. **#7 Constellation** (Q11): include every node any returned why mentions (topics too), `conferenceId` on all nodes, `fit` = normalised plan score, ≤800 nodes (dust ≤300). Fix mock paths (booth id `b-acme`, topic nodes in mock Sky) in the same PR.
-5. **#3 Scout** (`POST /api/conferences`, `GET /api/conferences/:id`): Sessionize KubeCon first (no Bright Data), then sponsor enrichment (cap 20–30 sponsors; confirm credits with the user). Set `maxDuration`; already-imported URL → `cached:true` fast.
-6. Then #5 steer (support `ops` for Undo), #9, #8, #10.
+`gh pr list -R sudhersankv/conftellation --state open` before you start. If #36 or #34 has merged, skip that item. Do not cancel those PRs.
 
-For every route you make real: keep the stub's response type, wrap it in `handle()`, add a route-level vitest, update COMMS.md.
+1. **Sync.** In `D:\conftellation`: `git checkout main` then `git pull`. Local `main` was `9817ff6`, behind origin. Do not continue from that commit.
+2. **Leave the UI alone.** Do not edit `app/(sky)/**`, `app/add`, `app/onboarding`, `app/layout.tsx`, `app/globals.css`, `components/**`, `lib/ui/**`, `docs/DESIGN.md`, `docs/UI_DEPENDENCIES.md`. Do not revert #37. Qodo findings on PR #27 are Ryan's. `SkyNode.fit?` is already on main (his 13:46 COMMS note). The real constellation must set it.
+3. **[#36](https://github.com/sudhersankv/conftellation/pull/36) `feat/7-constellation-2` first.** This is the missing sky (`GET /api/users/:id/constellation` is still a stub). Commit `484ba2e` on the closed #31 is not on main. Qodo reviewed head `67be2a648` at 14:04 PT. Fix every open finding, and if the head moves, wait for a new comment headed “Code Review by Qodo” before merging. Then `npm test` and `npm run typecheck`. Self-merge when High and Medium are clear. Local `npm run build` can fail lint (`lib/agents/recapper/index.ts` unused `_rank`, Ryan's 13:46 note); CI uses `next build --no-lint`.
+   - **High:** Feedback at one event erases another's. A person skipped at one event vanishes from another plan.
+   - **Medium:** Feedback can appear at the wrong event. Shared goals can land in the wrong event. Older encounters remain a person's latest. Check-ins replay at the planned time. Large session lists hide every booth. Busy skies lose capture-linked stars.
+   - From the 13:46 COMMS note: honour `confId`, put `conferenceId` on nodes, set `fit` to the plan score normalised to 0..1, set `at` on done/unplanned/moment nodes (leave it off planned items), use topic nodes and booth ids on why paths, and represent accepted meets as `type:"meet"`. Include every node a returned why mentions. Cap about 800 nodes (dust about 300).
+4. **[#34](https://github.com/sudhersankv/conftellation/pull/34) `fix/qodo-high`.** Head `5bbc8cba` (14:12 PT) is two commits past the review of `0501eb2`: `test(scribe): keep photo access to owner or network share` and `test(steer): assert undo restores the original goal topics`. There is no “Code Review by Qodo” on `5bbc8cba` yet. Wait for one. Fix any new High or Medium, then test, typecheck, and self-merge. On this branch, `remove_goal` undo already pushes `add_goal` with the original `goalId` (`lib/agents/steer/index.ts`). Do not regress that. The review of `0501eb2` had marked three findings resolved and left one Medium open: “People a photo is shared with cannot open it”. The later scribe commit is aimed at that; Qodo on the new head decides whether it is done.
+5. **Follow-ups that already merged with findings still open.** Do these after #36 and #34, before 16:45, on a new branch per issue. The meet-authorization High comes first.
+   - Network #33 (merged head `6ce3d5d`, on main as `c603b82`). Qodo still open: **High** “Anyone can change another user's meets”. **Medium:** past acquaintances appear as new intros; concurrent requests create duplicate meets; non-speakers vanish from semantic search; meet changes are missing from plan diffs; meet changes can be only half saved.
+   - Scout #35 (on main as `947c1ab`). Its High is marked resolved. **Medium still open:** a hall alone creates a fictitious booth; successfully enriched companies keep a stale skip reason; DNS rebinding can still reach internal hosts; later search hits cannot rescue a sponsor; overnight sessions end before they start. DNS rebinding is the one to fix if time is short.
+6. **KubeCon import is done.** Do not re-run it. Confirmed in graph `conftellations` at ~14:12 PT (see §0). Only if that node is missing, from a shell that already has `.env.local` (cache is warm; do not prewarm):
+
+   ```powershell
+   $env:FALKORDB_GRAPH='conftellations'; $env:CACHE_ONLY='true'; npx tsx scripts/import-conference.ts
+   ```
+
+   Default URL is KubeCon NA. A second run should log `cached=true` and Bright Data requests=0. This does not reseed PTC, June, or GitHub Universe.
+7. **Demo prep (#20)** once the sky is real on main and that commit's Fly deploy succeeded. Confirm https://conftellations.fly.dev. Code freeze 16:45 PT, demo 17:30 PT. No persistent volume: `public/uploads/` and any uncommitted Bright Data cache vanish on redeploy. Manual redeploy: `fly deploy --remote-only --ha=false`. Logs: `fly logs -a conftellations`.
+
+For every route you make real: keep the response type, wrap it in `handle()`, add a route-level vitest, update `COMMS.md`, and update this file.
 
 ---
 
@@ -272,7 +290,7 @@ npx skills@latest add mattpocock/skills -a cursor
 1. ~~OPENAI_API_KEY~~ set (11:47 PT). Model `gpt-5.4-nano`.
 2. ~~Bright Data zones~~ → `cli_unlocker` for both Unlocker and SERP (12:04 PT).
 3. Which sponsor gave the **$50 credits**, and is it applied to the account?
-4. Fly.io: confirm app name `conftellations`, region `sjc`, and that the personal org has billing set up.
+4. ~~Fly.io app name, region, billing~~ → app `conftellations`, region `sjc`. Deploys of #30, #32, #35, and #37 succeeded.
 5. ~~Real PTC details~~ → fabricated is fine (user, 11:56 PT).
 6. ~~Live "paste any URL" demo~~ → **KubeCon NA 2026** (Sessionize fast path) + Bright Data sponsor enrichment (user, 11:56 PT).
 
@@ -287,6 +305,8 @@ npx skills@latest add mattpocock/skills -a cursor
 - KubeCon Sessionize times have no offset; attach the venue timezone when normalizing.
 - RainFocus abstracts are HTML: strip tags before embedding.
 - GitHub Universe/KubeCon data are real people. Fine to show (public), but **personal-layer data (MET, goals) must stay fictional/seeded** for personas.
+- Windows: `next build` can fail with `ENOENT` renaming `500.html`. Delete `.next` and rebuild once.
+- Local `npm run build` runs lint. CI and the Docker image use `next build --no-lint`. An unused `_rank` in `lib/agents/recapper/index.ts` fails lint (Ryan, 13:46 PT). Typecheck is the gate.
 
 ---
 
@@ -310,3 +330,5 @@ Format: `HH:MM PT · agent · what changed (issue #, commit/PR)`
 - 12:37 PT · Cursor · #4 Planner done: `GET /plan` + `POST /feedback` live (~0.9 s), booths only after `now`, byGoal lists items under every goal, hiring intent bonus, whys ≤110 chars. Seed runs the planner for Sam (PLANS edges). 26/26 tests. Replied to Ryan's planner points in COMMS. User asked for "tracking" next → assumed #6 Scribe.
 - 12:42 PT · Cursor · Fly deploy confirmed (https://conftellations.fly.dev). Renamed `useFakeEmbed` → `isFakeEmbed` in `lib/llm.ts` (tripped `react-hooks/rules-of-hooks`). Repo moved to branch-per-issue PRs (PR #22); this change is on `fix/19-deploy-followups`.
 - 13:05 PT · Claude Code (Ryan) · #11 UI shell on `ui/11-app-shell`: dark tokens + Caslon/Geist fonts, `(sky)` route group with persistent `SkyStage`, top/tab bars, session context (`?as=`, `?now=`), `useSky` store, `useApi`, UI primitives, `call()` JSON fix + `now` option. All UI deps installed. COMMS note 13:05.
+- 13:46 PT · Claude Code (Ryan) · #12 Sky on `ui/12-sky-stage`: custom-painted constellation (states, goal suns, coverage halos), star card, why-path highlight + trace, lit pulses, replay, Today/All, galaxy home at `/` with fly-in and zoom out. `SkyNode.fit?` added. COMMS note 13:46.
+- 14:15 PT · handoff · Rewrote §0 and §7 for the next harness. main `9d5c76f`. Open: #36 constellation-2, #34 qodo-high. KubeCon is in graph `conftellations` (557 sessions, 701 people, 232 sponsors). Fly deploy of #37 succeeded.

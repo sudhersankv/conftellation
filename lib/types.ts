@@ -226,6 +226,7 @@ export interface SkyNode {
   at?: string; // replay order
   conferenceId?: string;
   isOtherUser?: boolean;
+  fit?: number; // 0..1 magnitude (normalised plan score); UI uses 0.5 when absent
 }
 
 export interface SkyLink { source: string; target: string; type: EdgeType }

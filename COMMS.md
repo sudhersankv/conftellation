@@ -172,6 +172,17 @@ Verify on my side: `npm run typecheck`, then every screen against mocks. Reply b
 - Assumption: both routes keep accepting `now` as a query param on GET plan and POST feedback. If you move it into the feedback body, tell me.
 - Verify: `npm run dev`, open `/plan?now=2026-10-24T13:10:00-07:00`, Network tab shows `.../plan?confId=ptc-2026&now=...`.
 
+### 13:12 PT · sudhersan → ryan · routes intros, network, meet, meets/:id/respond, people/:id, search are live (#9)
+- **No contract shape changes.** All six routes keep their types; each still honours `USE_MOCKS`.
+- `GET /api/users/:id/intros?confId=`: `warm_intro` (Q5: someone you met here checked in at a talk whose speaker also speaks on your problem/goal topic) and `met_before` (Q6). `path` is the real graph path (warm intro = user → MET → person → IS → user → CAPTURED → moment → AT → session → SPEAKS_AT → speaker, plus speaker → session → topic → problem → user). Demo: Sam gets "Emily, who you met, was at Priya Nair's talk; Priya speaks on agent tracing, your team's problem" and "You met Jake Morales at AI Engineer Summit in June". Unknown user/conference → 200 `{intros: []}`.
+- `GET /api/users/:id/network?confId=&now=`: ~130–160 ms warm on the demo graph (first call after boot ~500 ms). `users[]` = other attendees with plan/check-in overlap or shared goal topics, sorted by overlap; every `user.personId` set. `freeSlots` = up to 3 mutual gaps after `now` (≤30 min each), inside both availability windows, around both plans and accepted meets; pass the same `now` you use for plan. `incoming`/`outgoing` = all requests for this conference, any status. Unknown user → 200 empty.
+- `POST /api/users/:id/meet` body `{confId, toUserId, note, proposal}` → `MeetRequest` (pending). A second request to the same user while one is open updates it (same id). Self → 400, unknown user → 404.
+- `POST /api/meets/:id/respond` `{action, proposal?}`: `counter` needs `proposal` → `status:"countered"`; `decline`; `accept` → a `Meet` node (id = request id) both users `ATTENDS`; slot = `proposal.slot`, else 20 min right after `proposal.sessionId` ("Outside Stage B"), else the first mutual free slot. **Both users' next `GET plan` has a `type:"meet"` itinerary item** (`item.id` = meet id, `title` "Meet Emily Chen", `subtitle` = place, `why[0]` path user → Meet → other user). Unknown meet → 404.
+- `GET /api/people/:id?confId=&userId=`: sessions at `confId` (all if omitted), `why` (met before, warm intro, speaks on / works at a sponsor offering your goal topic) only when `userId` given, `metBefore` from MET edges at other conferences. `person.userId` set for users. Unknown → 404.
+- `GET /api/search?confId=&q=`: people first (name prefix / word prefix / company prefix among speakers, attendees, booth staff, then vector), sessions (title contains + vector), booths (company name + vector). `q` < 2 chars → all empty. ~300–550 ms with real embeddings.
+- For #7 constellation (whoever builds it): accepted meets are `(:User)-[:ATTENDS]->(:Meet {status:'accepted', conferenceId, slotFrom, slotTo, place, title})`, `(Meet)-[:AT]->(Session)` if proposed, `(Meet)-[:DURING]->(Conference)`.
+- Verify: `tests/network.test.ts`.
+
 ### 13:40 PT · sudhersan → ryan · route POST /api/conferences is live
 - **POST** `api.addConference(url)`: real Scout. Body `{url}`. `AddConferenceResponse` unchanged (`conference`, `counts`, `cached`). An already-imported URL (http/https, with or without a trailing slash) returns `cached:true` and does not refetch. Missing `{url}` → 400 `{error}`. `not a URL`, no timed agenda, or a Sessionize URL with no public code → 422 `{error}`. `maxDuration` is 300. `USE_MOCKS=true` still returns the mock.
 - **GET** `api.conference(id)` is real too. Unknown id → 404 `{error}`. `ConferenceDetail` gains optional `sponsors?: Company[]` (every sponsor, tier order; enriched rows have `description` and `via:"unlocker"`). Mock includes `sponsors`.
@@ -181,6 +192,20 @@ Verify on my side: `npm run typecheck`, then every screen against mocks. Reply b
 - **Coordinator, demo graph only** (cache is already warm; do not prewarm): `$env:FALKORDB_GRAPH='conftellations'; $env:CACHE_ONLY='true'; npx tsx scripts/import-conference.ts` — default URL is KubeCon NA. First run `cached=false`, id `kubecon-cloudnativecon-north-america-2026`, Bright Data requests=0. A second run is `cached=true`. Seeded PTC / June / GitHub Universe pick up `timezone` only after a reseed; this import does not reseed them.
 - **Assumption:** onboarding still creates `ATTENDS`. Scout does not. This import does not touch the demo graph until that command runs.
 - Verify: `npx vitest run tests/scout.test.ts`.
+
+### 13:40 PT · sudhersan → ryan · network meet rules tightened (#9)
+- No response-shape changes. `runPlanner`'s signature is unchanged.
+- `freeSlots` on `GET /api/users/:id/network` use **both** users' `availFrom`/`availTo`. Stored `user.blocks` (lunch and other itinerary blocks) are busy, along with planned slots and accepted meets.
+- Overlap counts a check-in (`kind:"checkin"`) or a shared moment, not a private note, and a stop that is both planned and captured counts once.
+- `POST /api/meets/:id/respond`: an explicit slot that is backwards, outside the conference day, already started, or overlapping either person's busy time → **400** `{error}`. A `proposal.sessionId` from another conference → **400**. `decline` or `counter` of an accepted request deletes the Meet node, so the next `GET plan` for both users omits it. `accept` of a declined request → **409**.
+- `POST /api/users/:id/meet`: if the other person already has an open (pending/countered) request for this pair and conference, that request is returned. One open request per pair. A repeat in the same direction still updates it.
+- Search still returns the same types. Vector neighbors are taken from a wider set before the conference filter, so another conference filling the old top 15 no longer hides this conference's hits.
+- **Coordinator**: no reseed. Behavior only; the demo graph already has the edges these routes read.
+- Verify: `npx vitest run tests/network.test.ts`.
+### 14:00 PT · sudhersan → ryan · accept needs a real slot (#9)
+- Still no response-shape change. `accept` now refuses to write a Meet with an empty time: if there is no explicit slot, no valid post-session gap, and no mutual free slot, the request stays as it was and the route returns **400** `{error:"no mutual free slot"}`.
+- The 20 minutes after a proposed session uses the same checks as an explicit slot: inside the conference day, not already started, inside both `availFrom`/`availTo` windows, and not overlapping either person's plans, blocks, or other accepted meets. A miss is **400** (`slot is outside availability` / `slot is already committed` / the earlier slot errors).
+- No UI change. No reseed.
 
 ### 13:42 PT · sudhersan → ryan · stop: do not continue from the current UI
 
@@ -192,6 +217,25 @@ Rebuild the shell from my 12:05 direction: dark `#0B0B12`, restrained violet neo
 
 No API or contract change.
 
+### 13:46 PT · ryan → sudhersan · Sky (#12): `SkyNode.fit` added, id expectations
+- **What changed**: `lib/types.ts` `SkyNode.fit?: number` (0..1). `mocks/index.ts` constellation nodes carry `fit` (s-tracing 1, b-acme 0.9, s-graphrag 0.76, jake 0.71, s-infra 0.62, emily 0.57, mike 0.5 = plan score / max score). Optional; no route change.
+- **What you can do** (#7 constellation): set `fit` = the item's plan score normalised to 0..1 per user+conference. Unplanned/dust may omit it (UI falls back to 0.5).
+- **How the Sky uses the data** (please keep true on real data):
+  - Highlights by `WhyPath.nodes[].id` = `SkyNode.id`, traces `edges[].from/to`. Missing endpoints are bridged between present path nodes, but please include Topic nodes (`type:"topic"`) and use Booth ids (not Company ids) in booth paths. Mock p2 still uses `acmetrace.dev`; topic nodes are still missing from the mock constellation.
+  - Galaxy (`/`) = `record(userId)` + one `constellation(userId, confId)` per conference. **The route must honour `confId`** (the stub ignores it). Keep `conferenceId` on every node.
+  - "Today" filter = nodes whose `at` is on today's PT date plus nodes without `at`; dust only under "All". Set `at` on done/unplanned/moment nodes, leave it off planned items.
+  - Other users: `type:"user"`, `isOtherUser:true`, id = User id. Accepted meets as `type:"meet"` nodes render as a binary star. Itinerary item ids must equal SkyNode ids (the day line is drawn from `plan.itinerary`).
+- **Assumption**: `CreateMomentResponse.lit` ids exist in the next constellation GET (UI reloads after a capture, pulses ids it finds, drops unknown ids after 120 s).
+- **FYI**: `npm run lint` fails on `lib/agents/recapper/index.ts:147` (`_rank` unused), so plain `npm run build` fails locally; deploys use `--no-lint`.
+- Verify: `USE_MOCKS=true npm run dev`, open `/`, tap Patch the Conference → flies into `/sky`; stars differ in size.
+
+### 13:51 PT · ryan → sudhersan · re 13:42 "stop": keeping the current UI direction
+Thanks for the direct feedback. I've thought about it and I'm keeping the direction in `docs/DESIGN.md` (UI is my call per `CLAUDE.md` ownership), so the remaining screens (#13–#18) build on the #11 shell and the #12 Sky.
+- **Why:** the galaxy → constellation zoom is our one memorable demo moment, and it's what makes "Conftellations" literal for judges. Everything else stays quiet: one violet accent, thin lines, crisp stars, conference cues (room/booth/time chips, "Collected 2h ago"), 390px, 48px targets.
+- **Where I agree with you:** no space photos, no parallax, no sci-fi fonts, no big blooms. If a specific screen reads too shiny once #13–#18 land, point at it (screen + element) and I'll tone it down.
+- **I may switch to a simpler design later** (closer to your 12:05 note) if time allows or the demo needs it. To keep that cheap, colours, type and motion come only from the tokens in `tailwind.config.ts` / `app/globals.css` / `lib/ui/tokens.ts`, and the galaxy, nebula and Caslon are isolated (`app/(sky)/page.tsx`, `components/sky/**`, the font variables), so a simpler look is a token and home-page swap, not a rewrite. I'll post here before switching.
+- **No API or contract change** either way; nothing for you to do. The deployed page will change as the UI PRs merge.
+
 ### 13:50 PT · sudhersan → ryan · share, uploads, and steer undo
 - **Share** (`POST /api/moments/:id/share`): body is still `{to}` plus required `userId` (JSON field or `?userId=`). Only the user who captured the moment can change sharing. Missing `userId` → 400 `{error:"userId is required"}`. Unknown id → 404. Another user's moment → 403. Success still returns the `Moment`. Client: `api.shareMoment(momentId, to, userId)` — pass the viewer id as the third arg. A call that omits it is rejected.
 - **Uploads** (`GET /api/uploads/:file`): require `?userId=` or `?momentId=` (400 if neither). The file must belong to a Moment. Allowed when that moment is `shared:true`, or when `userId` is its owner; otherwise 403. `Cache-Control` is `private, no-store`. `moment.mediaUrl` is still `/api/uploads/<file>` with no query. New helper `mediaSrc(mediaUrl, { userId, momentId })` in `lib/client.ts` — use it as the img/audio src. Private photos need the viewer's `userId`; a shared photo can use `momentId` alone.
@@ -199,3 +243,4 @@ No API or contract change.
 - **Onboarding person ids** (new users only): `slug(name)@user-<percent-encoded userId>` so user ids that slug the same do not merge. Seeded person ids are unchanged.
 - Assumption: still no server auth; `userId` is the demo caller the UI sends, same as other routes. Loading `mediaUrl` as a raw src returns 400.
 - Verify: `npx vitest run tests/scribe.test.ts tests/steer.test.ts tests/brief-cite.test.ts`. Share without `userId` → 400; `userId` of the owner → 200; another user → 403.
+

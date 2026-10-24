@@ -5,6 +5,7 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { assertResolvedPublic, publicUrlProblem, UnsafeUrlError } from "@/lib/publicUrl";
 
 const API = "https://api.brightdata.com";
 
@@ -81,10 +82,13 @@ async function bdFetch(url: string, init: RequestInit): Promise<Response> {
 
 /** Web Unlocker: any public page → markdown (default) or raw HTML. */
 export async function unlock(url: string, opts: { format?: "markdown" | "html" } = {}): Promise<Fetched<string>> {
+  const problem = publicUrlProblem(url);
+  if (problem) throw new UnsafeUrlError(problem);
   const format = opts.format ?? "markdown";
   const zone = process.env.BRIGHTDATA_UNLOCKER_ZONE ?? "web_unlocker1";
   const key = { kind: "unlock", url, format };
   return cached(key, "unlocker", url, async () => {
+    await assertResolvedPublic(url);
     const body: Record<string, unknown> = { zone, url, format: "raw" };
     if (format === "markdown") body.data_format = "markdown";
     return (await bdFetch(`${API}/request`, { method: "POST", body: JSON.stringify(body) })).text();
@@ -139,12 +143,64 @@ export async function scraperApi<T = unknown>(datasetId: string, inputs: Record<
 
 // ---------- plain HTTP (platform fast paths: Sessionize, sched, RainFocus, .ics) ----------
 
+const MAX_HTTP_BYTES = 2_000_000;
+const HTTP_TIMEOUT_MS = 20_000;
+
+/** Read at most `max` bytes, then abort. A declared Content-Length over the cap never buffers the body. */
+async function readLimited(res: Response, max: number): Promise<string> {
+  const declared = Number(res.headers.get("content-length"));
+  if (Number.isFinite(declared) && declared > max) throw new Error("response too large");
+  if (!res.body) {
+    const text = await res.text();
+    if (Buffer.byteLength(text) > max) throw new Error("response too large");
+    return text;
+  }
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (!value) continue;
+    total += value.byteLength;
+    if (total > max) {
+      await reader.cancel().catch(() => undefined);
+      throw new Error("response too large");
+    }
+    chunks.push(value);
+  }
+  reader.releaseLock();
+  return Buffer.concat(chunks).toString("utf8");
+}
+
 export async function fetchText(url: string, init: RequestInit = {}): Promise<Fetched<string>> {
+  const problem = publicUrlProblem(url);
+  if (problem) throw new UnsafeUrlError(problem);
   const key = { kind: "http", url, method: init.method ?? "GET", body: typeof init.body === "string" ? init.body : null };
   return cached(key, "http", url, async () => {
-    const res = await fetch(url, { ...init, headers: { "User-Agent": "Conftellations/0.1 (+public agenda import)", ...(init.headers ?? {}) } });
-    if (!res.ok) throw new Error(`GET ${url} → ${res.status}`);
-    return res.text();
+    let current = url;
+    let method = (init.method ?? "GET").toUpperCase();
+    for (let hop = 0; hop < 5; hop++) {
+      await assertResolvedPublic(current);
+      const res = await fetch(current, {
+        ...init,
+        method,
+        body: method === "GET" || method === "HEAD" ? undefined : init.body,
+        redirect: "manual",
+        signal: init.signal ?? AbortSignal.timeout(HTTP_TIMEOUT_MS),
+        headers: { "User-Agent": "Conftellations/0.1 (+public agenda import)", ...(init.headers ?? {}) },
+      });
+      if ([301, 302, 303, 307, 308].includes(res.status)) {
+        const loc = res.headers.get("location");
+        if (!loc) throw new Error(`GET ${current} → ${res.status} without location`);
+        current = new URL(loc, current).toString();
+        if (res.status === 303 || ((res.status === 301 || res.status === 302) && method !== "GET" && method !== "HEAD")) method = "GET";
+        continue;
+      }
+      if (!res.ok) throw new Error(`GET ${url} → ${res.status}`);
+      return readLimited(res, MAX_HTTP_BYTES);
+    }
+    throw new Error(`GET ${url} → too many redirects`);
   });
 }
 
