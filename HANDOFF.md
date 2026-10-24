@@ -16,13 +16,14 @@ Living, harness-agnostic handoff for whichever agent is driving (Claude Code, Cu
 
 - **What**: Conftellations, an attendee-owned conference brain. Hackathon: Patch the Conference (WeMakeDevs), **Sat Oct 24 2026, SF. Code freeze 16:45 PT, demo 17:30 PT.** Main track FalkorDB, secondary Bright Data, Qodo reviews PRs.
 - **Team**: **Sudhersan** (`sudhersankv`, you/Cursor) = graph + backend + deploy. **Ryan** (`RyanV27`, his own agent) = UI. Ryan is setting up Qodo on the repo right now.
-- **State**: **#2 done** (adapters), **#1 done** (demo graph seeded on the hosted instance with **real OpenAI embeddings**). All routes still serve mocks. 11 tests pass (`npm test`, ~20 s, seeds `_test` graph with the fake embedder).
+- **State (12:37 PT)**: **#2 done** (adapters), **#1 done** (demo graph, real OpenAI embeddings), **#4 done** (Planner: `GET /plan` + `POST /feedback` real; seed writes Sam's PLANS). **#19 Fly deploy + CI** landed (`236380c`, by a parallel agent). Other routes still serve mocks. 26 tests pass (`npm test`, ~45 s).
+- **Ryan's agent posted a 22-point integration list in `COMMS.md` (19:24 + 19:28 entries)**: read it before making any route real. Planner points are answered; open ones: `SkyNode.fit`, mock path/Sky id fixes (#7), `Conference.timezone?`, `CreateMomentFields.clientId?` (#6), `SteerRequest.ops?` for Undo (#5), `createMoment` <1 s, search name-prefix (#9).
 - **Working mode (user, 11:50 PT)**: go **module by module**, test each live before moving on, ask the user on use-case questions instead of assuming.
 - **LLM**: `OPENAI_MODEL=gpt-5.4-nano` (user's choice; verified live, ~2 s structured call). `lib/llm.ts` sends `reasoning_effort` (env `OPENAI_REASONING_EFFORT`, default `low`) instead of `temperature` for gpt-5*/o* models.
 - **Bright Data: working** (12:04 PT). User ran `npx bdata login`, which created zones `cli_unlocker` (unblocker) + `cli_browser`. `.env.local`: `BRIGHTDATA_UNLOCKER_ZONE=cli_unlocker`, `BRIGHTDATA_SERP_ZONE=cli_unlocker` (SERP via the unlocker zone works with `&brd_json=1`). Verified live: `unlock()` ~23 s/page, `serp()` ~18 s, 9 organic results. **Slow: pre-warm the cache before the demo.** Our API key still can't create zones (not admin); `scripts/bd-zones.ts` lists them.
 - **Contract additions (12:11 PT)**: `GET /api/people/:id` → `PersonDetail` (stub, real handler is backend work with #9), `PlanResponse.now?` (Planner/#4 must fill it: latest check-in else planned session containing now), `CreateMomentFields`, `community(sessionId, userId?)` (#10 must honour `userId`).
 - **UI direction** posted to Ryan in COMMS.md (12:05 PT): dark, sleek, Gen Z, restrained neon; constellation not galaxy; conference cues; surface Scout/Planner/Steer/Scribe/Recapper subtly.
-- **Your next task**: **#3** Scout (live demo = **KubeCon NA 2026 via Sessionize + Bright Data sponsor enrichment**), **#4** Planner, **#7** Constellation. See §7.
+- **Your next task**: **#6** Scribe (capture; user said "tracking", assumed Scribe), **#7** Constellation, **#3** Scout (live demo = **KubeCon NA 2026 via Sessionize + Bright Data sponsor enrichment**). See §7.
 
 ---
 
@@ -80,10 +81,14 @@ npm run smoke           # NOT WRITTEN YET: tsx scripts/smoke.ts
 | `lib/schema.ts` | `ensureIndexes()`: range indexes on every label's id (+ Conference.url) and vector indexes (1536, cosine) on Session/Person/Company/Topic. Idempotent. |
 | `lib/time.ts` | `isoInZone(date, tz)`, `localToIso(local, tz)`, `PT`, `ms()`. |
 | `seed/ptc.json`, `seed/ai-eng-summit-june.json` | Hand-written normalized conferences (fabricated but plausible PTC schedule 10:00–18:30 with deliberate clashes at 11:30, 13:00, 14:00, 15:00; 7 booths in walking order 2..14). |
-| `seed/personal.ts` | Sam (3 goals, problem, June MET Jake, today's moments m1–m6, MET Mike/Emily), Emily (hiring; checked in at s-graphrag + s-tracing → warm intro), Mike (booth staff), 12 generated users `u-ana…u-lia` (deterministic PRNG) with goals, PLANS, check-ins, shared notes clustered mid-session (hot moments), pending meet `meet-1` sam→emily. **Sam has no PLANS edges yet: the Planner (#4) writes them.** |
+| `seed/personal.ts` | Sam (3 goals, problem, June MET Jake, today's moments m1–m6, MET Mike/Emily), Emily (hiring; checked in at s-graphrag + s-tracing → warm intro), Mike (booth staff), 12 generated users `u-ana…u-lia` (deterministic PRNG) with goals, PLANS, check-ins, shared notes clustered mid-session (hot moments), pending meet `meet-1` sam→emily. Sam's PLANS edges are written by the Planner at the end of `seedDemo()` (now = `DEMO_NOW` or 12:30). |
 | `seed/demo.ts`, `seed/seed.ts`, `seed/env.ts` | `seedDemo({githubUniverse})` = wipe → indexes → PTC → June → GitHub Universe → personal. CLI `npm run seed [-- --no-ghu]` (~45 s with real embeddings). `seed/env.ts` must be the first import in CLI scripts. |
 | `scripts/inspect.ts` | `npm run inspect`: label counts, Q1, a vector query, Q6, identity checks. |
 | `tests/fakes.ts`, `tests/helpers.ts`, `tests/seed.test.ts` | `fakeLlm(orig, structuredImpl?)` for `vi.mock("@/lib/llm", async (orig) => (await import("./fakes")).fakeLlm(await orig()))`; `seedOnce()` seeds `_test` (no GHU); `req(url, body?)` builds a `Request`. Vitest runs files sequentially (shared `_test` graph). |
+| `lib/agents/planner/index.ts` | `runPlanner(userId, confId, {now?, write?})` → `{plan, diff}`; throws `NotFound`. Score = Σ goal weight over distinct goals + 0.1·extra topics + 0.5·boosted + 0.3·vector sim; people +0.2 speaker / +0.1 sponsor / +0.4 met-before / +0.3 intent (job goal ↔ person `openTo:hiring`); booths +0.4 if you met staff. Every why is a template over a real path (`fitWhy` keeps it ≤110 chars). byGoal lists items under every goal they serve; `goalId` = best goal. `write` replaces the conference's PLANS edges. |
+| `lib/agents/planner/itinerary.ts` | Pure `buildItinerary`: done/pinned fixed, greedy by score without clashes inside the availability window minus blocks, then booth runs in walking order in gaps **after `now`**. Unit tests: `tests/itinerary.test.ts`. |
+| `lib/queries/plan.ts`, `lib/queries/feedback.ts` | Planner Cypher (user state, session/person/booth candidate paths, vector sim, details, `writePlans`) and `writeFeedback` (SKIPPED/BOOSTED, removes the opposite edge). |
+| `app/api/users/[id]/plan`, `.../feedback` | **Live.** `?now=` or `DEMO_NOW` env. Unknown user → 200 empty plan. Route tests: `tests/planner.test.ts`. `npx tsx scripts/plan-demo.ts [user] [now]` prints a plan + lint (long whys, missing details). |
 | `scripts/falkor-ping.ts` | Connectivity + vector sanity check. |
 | `tests/setup.ts`, `tests/contract.test.ts`, `vitest.config.ts` | vitest with `@` alias. Setup forces graph `<name>_test`. Contract tests check the fixture invariants (3 passing). |
 | `CLAUDE.md` | Principles, ownership, run commands, FalkorDB facts. **Cursor should treat it as the project rules** (`AGENTS.md` and `.cursor/rules/` point to it). |
@@ -219,10 +224,11 @@ The backend load is heavy, so prioritise by spec §15 "never cut": Sky with why-
 ## 7. Next steps for Cursor (in order)
 
 1. ~~#2 adapters~~ **done**. ~~#1 seed~~ **done** (brief/trip/crowd precompute is part of #8; seed should call the planner for Sam once #4 lands).
-4. **#3 Scout** (`POST /api/conferences`, `GET /api/conferences/:id`): router → adapters (`sessionize`, `sched` .ics, `rainfocus`, `ics`, `unlocker+llm`) → `NormalizedConference` → `upsertConference()` (already exists). Already-imported URL → `cached:true`.
-5. **#4 Planner** then **#7 Constellation**: these unblock Ryan's Sky (#12) and Plan (#13) on real data. Post `route X is live` in COMMS.md each time.
-6. **#19 Fly deploy** early (even on mocks): `Dockerfile` (node:22-alpine, standalone output, `PORT=3001`), `fly launch --no-deploy --name conftellations --region sjc` (confirm with the user first), `fly secrets import < .env.local`, `fly deploy`.
-7. Then #6, #5, #9, #8, #10 in that order.
+2. ~~#4 Planner~~ **done** (12:37 PT). ~~#19 Fly deploy + CI~~ **landed** (`236380c`; check the deployed URL/secrets with the user).
+3. **#6 Scribe** (`POST /api/users/:id/moments`, share): attach to explicit target else `plan.now` rule (latest check-in, else planned session containing now; reuse `nowTarget` in the planner). Honour Ryan's COMMS asks: respond <1 s (topic extraction/embedding after), `clientId` MERGE, `lit` ids must exist in the constellation. Check-in flips PLANS status to done.
+4. **#7 Constellation** (Q11): include every node any returned why mentions (topics too), `conferenceId` on all nodes, `fit` = normalised plan score, ≤800 nodes (dust ≤300). Fix mock paths (booth id `b-acme`, topic nodes in mock Sky) in the same PR.
+5. **#3 Scout** (`POST /api/conferences`, `GET /api/conferences/:id`): Sessionize KubeCon first (no Bright Data), then sponsor enrichment (cap 20–30 sponsors; confirm credits with the user). Set `maxDuration`; already-imported URL → `cached:true` fast.
+6. Then #5 steer (support `ops` for Undo), #9, #8, #10.
 
 For every route you make real: keep the stub's response type, wrap it in `handle()`, add a route-level vitest, update COMMS.md.
 
@@ -300,3 +306,4 @@ Format: `HH:MM PT · agent · what changed (issue #, commit/PR)`
 - 12:18 PT · Cursor · Ran all spec queries on the demo graph (`scripts/queries-check.ts`); results + FalkorDB path facts in §3. Fixed seed: generated moment times now `-07:00`. Reseeded. Started a background agent for #19 (Fly.io deploy + GitHub Actions auto-deploy on push to main; user approved Fly).
 - 12:11 PT · Cursor · Contract gaps closed after checking UI issues #11–#18 with gh: `GET /api/people/:id` (`PersonDetail`, stub + mock), `PlanResponse.now?`, `CreateMomentFields` + `momentForm()`, `api.community(sessionId, userId?)`, steer empty-ops + edge-type docs. COMMS note; comments on #11 #12 #13 #14 #17 #18.
 - 12:05 PT · Cursor · User ran `bdata login` → `cli_unlocker`. Unlocker + SERP verified live (~20 s each, 2 credits total). UI direction + backend agent vocabulary posted to Ryan in COMMS.md. Next: #3 Scout step 1 (Sessionize/KubeCon).
+- 12:37 PT · Cursor · #4 Planner done: `GET /plan` + `POST /feedback` live (~0.9 s), booths only after `now`, byGoal lists items under every goal, hiring intent bonus, whys ≤110 chars. Seed runs the planner for Sam (PLANS edges). 26/26 tests. Replied to Ryan's planner points in COMMS. User asked for "tracking" next → assumed #6 Scribe.

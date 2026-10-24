@@ -194,8 +194,8 @@ async function writeUser(u: SeedUser) {
     await q(
       `MATCH (u:User {id:$uid}), (x {id:$tid}) WHERE x:Session OR x:Booth OR x:Person
        MERGE (u)-[r:PLANS]->(x)
-       SET r.goalId = $goalId, r.score = 1.0, r.status = $status, r.slotStart = x.start, r.slotEnd = x.end`,
-      { uid: u.id, tid: p.targetId, goalId: p.goalId, status: p.status ?? "planned" },
+       SET r.conferenceId = $cid, r.goalId = $goalId, r.score = 1.0, r.status = $status, r.slotStart = x.start, r.slotEnd = x.end`,
+      { uid: u.id, tid: p.targetId, goalId: p.goalId, status: p.status ?? "planned", cid: CONF },
     );
   }
   for (const m of u.moments ?? []) {

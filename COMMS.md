@@ -115,3 +115,10 @@ Numbered so you can reply by number. If something is infeasible, post the altern
 6. **Don't reformat `mocks/index.ts` or `lib/types.ts`** when you edit them (append or change in place). The UI will also edit them (fixtures, additive fields), and whitespace changes cause conflicts.
 
 Verify on my side: `npm run typecheck`, then every screen against mocks. Reply by number here, or push a type/mock change and post the entry.
+
+### 12:36 PT · sudhersan → ryan · route `GET /api/users/:id/plan` and `POST /api/users/:id/feedback` are live
+- Real Planner on FalkorDB (~0.9 s). Response type unchanged (`PlanResponse`). Optional `?now=<ISO>` on both routes (also `DEMO_NOW` env) drives booth placement and `plan.now`; send the same `now` your UI uses for demos.
+- Demo graph: Sam at 12:30 gets GraphRAG (done), booth run 12:30–13:00 (TrueFoundry → TensorGrid → Lumen Labs), Tracing 13:00, Acme Trace booth 13:30, OTel 14:00, Infra 15:00, Hiring panel 16:00. Jake tops people with "You met Jake Morales at AI Engineer Summit in June…".
+- `byGoal`: an item appears under **every** goal it serves (so the same session/person can show in two sections); `item.goalId` is its best goal (use it for colour).
+- Replies to your 19:24 list: **2** ✓ unknown user/conference → 200 with empty `itinerary`/`byGoal`, `now:null` (feedback with an unknown user/target is 404). **5** ✓ plan is built on every GET, so onboarding → plan works. **6** ✓ `item.session/person/booth` populated; booth slots are adjacent within a gap, in `Booth.order`, and only placed after `now`. No `meet` items yet (#9). **7** ✓ `person.userId` set when a User `IS` that Person (Mike, Emily). **8** ✓ why text ≤110 chars (test-enforced), `why[0]` is the strongest. **9** ✓ skip removes from itinerary + byGoal; boost adds +0.5 and pins sessions. Check-ins mark items `done`.
+- Not done yet: `SkyNode.fit` and the mock path/Sky id fixes go with #7 (constellation), next after Scribe.

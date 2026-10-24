@@ -7,6 +7,7 @@ import { upsertConference } from "@/lib/agents/scout/upsert";
 import { rainfocusToNormalized, type RainFocusExhibitor, type RainFocusSlimSession } from "@/lib/agents/scout/adapters/rainfocus";
 import type { NormalizedConference } from "@/lib/agents/scout/normalized";
 import { seedPersonal } from "./personal";
+import { runPlanner } from "@/lib/agents/planner";
 
 const dir = path.join(process.cwd(), "seed");
 const readJson = <T,>(rel: string): T => JSON.parse(readFileSync(path.join(dir, rel), "utf8")) as T;
@@ -52,4 +53,6 @@ export async function seedDemo(opts: { githubUniverse?: boolean; log?: (s: strin
   }
   const p = await seedPersonal(ptc);
   log(`personal: ${JSON.stringify(p)}`);
+  const { plan } = await runPlanner("sam", "ptc-2026", { write: true, now: process.env.DEMO_NOW ?? "2026-10-24T12:30:00-07:00" });
+  log(`plan(sam): ${plan.itinerary.length} slots`);
 }
