@@ -111,6 +111,13 @@ Dev: `typescript`, `tailwindcss@3`, `eslint`, `vitest`, `tsx`, `dotenv`, `@brigh
 - Vector search can't filter by property: filter by conference in a following `MATCH`.
 - After an aggregation, `ORDER BY` may only reference projected aliases (`RETURN s.start AS start, count(t) AS n ORDER BY n DESC, start`), not `s.start`.
 - `SET n += $map`, `UNWIND $rows` + `vecf32(r.v)`, and `FOREACH (x IN list | MERGE ...)` all work.
+- **Why-paths: use named paths.** `MATCH p = (u)-[:MET]->(a)<-[:IS]-(au)-[:CAPTURED]->(m)-[:AT]->(s)<-[:SPEAKS_AT]-(b) RETURN [n IN nodes(p) | {id:n.id, label:labels(n)[0], name:coalesce(n.name,n.title,n.kind)}] AS nodes, [r IN relationships(p) | {type:type(r), from:startNode(r).id, to:endNode(r).id}] AS edges` returns `WhyPath` shape directly (verified 12:18 PT).
+- `shortestPath` only works in `WITH`/`RETURN` (`WITH shortestPath((u)-[*..4]->(j)) AS p`), **directed only**; undirected is unsupported.
+- Vector query can take a stored embedding: `MATCH (g:Goal {id:$id}) CALL db.idx.vector.queryNodes('Session','embedding',30,g.embedding) ...` (no need to send the vector from JS).
+- Times are compared as strings in Cypher (`s.start >= u.availFrom`), so **every stored time must be ISO with the same `-07:00` offset** (seed fixed 12:17 PT; generated moments were UTC `Z`).
+
+### Spec queries on the demo graph (`npx tsx scripts/queries-check.ts`, 12:18 PT)
+Q1 ✓ (s-tracing, s-otel top for g-tracing) · Q1b vector ✓ · Q2 ✓ (Jake, Arjun, Emily, Noa for g-infra) · Q3 ✓ (Booth 14 Acme Trace, "you met Mike") · Q4 ✓ but **`sum(DISTINCT g.weight)` is wrong** (collapses equal weights; sum per distinct goal instead) · Q5 ✓ (Emily → Priya Nair, speaks on agent tracing) · Q6 ✓ (Jake, met at AI Eng Summit) · **Q7 as written returns 0** until Sam has PLANS; use `[:PLANS|CAPTURED|AT*1..2]` to include check-ins (5 users share s-graphrag) · Q7b ✓ · Q9 ✓ (m2, m-x1) · Q9b ✓ · Q10 ✓ · Q11 inputs ✓ (Sam: 4 goals/problems, 8 moments, 3 met, 0 plans → Planner must write PLANS).
 - `tsconfig.json` needed `"target": "es2017"` (Set/Map iteration). Delete `tsconfig.tsbuildinfo` if tsc shows stale errors.
 - `ORDER BY` after an aggregation can only reference projected aliases (`RETURN s.start AS start … ORDER BY start`, not `ORDER BY s.start`).
 - `SET n += $map` works; `FOREACH (x IN list | MERGE …)` works inside UNWIND batches; `vecf32(r.v)` works on UNWIND rows from params.
@@ -290,5 +297,6 @@ Format: `HH:MM PT · agent · what changed (issue #, commit/PR)`
 - 11:53 PT · Cursor · #1 done: shared `upsertConference()` + identity rules, RainFocus adapter, `seed/ptc.json`, June conf, personal layer, `npm run seed` (real embeddings, ~45 s), `npm run inspect`, `tests/seed.test.ts`. `Via` widened (`rainfocus`, `ics`; COMMS note). 11/11 tests pass.
 - 11:56 PT · Cursor · Model → `gpt-5.4-nano` (verified live). Bright Data: no zones on account, budget 403. Decisions: KubeCon is the live import demo; fabricated PTC is fine; work module by module.
 - 11:59 PT · Cursor · Bright Data key can list zones (none) but can't create them (403). `scripts/bd-zones.ts` added. Waiting on user: `bdata login` or admin key.
+- 12:18 PT · Cursor · Ran all spec queries on the demo graph (`scripts/queries-check.ts`); results + FalkorDB path facts in §3. Fixed seed: generated moment times now `-07:00`. Reseeded. Started a background agent for #19 (Fly.io deploy + GitHub Actions auto-deploy on push to main; user approved Fly).
 - 12:11 PT · Cursor · Contract gaps closed after checking UI issues #11–#18 with gh: `GET /api/people/:id` (`PersonDetail`, stub + mock), `PlanResponse.now?`, `CreateMomentFields` + `momentForm()`, `api.community(sessionId, userId?)`, steer empty-ops + edge-type docs. COMMS note; comments on #11 #12 #13 #14 #17 #18.
 - 12:05 PT · Cursor · User ran `bdata login` → `cli_unlocker`. Unlocker + SERP verified live (~20 s each, 2 credits total). UI direction + backend agent vocabulary posted to Ryan in COMMS.md. Next: #3 Scout step 1 (Sessionize/KubeCon).

@@ -1,9 +1,10 @@
-// Personal layer for the demo: Sam, Emily, Mike + generated attendees. Ids match mocks/index.ts.
+﻿// Personal layer for the demo: Sam, Emily, Mike + generated attendees. Ids match mocks/index.ts.
 // All personal data (goals, problems, MET, moments) is fictional.
 import { q } from "@/lib/falkor";
 import { writeEmbeddings } from "@/lib/agents/scout/upsert";
 import { personId, topicId } from "@/lib/agents/scout/normalized";
 import type { GoalKind, MomentKind, OpenTo } from "@/lib/types";
+import { isoInZone, PT as PT_TZ } from "@/lib/time";
 
 const CONF = "ptc-2026";
 const JUNE = "ai-eng-summit-2026";
@@ -129,13 +130,13 @@ function generated(sessions: { id: string; start: string; end: string; topics: s
       plans.push({ targetId: s.id, goalId, status: attended ? "done" : "planned" });
       if (!attended) continue;
       const start = new Date(s.start).getTime();
-      moments.push({ id: `m-${first}-${moments.length + 1}`, kind: "checkin", at: new Date(start + (1 + Math.floor(r() * 4)) * 60_000).toISOString(), targetId: s.id, topics: s.topics.slice(0, 1) });
+      moments.push({ id: `m-${first}-${moments.length + 1}`, kind: "checkin", at: isoInZone(new Date(start + (1 + Math.floor(r() * 4)) * 60_000), PT_TZ), targetId: s.id, topics: s.topics.slice(0, 1) });
       const notes = NOTES[s.id];
       if (notes && r() < 0.7) {
         // cluster around the middle of the session → hot moments
         const mid = start + (new Date(s.end).getTime() - start) / 2;
         moments.push({
-          id: `m-${first}-${moments.length + 1}`, kind: "note", at: new Date(mid - 4 * 60_000 + Math.floor(r() * 8) * 60_000).toISOString(),
+          id: `m-${first}-${moments.length + 1}`, kind: "note", at: isoInZone(new Date(mid - 4 * 60_000 + Math.floor(r() * 8) * 60_000), PT_TZ),
           text: i === 0 && s.id === "s-graphrag" ? NOTES["s-graphrag"][0] : pick(notes), shared: r() < 0.75, targetId: s.id, topics: s.topics.slice(0, 2),
         });
       }
