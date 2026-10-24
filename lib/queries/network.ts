@@ -91,16 +91,17 @@ export async function sharedGoalTopics(userId: string, others: string[]): Promis
 }
 
 /** Busy intervals: planned slots, accepted meets, and stored itinerary blocks (lunch and the like). */
-export async function busySlots(userIds: string[], confId: string): Promise<{ id: string; from: string; to: string }[]> {
+export async function busySlots(userIds: string[], confId: string, exceptMeetId?: string): Promise<{ id: string; from: string; to: string }[]> {
   if (!userIds.length) return [];
   const [timed, stored] = await Promise.all([
     q<{ id: string; from: string; to: string }>(
       `MATCH (o:User)-[r:PLANS]->() WHERE o.id IN $ids AND r.conferenceId = $confId AND r.slotStart IS NOT NULL AND r.slotEnd IS NOT NULL
        RETURN o.id AS id, r.slotStart AS from, r.slotEnd AS to
        UNION ALL
-       MATCH (o:User)-[:ATTENDS]->(mt:Meet) WHERE o.id IN $ids AND mt.conferenceId = $confId AND mt.status = 'accepted' AND mt.slotFrom IS NOT NULL
+       MATCH (o:User)-[:ATTENDS]->(mt:Meet)
+       WHERE o.id IN $ids AND mt.conferenceId = $confId AND mt.status = 'accepted' AND mt.slotFrom IS NOT NULL AND mt.id <> $except
        RETURN o.id AS id, mt.slotFrom AS from, mt.slotTo AS to`,
-      { ids: userIds, confId },
+      { ids: userIds, confId, except: exceptMeetId ?? "" },
     ),
     q<{ id: string; blocks: string | null }>(
       `MATCH (o:User) WHERE o.id IN $ids AND o.blocks IS NOT NULL RETURN o.id AS id, o.blocks AS blocks`,

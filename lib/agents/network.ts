@@ -150,19 +150,22 @@ export async function respondMeet(meetId: string, body: MeetRespondBody, now: st
   } else {
     const proposal = body.proposal ?? req.proposal;
     const confId = row.conferenceId ?? "";
-    const slot = await meetSlot(proposal, confId, [req.fromUserId, req.toUserId], now);
+    const slot = await meetSlot(proposal, confId, [req.fromUserId, req.toUserId], now, meetId);
+    if (!slot) throw new MeetError("no mutual free slot", 400);
     await setMeetStatus(meetId, "accepted", body.proposal ? JSON.stringify(body.proposal) : undefined);
     await writeMeet({
-      id: meetId, from: req.fromUserId, to: req.toUserId, confId, slotFrom: slot?.from ?? null, slotTo: slot?.to ?? null,
-      place: proposal.place ?? slot?.place ?? null, sessionId: proposal.sessionId ?? null, title: `${req.fromName} × ${req.toName}`,
+      id: meetId, from: req.fromUserId, to: req.toUserId, confId, slotFrom: slot.from, slotTo: slot.to,
+      place: proposal.place ?? slot.place ?? null, sessionId: proposal.sessionId ?? null, title: `${req.fromName} × ${req.toName}`,
     });
   }
   return toMeetRequest((await meetById(meetId))!);
 }
 
-/** Explicit slot; else 20 min right after the proposed session; else the first slot both are free. */
-async function meetSlot(p: MeetProposal, confId: string, users: string[], now: string): Promise<{ from: string; to: string; place?: string } | null> {
+/** Explicit slot; else 20 min right after the proposed session; else the first slot both are free. Null only when nothing is schedulable. */
+async function meetSlot(p: MeetProposal, confId: string, users: string[], now: string, exceptMeetId?: string): Promise<{ from: string; to: string; place?: string } | null> {
   const day = await conferenceDay(confId);
+  const [busy, windows] = await Promise.all([busySlots(users, confId, exceptMeetId), userWindows(users)]);
+  const wins = users.map((id) => windows.get(id) ?? { from: null, to: null });
   let afterSession: { from: string; to: string; place?: string } | null = null;
   if (p.sessionId) {
     const [s] = await sessionsByIds([p.sessionId]);
@@ -171,21 +174,28 @@ async function meetSlot(p: MeetProposal, confId: string, users: string[], now: s
   }
   if (p.slot?.from || p.slot?.to) {
     if (!p.slot.from || !p.slot.to) throw new MeetError("slot is backwards", 400);
-    rejectSlot(p.slot.from, p.slot.to, day, now, await busySlots(users, confId));
+    rejectSlot(p.slot.from, p.slot.to, day, now, busy, wins);
     return { from: p.slot.from, to: p.slot.to };
   }
-  if (afterSession) return afterSession;
+  if (afterSession) {
+    rejectSlot(afterSession.from, afterSession.to, day, now, busy, wins);
+    return afterSession;
+  }
   if (!day.from || !day.to) return null;
-  const [busy, windows] = await Promise.all([busySlots(users, confId), userWindows(users)]);
-  const wins = users.map((id) => windows.get(id) ?? { from: null, to: null });
   return freeSlots({ day: { from: day.from, to: day.to }, now, windows: wins, busy })[0] ?? null;
 }
 
-function rejectSlot(from: string, to: string, day: { from: string | null; to: string | null }, now: string, busy: { from: string; to: string }[]) {
+function rejectSlot(
+  from: string, to: string, day: { from: string | null; to: string | null }, now: string,
+  busy: { from: string; to: string }[], windows: { from: string | null; to: string | null }[],
+) {
   const a = ms(from);
   const b = ms(to);
   if (!Number.isFinite(a) || !Number.isFinite(b) || a >= b) throw new MeetError("slot is backwards", 400);
   if (!day.from || !day.to || a < ms(day.from) || b > ms(day.to)) throw new MeetError("slot is outside the conference", 400);
   if (a < ms(now)) throw new MeetError("slot is in the past", 400);
+  for (const w of windows) {
+    if ((w.from && a < ms(w.from)) || (w.to && b > ms(w.to))) throw new MeetError("slot is outside availability", 400);
+  }
   if (busy.some((s) => ms(s.from) < b && a < ms(s.to))) throw new MeetError("slot is already committed", 400);
 }

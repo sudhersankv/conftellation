@@ -202,3 +202,7 @@ Verify on my side: `npm run typecheck`, then every screen against mocks. Reply b
 - Search still returns the same types. Vector neighbors are taken from a wider set before the conference filter, so another conference filling the old top 15 no longer hides this conference's hits.
 - **Coordinator**: no reseed. Behavior only; the demo graph already has the edges these routes read.
 - Verify: `npx vitest run tests/network.test.ts`.
+### 14:00 PT · sudhersan → ryan · accept needs a real slot (#9)
+- Still no response-shape change. `accept` now refuses to write a Meet with an empty time: if there is no explicit slot, no valid post-session gap, and no mutual free slot, the request stays as it was and the route returns **400** `{error:"no mutual free slot"}`.
+- The 20 minutes after a proposed session uses the same checks as an explicit slot: inside the conference day, not already started, inside both `availFrom`/`availTo` windows, and not overlapping either person's plans, blocks, or other accepted meets. A miss is **400** (`slot is outside availability` / `slot is already committed` / the earlier slot errors).
+- No UI change. No reseed.
