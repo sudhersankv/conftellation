@@ -9,9 +9,10 @@ import type { SkyNode, SkyNodeType } from "@/lib/types";
 import { api } from "@/lib/client";
 import { apiKey, useApi } from "@/lib/ui/use-api";
 import { useSession } from "@/lib/ui/session-context";
-import { TYPE_COLOR, TYPE_LABEL } from "@/lib/ui/tokens";
+import { TYPE_LABEL } from "@/lib/ui/tokens";
 import { cn } from "@/lib/ui/cn";
-import { buttonClass, Drawer, EmptyState, ErrorState, Segmented, TypeDot } from "@/components/ui";
+import { buttonClass, Drawer, EmptyState, ErrorState } from "@/components/ui";
+import { CREAM, INK, NODE_COLOR, YELLOW, titleCase } from "./palette";
 import type { CanvasHandle } from "./ConstellationCanvas";
 
 const ConstellationCanvas = dynamic(() => import("./ConstellationCanvas").then((m) => m.ConstellationCanvas), {
@@ -19,8 +20,30 @@ const ConstellationCanvas = dynamic(() => import("./ConstellationCanvas").then((
   loading: () => <CanvasLoading />,
 });
 
+/** Graph-local type dot: flat colour with an ink outline (matches the canvas nodes). */
+function Dot({ type, size = 10, hollow }: { type: SkyNodeType; size?: number; hollow?: boolean }) {
+  return (
+    <span
+      className="inline-block shrink-0 rounded-full"
+      style={{ width: size, height: size, background: hollow || type === "topic" ? "#fff" : NODE_COLOR[type], border: `2px solid ${hollow ? NODE_COLOR[type] : INK}`, boxShadow: hollow ? `0 0 0 1px ${INK}` : undefined }}
+      title={TYPE_LABEL[type]}
+      aria-hidden
+    />
+  );
+}
+
+/** White pill with a 2px ink border; `on` = ink fill with cream text. */
+function pill(on = false, extra = "") {
+  return cn(
+    "inline-flex h-8 items-center gap-1.5 rounded-full border-2 border-[#111] px-3 text-xs font-semibold transition-transform",
+    "shadow-[2px_2px_0_#111] active:translate-x-[1px] active:translate-y-[1px] active:shadow-[1px_1px_0_#111] disabled:opacity-50",
+    on ? "bg-[#111] text-[#FFF7E8]" : "bg-white text-[#111] hover:bg-[#FFD23F]",
+    extra,
+  );
+}
+
 function CanvasLoading() {
-  return <div className="grid size-full place-items-center text-xs text-muted" role="status">Drawing your graph</div>;
+  return <div className="grid size-full place-items-center text-sm font-semibold text-[#111]" role="status">Drawing your graph…</div>;
 }
 
 const LEGEND: { type: SkyNodeType; label: string }[] = [
@@ -49,7 +72,8 @@ function useSize<T extends HTMLElement>() {
 }
 
 export function GraphView() {
-  const { userId, confId } = useSession();
+  const { userId, confId, nowIso } = useSession();
+  const now = nowIso();
   const params = useSearchParams();
   const router = useRouter();
   const all = params.get("all") === "1";
@@ -57,7 +81,7 @@ export function GraphView() {
   const hlRaw = params.get("hl") ?? "";
   const highlight = useMemo(() => new Set(hlRaw.split(",").map((s) => s.trim()).filter(Boolean)), [hlRaw]);
 
-  const { data, error, loading, reload } = useApi(apiKey("constellation", userId, all ? "all" : conf), () => api.constellation(userId, all ? undefined : conf));
+  const { data, error, loading, reload } = useApi(apiKey("constellation", userId, all ? "all" : conf, now ?? "live"), () => api.constellation(userId, all ? undefined : conf, { now }));
   const [wrapRef, size] = useSize<HTMLDivElement>();
   const canvas = useRef<CanvasHandle>(null);
   const [selected, setSelected] = useState<SkyNode | null>(null);
@@ -98,7 +122,8 @@ export function GraphView() {
     <div className="-mx-4 -mt-4 -mb-4 md:-mx-8 md:-mb-10 md:-mt-8">
       <div
         ref={wrapRef}
-        className="relative h-[calc(100dvh-var(--topbar-h)-var(--nav-h)-env(safe-area-inset-bottom))] overflow-hidden bg-bg md:h-dvh"
+        className="relative h-[calc(100dvh-var(--topbar-h)-var(--nav-h)-env(safe-area-inset-bottom))] overflow-hidden md:h-dvh"
+        style={{ backgroundColor: CREAM, backgroundImage: "radial-gradient(rgba(17,17,17,0.06) 1.2px, transparent 1.4px)", backgroundSize: "24px 24px" }}
       >
         {error && !data ? (
           <div className="grid size-full place-items-center p-4"><ErrorState what="your graph" detail={error.message} onRetry={reload} /></div>
@@ -118,6 +143,7 @@ export function GraphView() {
             highlight={highlight}
             revealed={revealed}
             anchorId={userId}
+            selectedId={selected?.id ?? null}
             onNodeClick={setSelected}
           />
         )}
@@ -128,13 +154,13 @@ export function GraphView() {
             {goals.map((g) => {
               const pct = g.planned ? Math.min(1, g.covered / g.planned) : 0;
               return (
-                <div key={g.goalId} className="pointer-events-auto rounded-md border border-border bg-surface/90 px-2 py-1.5">
-                  <div className="flex items-center gap-2 text-[11px] leading-4">
-                    <span className="min-w-0 flex-1 truncate text-text" title={g.label}>{g.label}</span>
-                    <span className="tabular shrink-0 text-muted">{g.covered}/{g.planned}</span>
+                <div key={g.goalId} className="pointer-events-auto rounded-lg border-2 border-[#111] bg-white px-2 py-1.5 shadow-[2px_2px_0_#111]">
+                  <div className="flex items-center gap-2 text-[12px] font-semibold leading-4 text-[#111]">
+                    <span className="min-w-0 flex-1 truncate" title={titleCase(g.label)}>{titleCase(g.label)}</span>
+                    <span className="tabular shrink-0">{g.covered}/{g.planned}</span>
                   </div>
-                  <div className="mt-1 h-1 overflow-hidden rounded-full bg-surface2">
-                    <div className="h-full rounded-full" style={{ width: `${pct * 100}%`, background: TYPE_COLOR.goal }} />
+                  <div className="mt-1 h-2 overflow-hidden rounded-full border-[1.5px] border-[#111] bg-white">
+                    <div className="h-full" style={{ width: `${pct * 100}%`, background: YELLOW, borderRight: pct > 0 && pct < 1 ? `1.5px solid ${INK}` : undefined }} />
                   </div>
                 </div>
               );
@@ -144,18 +170,18 @@ export function GraphView() {
 
         {/* Controls (top-right) */}
         <div className="absolute right-3 top-3 flex flex-col items-end gap-2 md:flex-row md:items-center">
-          <Segmented
-            value={all ? "all" : "conf"}
-            onChange={(v) => setParam("all", v === "all" ? "1" : null)}
-            options={[{ value: "conf", label: <><span className="md:hidden">Conf</span><span className="hidden md:inline">This conference</span></> }, { value: "all", label: "All" }]}
-            className="h-8 text-xs [&_button]:px-2 [&_button]:text-xs md:[&_button]:px-3"
-          />
+          <div className="flex gap-1.5" role="radiogroup" aria-label="Scope">
+            <button type="button" role="radio" aria-checked={!all} onClick={() => setParam("all", null)} className={pill(!all, "px-2.5 md:px-3")}>
+              <span className="md:hidden">Conf</span><span className="hidden md:inline">This conference</span>
+            </button>
+            <button type="button" role="radio" aria-checked={all} onClick={() => setParam("all", "1")} className={pill(all, "px-2.5 md:px-3")}>All</button>
+          </div>
           <div className="flex gap-2">
             <button
               type="button"
               onClick={revealed ? stopReplay : replay}
               disabled={!data}
-              className={buttonClass({ variant: "secondary", size: "sm", className: "px-2 md:px-3" })}
+              className={pill(!!revealed, "px-2.5 md:px-3")}
               aria-label={revealed ? "Stop replay" : "Replay day"}
               title="Replay day"
             >
@@ -165,7 +191,7 @@ export function GraphView() {
             <button
               type="button"
               onClick={() => canvas.current?.zoomToFit()}
-              className={buttonClass({ variant: "secondary", size: "sm", className: "px-2 md:px-3" })}
+              className={pill(false, "px-2.5 md:px-3")}
               aria-label="Reset view"
               title="Reset view"
             >
@@ -178,11 +204,11 @@ export function GraphView() {
         {/* Highlight pill */}
         {highlight.size > 0 && (
           <div className="absolute bottom-[76px] left-1/2 z-10 -translate-x-1/2 md:bottom-auto md:top-3">
-            <div className="flex items-center gap-2 whitespace-nowrap rounded-full border border-accent/40 bg-surface px-3 py-1.5 text-xs shadow-xl">
-              <span className="size-1.5 rounded-full bg-accent" aria-hidden />
-              <span className="text-text">Showing: why path</span>
-              {hlCount === 0 && <span className="text-faint">· not in this view</span>}
-              <button type="button" onClick={() => setParam("hl", null)} className="flex items-center gap-1 text-muted hover:text-text">
+            <div className="flex items-center gap-2 whitespace-nowrap rounded-full border-2 border-[#111] bg-[#FFD23F] px-3 py-1.5 text-xs font-semibold text-[#111] shadow-[2px_2px_0_#111]">
+              <span className="size-2 rounded-full border border-[#111] bg-white" aria-hidden />
+              <span>Showing: why path</span>
+              {hlCount === 0 && <span className="opacity-70">· not in this view</span>}
+              <button type="button" onClick={() => setParam("hl", null)} className="flex items-center gap-1 underline-offset-2 hover:underline">
                 · Clear <X className="size-3" />
               </button>
             </div>
@@ -190,22 +216,23 @@ export function GraphView() {
         )}
 
         {/* Legend (bottom-left) */}
-        <div className="pointer-events-none absolute bottom-3 left-3 flex max-w-[calc(100%-24px)] flex-wrap gap-x-3 gap-y-1 rounded-md border border-border bg-surface/90 px-2 py-1.5 text-[11px] text-muted">
+        <div className="pointer-events-none absolute bottom-3 left-3 flex max-w-[calc(100%-24px)] flex-wrap gap-x-3 gap-y-1 rounded-lg border-2 border-[#111] bg-white px-2.5 py-1.5 text-[11px] font-medium text-[#111] shadow-[2px_2px_0_#111]">
           {LEGEND.map((l) => (
             <span key={l.type} className="flex items-center gap-1.5">
-              <TypeDot type={l.type} size={7} />{l.label}
+              <Dot type={l.type} size={10} />{l.label}
             </span>
           ))}
-          <span className="flex items-center gap-1.5"><span className="inline-block size-[7px] rounded-full border border-muted" />Planned</span>
+          <span className="flex items-center gap-1.5"><Dot type="session" size={10} hollow />Planned</span>
         </div>
       </div>
 
-      <NodeDrawer node={selected} links={data?.links ?? []} byId={byId} onClose={() => setSelected(null)} />
+      <NodeDrawer node={selected} links={data?.links ?? []} byId={byId} confId={confId} onClose={() => setSelected(null)} />
     </div>
   );
 }
 
-function NodeDrawer({ node, links, byId, onClose }: { node: SkyNode | null; links: { source: string; target: string; type: string }[]; byId: Map<string, SkyNode>; onClose(): void }) {
+function NodeDrawer({ node, links, byId, confId, onClose }: { node: SkyNode | null; links: { source: string; target: string; type: string }[]; byId: Map<string, SkyNode>; confId: string; onClose(): void }) {
+  const { setConfId } = useSession();
   const [last, setLast] = useState<SkyNode | null>(node);
   useEffect(() => { if (node) setLast(node); }, [node]);
   const n = node ?? last;
@@ -224,16 +251,21 @@ function NodeDrawer({ node, links, byId, onClose }: { node: SkyNode | null; link
     else if (n.type === "user" && n.isOtherUser) { href = "/network"; cta = "Open network"; }
     else if (n.type === "moment") {
       const at = links.find((l) => l.source === n.id && l.type === "AT")?.target;
-      if (at && byId.get(at)?.type === "session") { href = `/sessions/${encodeURIComponent(at)}`; cta = `Open ${byId.get(at)!.label}`; }
+      if (at && byId.get(at)?.type === "session") { href = `/sessions/${encodeURIComponent(at)}`; cta = `Open ${titleCase(byId.get(at)!.label)}`; }
     }
   }
 
   return (
-    <Drawer open={!!node} onOpenChange={(o) => !o && onClose()} title={n?.label ?? ""} description={n ? TYPE_LABEL[n.type] : undefined}>
+    <Drawer
+      open={!!node}
+      onOpenChange={(o) => !o && onClose()}
+      title={n ? titleCase(n.label) : ""}
+      description={n ? TYPE_LABEL[n.type] : undefined}
+    >
       {n && (
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
-            <span className="inline-flex h-6 items-center gap-1.5 rounded-md border border-border px-2"><TypeDot type={n.type} />{TYPE_LABEL[n.type]}</span>
+            <span className="inline-flex h-6 items-center gap-1.5 rounded-md border border-border px-2"><Dot type={n.type} size={9} />{TYPE_LABEL[n.type]}</span>
             <span className="inline-flex h-6 items-center rounded-md border border-border px-2">{STATE_LABEL[n.state]}</span>
             {n.conferenceId && <span className="inline-flex h-6 items-center rounded-md border border-border px-2">{n.conferenceId}</span>}
             {typeof n.fit === "number" && <span className="tabular inline-flex h-6 items-center rounded-md border border-border px-2">fit {Math.round(n.fit * 100)}%</span>}
@@ -243,13 +275,21 @@ function NodeDrawer({ node, links, byId, onClose }: { node: SkyNode | null; link
               <div className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted">Connected to</div>
               <ul className="flex flex-col gap-1">
                 {neighbours.map((m) => (
-                  <li key={m.id} className="flex items-center gap-2 text-sm text-text"><TypeDot type={m.type} /><span className="truncate">{m.label}</span></li>
+                  <li key={m.id} className="flex items-center gap-2 text-sm text-text"><Dot type={m.type} size={9} /><span className="truncate">{titleCase(m.label)}</span></li>
                 ))}
               </ul>
             </div>
           )}
           {href && (
-            <Link href={href} className={cn(buttonClass({ size: "md" }), "w-full")} onClick={onClose}>
+            <Link
+              href={href}
+              className={cn(buttonClass({ size: "md" }), "w-full")}
+              onClick={() => {
+                // Plan/session pages read the session conference; switch to the node's conference first.
+                if (n.conferenceId && n.conferenceId !== confId && href !== "/network") setConfId(n.conferenceId);
+                onClose();
+              }}
+            >
               {cta}<ArrowRight className="size-4" />
             </Link>
           )}
