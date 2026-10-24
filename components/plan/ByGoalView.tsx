@@ -22,7 +22,8 @@ export function ByGoalView({ plan, tz, confId, locked, onPlan, onOpen }: {
 function GoalSection({ g, tz, confId, locked, onPlan, slotOf, onOpen }: {
   g: GoalPlan; tz: string; confId: string; locked: boolean; onPlan(p: PlanResponse): void; slotOf: Map<string, ItinerarySlot>; onOpen(s: ItinerarySlot): void;
 }) {
-  const sessions = g.sessions.filter((s) => s.status !== "skipped");
+  const startOf = (it: PlanItem) => slotOf.get(it.id)?.from ?? it.session?.start ?? "~";
+  const sessions = g.sessions.filter((s) => s.status !== "skipped").sort((a, b) => Date.parse(startOf(a)) - Date.parse(startOf(b)) || startOf(a).localeCompare(startOf(b)));
   const people = g.people.filter((s) => s.status !== "skipped");
   const booths = g.booths.filter((s) => s.status !== "skipped");
   const fb = (item: PlanItem) => (locked ? null : <FeedbackButtons item={item} onPlan={onPlan} />);
