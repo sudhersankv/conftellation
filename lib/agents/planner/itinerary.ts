@@ -3,7 +3,7 @@ import { ms } from "@/lib/time";
 
 export interface TimedCandidate { id: string; start: string; end: string; score: number; pinned?: boolean; done?: boolean }
 export interface BoothCandidate { id: string; score: number; order?: number; hall?: string; pinned?: boolean; done?: boolean }
-export interface Block { from: string; to: string; label: string }
+export interface Block { from: string; to: string; label: string; id?: string }
 
 export interface ItineraryInput {
   sessions: TimedCandidate[];
@@ -24,6 +24,10 @@ export type Slot =
 const overlaps = (a: [number, number], b: [number, number]) => a[0] < b[1] && b[0] < a[1];
 
 /** Format an epoch-ms time with the same offset as `like` (keeps every time in the venue offset, e.g. -07:00). */
+export function fmtLike(t: number, like: string): string {
+  return fmt(t, like);
+}
+
 function fmt(t: number, like: string): string {
   const m = like.match(/([+-])(\d{2}):(\d{2})$/);
   if (!m) return new Date(t).toISOString();
@@ -35,7 +39,7 @@ export function buildItinerary(input: ItineraryInput): Slot[] {
   const boothMs = (input.boothMinutes ?? 10) * 60_000;
   const lo = Math.max(ms(input.day.from), input.window?.from ? ms(input.window.from) : -Infinity);
   const hi = Math.min(ms(input.day.to), input.window?.to ? ms(input.window.to) : Infinity);
-  const blocks = (input.blocks ?? []).map((b, i) => ({ ...b, id: `block-${i}`, span: [ms(b.from), ms(b.to)] as [number, number] }));
+  const blocks = (input.blocks ?? []).map((b, i) => ({ ...b, id: b.id ?? `block-${i}`, span: [ms(b.from), ms(b.to)] as [number, number] }));
   const taken: [number, number][] = blocks.map((b) => b.span);
   const slots: Slot[] = blocks.map((b) => ({ kind: "block", id: b.id, label: b.label, from: b.from, to: b.to }));
 
