@@ -2,7 +2,9 @@
 // /sessions/[id]: details, capture row, memo, my notes & photos, community tab.
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Camera, GitBranch, MapPin, Mic, Share2, StickyNote, UserPlus } from "lucide-react";
+import { Camera, Copy, GitBranch, MapPin, Mic, Pencil, Share2, StickyNote, UserPlus } from "lucide-react";
+import ReactMarkdown, { type Components } from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 import type { CommunityResponse, Moment, MomentKind } from "@/lib/types";
 import { api, mediaSrc } from "@/lib/client";
@@ -69,7 +71,7 @@ function Mine({ data, userId, onSaved }: { data: CommunityResponse; userId: stri
   const rest = sorted.filter((m) => !(m.kind === "note" && MEMO.test(m.text ?? "")));
   return (
     <>
-      <MemoCard key={memo?.id ?? "none"} memo={memo} userId={userId} confId={data.session.conferenceId} sessionId={data.session.id} onSaved={onSaved} />
+      <MemoCard key={memo?.id ?? "none"} memo={memo} userId={userId} confId={data.session.conferenceId} sessionId={data.session.id} onSaved={onSaved} onExport={() => exportMemo(data, memo, rest)} />
       <section>
         <SectionHeader title="My notes & photos" count={rest.length} />
         {rest.length === 0 ? (
@@ -82,7 +84,46 @@ function Mine({ data, userId, onSaved }: { data: CommunityResponse; userId: stri
   );
 }
 
-function MemoCard({ memo, userId, confId, sessionId, onSaved }: { memo?: Moment; userId: string; confId: string; sessionId: string; onSaved(): void }) {
+/** Markdown document: title, time/room, memo, notes (bullets with time), photos. */
+function memoMarkdown(data: CommunityResponse, memo: Moment | undefined, rest: Moment[]) {
+  const s = data.session;
+  const chrono = [...rest].sort((a, b) => a.at.localeCompare(b.at));
+  const notes = chrono.filter((m) => m.text && m.kind !== "photo");
+  const photos = chrono.filter((m) => m.mediaUrl);
+  const lines = [`# ${s.title}`, "", `${fmtDay(s.start)} · ${fmtRange(s.start, s.end)}${s.room ? ` · ${s.room}` : ""}`, ""];
+  const body = memo?.text?.replace(MEMO, "").trim();
+  if (body) lines.push(body, "");
+  lines.push("## Notes", "");
+  if (notes.length) for (const n of notes) lines.push(`- ${fmtTime(n.at)}: ${(n.text ?? "").replace(/\s*\n\s*/g, " ")}`);
+  else lines.push("_None_");
+  lines.push("", "## Photos", "");
+  if (photos.length) for (const p of photos) lines.push(`![photo](${p.mediaUrl})`);
+  else lines.push("_None_");
+  return lines.join("\n") + "\n";
+}
+
+async function exportMemo(data: CommunityResponse, memo: Moment | undefined, rest: Moment[]) {
+  try {
+    await navigator.clipboard.writeText(memoMarkdown(data, memo, rest));
+    toast("Copied");
+  } catch (e) {
+    toast.error(`Couldn't copy: ${e instanceof Error ? e.message : "clipboard blocked"}`);
+  }
+}
+
+const MD_COMPONENTS: Components = {
+  h1: ({ children }) => <h3 className="mb-1 mt-3 font-heading text-base font-bold first:mt-0">{children}</h3>,
+  h2: ({ children }) => <h4 className="mb-1 mt-3 font-heading text-sm font-bold first:mt-0">{children}</h4>,
+  h3: ({ children }) => <h5 className="mb-1 mt-2 font-heading text-sm font-bold first:mt-0">{children}</h5>,
+  p: ({ children }) => <p className="my-1.5 text-sm leading-6 text-text first:mt-0 last:mb-0">{children}</p>,
+  ul: ({ children }) => <ul className="my-1.5 list-disc pl-5 text-sm leading-6">{children}</ul>,
+  ol: ({ children }) => <ol className="my-1.5 list-decimal pl-5 text-sm leading-6">{children}</ol>,
+  a: ({ children, href }) => <a href={href} target="_blank" rel="noreferrer" className="underline underline-offset-2" onClick={(e) => e.stopPropagation()}>{children}</a>,
+  code: ({ children }) => <code className="rounded bg-surface2 px-1 font-mono text-[12px]">{children}</code>,
+  strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+};
+
+function MemoCard({ memo, userId, confId, sessionId, onSaved, onExport }: { memo?: Moment; userId: string; confId: string; sessionId: string; onSaved(): void; onExport(): void }) {
   const current = memo?.text?.replace(MEMO, "") ?? "";
   const [editing, setEditing] = useState(!memo);
   const [text, setText] = useState(current);
@@ -99,8 +140,12 @@ function MemoCard({ memo, userId, confId, sessionId, onSaved }: { memo?: Moment;
   return (
     <Card>
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-semibold">Personal memo</h2>
-        {memo && <span className="text-xs text-faint">Updated {fmtTime(memo.at)}</span>}
+        <h2 className="font-heading text-sm font-bold">Personal memo</h2>
+        <div className="flex items-center gap-2">
+          {memo && <span className="text-xs text-faint">Updated {fmtTime(memo.at)}</span>}
+          {memo && !editing && <Button variant="ghost" size="sm" className="px-2" onClick={() => setEditing(true)}><Pencil className="size-3.5" />Edit</Button>}
+          <Button variant="secondary" size="sm" className="px-2" onClick={onExport}><Copy className="size-3.5" />Export memo</Button>
+        </div>
       </div>
       {editing ? (
         <>
@@ -111,10 +156,11 @@ function MemoCard({ memo, userId, confId, sessionId, onSaved }: { memo?: Moment;
           </div>
         </>
       ) : (
-        <button type="button" onClick={() => setEditing(true)} className="w-full whitespace-pre-wrap rounded-md text-left text-sm leading-6 text-text hover:bg-surface2" title="Edit memo">
-          {current}
-        </button>
+        <div className="text-text">
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={MD_COMPONENTS}>{current}</ReactMarkdown>
+        </div>
       )}
+      <p className="mt-2 text-xs text-faint">Markdown works: **bold**, - lists, # headings</p>
     </Card>
   );
 }
