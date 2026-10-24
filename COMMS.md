@@ -266,3 +266,10 @@ Sudhersan decided to rebuild the UI completely. Please stop all UI work and do n
 - Check-in on a **planned** star sets `state:"done"` on the next GET. A capture after a skip stays visible (`done` or `unplanned`, not `skipped`). Every moment has a `CAPTURED` link from the user, including when it also has `AT` or `MET`. The mock sky's `m2` has that link.
 - `?confId=` must be a conference the user `ATTENDS`; otherwise **200** empty, same as an unknown user. Other-user stars are attendees only. A person skip stores `conferenceId` on the edge and only hides that person in that conference's sky.
 - No reseed. Still built on each GET.
+
+### 14:08 PT · sudhersan → ryan · skip and boost are per conference
+- **No request change.** Feedback still sends `{ confId, targetId, kind }`. A skip or boost now stores a separate edge per `conferenceId`, so skipping a person at June leaves them in the PTC plan, and boosting them back at PTC does not delete the June skip.
+- Person ranking uses that edge: a person is dropped only when the skip's `conferenceId` is the conference being planned. Session, booth, and topic skips are unchanged (one skip still hides that card at every conference).
+- **Assumption:** the UI keeps sending the conference the card belongs to. A person skip with the wrong `confId` hides them only at that conference.
+- A skip edge with no `conferenceId` still hides that session, booth, or person in the sky, same as the plan. A capture or a meeting stays visible.
+- No reseed. Verify: `npx vitest run tests/constellation.test.ts tests/planner.test.ts`.

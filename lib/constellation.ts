@@ -246,8 +246,7 @@ export async function buildConstellation(userId: string, confId: string | null, 
     if (prev) {
       if (prev.state === "done" || prev.state === "unplanned" || prev.type === "moment") continue;
       prev.state = "skipped";
-    } else if (!x.conferenceId && x.label === "Person") continue;
-    else add({ id: x.id, type, label: short(x.name ?? x.id), state: "skipped", conferenceId: x.conferenceId ?? confFallback });
+    } else add({ id: x.id, type, label: short(x.name ?? x.id), state: "skipped", conferenceId: x.conferenceId ?? confFallback });
     pin(x.id, 3);
   }
 

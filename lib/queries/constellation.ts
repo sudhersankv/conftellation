@@ -73,14 +73,17 @@ export async function skyMet(userId: string, confIds: string[]) {
   );
 }
 
-/** Things the user skipped at these conferences (rendered hidden, so steer can animate them out). */
+/** Things the user skipped here. A null conferenceId is a legacy global skip; a set one applies only there. */
 export async function skySkipped(userId: string, confIds: string[]) {
   return q<{ id: string; label: NodeLabel; name: string; conferenceId: string | null }>(
-    `MATCH (:User {id:$userId})-[:SKIPPED]->(x) WHERE (x:Session OR x:Booth) AND x.conferenceId IN $confIds
+    `MATCH (:User {id:$userId})-[r:SKIPPED]->(x)
+     WHERE (x:Session OR x:Booth) AND x.conferenceId IN $confIds
+       AND (r.conferenceId IS NULL OR r.conferenceId IN $confIds)
      OPTIONAL MATCH (co:Company)-[:HAS_BOOTH]->(x)
      RETURN x.id AS id, labels(x)[0] AS label, coalesce(x.title, x.label + coalesce(' · ' + co.name, '')) AS name, x.conferenceId AS conferenceId
      UNION
-     MATCH (:User {id:$userId})-[r:SKIPPED]->(x:Person) WHERE r.conferenceId IN $confIds
+     MATCH (:User {id:$userId})-[r:SKIPPED]->(x:Person)
+     WHERE r.conferenceId IS NULL OR r.conferenceId IN $confIds
      RETURN x.id AS id, 'Person' AS label, x.name AS name, r.conferenceId AS conferenceId`,
     { userId, confIds },
   );
