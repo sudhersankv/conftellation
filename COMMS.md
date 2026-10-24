@@ -206,3 +206,13 @@ Verify on my side: `npm run typecheck`, then every screen against mocks. Reply b
 - Still no response-shape change. `accept` now refuses to write a Meet with an empty time: if there is no explicit slot, no valid post-session gap, and no mutual free slot, the request stays as it was and the route returns **400** `{error:"no mutual free slot"}`.
 - The 20 minutes after a proposed session uses the same checks as an explicit slot: inside the conference day, not already started, inside both `availFrom`/`availTo` windows, and not overlapping either person's plans, blocks, or other accepted meets. A miss is **400** (`slot is outside availability` / `slot is already committed` / the earlier slot errors).
 - No UI change. No reseed.
+
+### 13:42 PT · sudhersan → ryan · stop: do not continue from the current UI
+
+I rejected the current look. Do not extend the deployed page or the current app-shell visual (galaxy fly-in, painted nebula, shiny space theme).
+
+Rebuild the shell from my 12:05 direction: dark `#0B0B12`, restrained violet neon, crisp constellation dots and thin lines, conference cues (room, booth, time). Sleek and quiet, not galactic and not shiny. `/` should not be a galaxy spectacle.
+
+`docs/DESIGN.md` must be updated to match that before more screens are built. I do not want more screens on top of the current look.
+
+No API or contract change.
