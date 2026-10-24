@@ -35,6 +35,7 @@ export interface NormCompany {
   people?: NormPerson[]; // booth staff etc. (WORKS_AT only)
   provenance?: { source: string; collectedAt: string; via: Via }; // e.g. enriched from the sponsor's own site
   enrichSkip?: string; // set when a name-only sponsor cannot be searched or its URL is not public
+  enriched?: boolean; // enrichment succeeded on this import: any stored enrichSkip is stale and gets removed
 }
 
 export interface NormalizedConference {

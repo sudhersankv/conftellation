@@ -92,9 +92,10 @@ export async function upsertConference(n: NormalizedConference): Promise<UpsertR
     `MATCH (c:Conference {id:$confId})
      UNWIND $rows AS r
      MERGE (co:Company {id:r.id}) SET co += r.p
+     SET co.enrichSkip = CASE WHEN r.enriched THEN null ELSE co.enrichSkip END
      MERGE (co)-[:SPONSORS]->(c)
      FOREACH (tid IN r.topics | MERGE (t:Topic {id:tid}) ON CREATE SET t.name = tid MERGE (co)-[:OFFERS]->(t))`,
-    { confId, rows: companies.map((c) => ({ id: c.id, topics: tids(c.topics), p: props(companyProps(c, now)) })) },
+    { confId, rows: companies.map((c) => ({ id: c.id, topics: tids(c.topics), enriched: Boolean(c.enriched), p: props(companyProps(c, now)) })) },
   );
 
   const booths = companies

@@ -143,6 +143,25 @@ function plusMinutes(iso: string, minutes: number, timeZone: string): string {
   return isoInZone(new Date(d.getTime() + minutes * 60_000), timeZone);
 }
 
+/** Venue-local calendar date of an instant (not the date in whatever offset the string carries). */
+function localDate(iso: string, timeZone: string): string | undefined {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return undefined;
+  return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+}
+
+const nextDay = (ymd: string) => new Date(Date.parse(`${ymd}T12:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+
+/** A time-only end sits on the start's venue-local day, or the next day when it would otherwise precede the start (overnight). */
+function sessionEnd(value: string | null | undefined, start: string, timeZone: string): string | undefined {
+  const day = localDate(start, timeZone);
+  const end = sessionInstant(value, day, timeZone);
+  if (!end || !day || !/^\d{1,2}:\d{2}$/.test(value?.trim() ?? "")) return end;
+  const delta = Date.parse(end) - Date.parse(start);
+  if (delta === 0) return undefined; // an echoed start time means "unknown end": the caller's default length applies
+  return delta < 0 ? sessionInstant(value, nextDay(day), timeZone) : end;
+}
+
 function toPerson(p: Extracted["people"][number]): NormPerson | undefined {
   const name = present(p.name);
   if (!name) return undefined;
@@ -162,7 +181,7 @@ export function extractedToNormalized(e: Extracted, opts: { id: string; url: str
     const title = present(s.title);
     const start = sessionInstant(s.start, day, opts.timeZone);
     if (!title || !start) continue;
-    const end = sessionInstant(s.end, start.slice(0, 10), opts.timeZone) ?? plusMinutes(start, 30, opts.timeZone);
+    const end = sessionEnd(s.end, start, opts.timeZone) ?? plusMinutes(start, 30, opts.timeZone);
     const speakers = s.speakers.map((name) => present(name)).filter((name): name is string => Boolean(name)).map((name) => {
       const known = peopleByName.get(name.toLowerCase());
       return known ? { ...known, name: known.name } : { name };
@@ -186,7 +205,8 @@ export function extractedToNormalized(e: Extracted, opts: { id: string; url: str
   const companies: NormCompany[] = e.companies.flatMap((c) => {
     const name = present(c.name);
     if (!name) return [];
-    const label = present(c.booth) ?? present(c.hall);
+    // A hall with no booth label is not a booth: no Booth node is invented from it.
+    const label = present(c.booth);
     return [{
       name,
       website: present(c.website),

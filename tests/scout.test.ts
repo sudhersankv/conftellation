@@ -5,6 +5,8 @@ import { POST as addConference } from "@/app/api/conferences/route";
 import { GET as getConference } from "@/app/api/conferences/[id]/route";
 import { q } from "@/lib/falkor";
 import { urlVariants } from "@/lib/agents/scout";
+import { extractedToNormalized, type Extracted } from "@/lib/agents/scout/adapters/generic";
+import { _setLookupForTests } from "@/lib/publicUrl";
 import type { AddConferenceResponse, ConferenceDetail } from "@/lib/types";
 import { req } from "./helpers";
 
@@ -17,6 +19,7 @@ const net = vi.hoisted(() => ({
   serp: new Map<string, { title: string; link: string; description?: string }[]>(),
   calls: [] as string[],
   used: 0,
+  memo: new Map<string, unknown>(),
 }));
 
 vi.mock("@/lib/brightdata", () => {
@@ -48,7 +51,14 @@ vi.mock("@/lib/brightdata", () => {
       const data = hit?.[1] ?? [];
       return { data, cached: true, collectedAt: at, via: "serp", source: `https://www.google.com/search?q=${encodeURIComponent(query)}` };
     },
-    memo: async (_key: unknown, source: string, run: () => Promise<unknown>) => ({ data: await run(), cached: false, collectedAt: at, via: "memo", source }),
+    // Sponsor extractions are really memoized by key here, so a too-coarse key shows up as one company's profile on another.
+    memo: async (key: Record<string, unknown>, source: string, run: () => Promise<unknown>) => {
+      const k = JSON.stringify(key);
+      if (key.task === "sponsor-enrich" && net.memo.has(k)) return { data: net.memo.get(k), cached: true, collectedAt: at, via: "memo", source };
+      const data = await run();
+      if (key.task === "sponsor-enrich") net.memo.set(k, data);
+      return { data, cached: false, collectedAt: at, via: "memo", source };
+    },
     requestsUsed: () => net.used,
   };
 });
@@ -86,6 +96,20 @@ const nameOnly = {
   ],
 };
 
+const rescue = {
+  conference: { name: "Rescue Expo 2026", startDate: "2026-12-05", endDate: "2026-12-05", city: "London", ...blankConf },
+  sessions: [
+    { title: "Opening", abstract: "", kind: "keynote", start: "2026-12-05T09:00:00+00:00", end: "2026-12-05T09:30:00+00:00", room: "", url: "", speakers: [], topics: ["opening"] },
+  ],
+  people: [],
+  companies: [
+    { name: "Rescue Co", website: "", description: "", sponsorTier: "Gold", booth: "", hall: "", topics: [] },
+    { name: "Twin Labs", website: "", description: "", sponsorTier: "Gold", booth: "", hall: "", topics: [] },
+    { name: "Twin Labs Cloud", website: "", description: "", sponsorTier: "Gold", booth: "", hall: "", topics: [] },
+    { name: "Stale Co", website: "", description: "", sponsorTier: "Gold", booth: "", hall: "", topics: [] },
+  ],
+};
+
 vi.mock("@/lib/llm", async (orig) =>
   (await import("./fakes")).fakeLlm(await orig(), (...args: unknown[]) => {
     const [, , user, name] = args as [unknown, string, string, string];
@@ -96,6 +120,7 @@ vi.mock("@/lib/llm", async (orig) =>
     if (name === "conference") {
       if (user.includes("SPAN DAYS")) return spanDays;
       if (user.includes("NAME ONLY SPONSORS")) return nameOnly;
+      if (user.includes("RESCUE EXPO")) return rescue;
       if (user.includes("CAP PAGES")) return { ...generic, conference: { ...generic.conference, name: "Cap Pages 2026" } };
       return generic;
     }
@@ -135,6 +160,15 @@ beforeAll(async () => {
     { title: "Other Co", link: "https://en.wikipedia.org/wiki/Other_Co", description: "directory" },
     { title: "Found Co", link: "https://found.example/", description: "different company" },
   ]);
+  net.unlock.set("https://rescueexpo.example:8443/expo", "# RESCUE EXPO\n");
+  for (const site of ["https://rescue.example/", "https://twinlabs.example/", "https://staleco.example/"]) net.unlock.set(site, `# ${site}\n${"We build cloud infrastructure for platform teams. ".repeat(12)}`);
+  net.serp.set("Rescue Co", [
+    { title: "Rescue Co (gone)", link: "https://rescue-dead.example/", description: "does not resolve" },
+    { title: "Rescue Co (old)", link: "https://rescue-internal.example/", description: "resolves to a private address" },
+    { title: "Rescue Co", link: "https://rescue.example/", description: "public" },
+  ]);
+  net.serp.set("Twin Labs", [{ title: "Twin Labs", link: "https://twinlabs.example/", description: "one page for both" }]);
+  net.serp.set("Stale Co", [{ title: "Stale Co", link: "https://staleco.example/", description: "public now" }]);
   net.serp.set("Ghost Co", [{ title: "internal", link: "http://10.1.1.1/secret", description: "no" }]);
   const capLinks = Array.from({ length: 8 }, (_, i) => `[a](https://cap.example/agenda/${"p".repeat(i + 1)})`).join("\n");
   net.unlock.set("https://cap.example/start", `# CAP PAGES\n${capLinks}\n`);
@@ -243,7 +277,8 @@ describe("POST /api/conferences (other paths)", () => {
   });
 
   it("searches name-only sponsors and stores a skip reason when search has no public url", async () => {
-    const { status, body } = await post({ url: "https://nameonly.example/" });
+    _setLookupForTests(async () => [{ address: "93.184.216.34", family: 4 }]);
+    const { status, body } = await post({ url: "https://nameonly.example/" }).finally(() => _setLookupForTests(null));
     expect(status, body.error).toBe(200);
     expect(net.calls.some((c) => c.startsWith("serp ") && c.includes("Found Co"))).toBe(true);
     expect(net.calls.some((c) => c.startsWith("serp ") && c.includes("Ghost Co"))).toBe(true);
@@ -259,6 +294,31 @@ describe("POST /api/conferences (other paths)", () => {
     expect(rows.find((r) => r.id === "ghost-co")).toMatchObject({ skip: "no website; search returned no public url", website: null });
     expect(rows.find((r) => r.id === "loopback-labs")?.skip).toBe("website is not a public http(s) url");
     expect(rows.find((r) => r.id === "loopback-labs")?.website ?? null).toBeNull();
+  });
+
+  it("tries later search hits, keys searched profiles per company, clears stale skips, and accepts host:port input", async () => {
+    await q(`MERGE (co:Company {id:'stale-co'}) SET co.name = 'Stale Co', co.enrichSkip = 'website host is not public'`);
+    _setLookupForTests(async (host) => {
+      if (host === "rescue-dead.example") throw Object.assign(new Error("ENOTFOUND"), { code: "ENOTFOUND" });
+      return host === "rescue-internal.example" ? [{ address: "10.0.0.9", family: 4 }] : [{ address: "93.184.216.34", family: 4 }];
+    });
+    try {
+      const { status, body } = await post({ url: "rescueexpo.example:8443/expo" });
+      expect(status, body.error).toBe(200);
+      expect(body.conference.id).toBe("rescue-expo-2026");
+    } finally {
+      _setLookupForTests(null);
+    }
+    expect(net.calls).not.toContain("unlock https://rescue-internal.example/");
+    expect(net.calls).not.toContain("unlock https://rescue-dead.example/");
+    const rows = await q<{ id: string; skip: string | null; website: string | null; description: string | null }>(
+      `MATCH (co:Company)-[:SPONSORS]->(:Conference {id:'rescue-expo-2026'}) RETURN co.id AS id, co.enrichSkip AS skip, co.website AS website, co.description AS description`,
+    );
+    const row = (id: string) => rows.find((r) => r.id === id);
+    expect(row("rescue-co")).toMatchObject({ skip: null, website: "https://rescue.example/", description: "Rescue Co builds cloud infrastructure for platform teams." });
+    expect(row("twin-labs")?.description).toBe("Twin Labs builds cloud infrastructure for platform teams.");
+    expect(row("twin-labs-cloud")?.description).toBe("Twin Labs Cloud builds cloud infrastructure for platform teams.");
+    expect(row("stale-co")).toMatchObject({ skip: null, website: "https://staleco.example/" });
   });
 
   it("reads sponsors from a direct sched.com page", async () => {
@@ -341,5 +401,37 @@ describe("POST /api/conferences (other paths)", () => {
     const nf = await getConference(req("/api/conferences/nope"), { params: { id: "nope" } });
     expect(nf.status).toBe(404);
     expect(await nf.json()).toHaveProperty("error");
+  });
+});
+
+describe("generic extraction -> normalized", () => {
+  const base = (sessions: Extracted["sessions"], companies: Extracted["companies"] = []) =>
+    ({ conference: { name: "Unit Conf", startDate: "2026-12-03", endDate: "2026-12-04", city: "", region: "", country: "", timezone: "" }, sessions, people: [], companies }) as unknown as Extracted;
+  const session = (start: string, end: string) => ({ title: "Late show", abstract: "", kind: "talk", start, end, room: "", url: "", speakers: [], topics: [] }) as unknown as Extracted["sessions"][number];
+
+  it("rolls a time-only end past midnight onto the next venue-local day", () => {
+    const n = extractedToNormalized(base([session("2026-12-03T23:30", "01:00")]), { id: "u", url: "https://u.example/", timeZone: "Europe/London", collectedAt: "x" });
+    expect(n.sessions[0]).toMatchObject({ start: "2026-12-03T23:30:00+00:00", end: "2026-12-04T01:00:00+00:00" });
+  });
+
+  it("puts a time-only end on the venue-local date of an offset-bearing start", () => {
+    const n = extractedToNormalized(base([session("2026-12-04T01:30:00+09:00", "09:15")]), { id: "u", url: "https://u.example/", timeZone: "America/Los_Angeles", collectedAt: "x" });
+    expect(n.sessions[0].end).toBe("2026-12-03T09:15:00-08:00");
+    expect(Date.parse(n.sessions[0].end) - Date.parse(n.sessions[0].start)).toBe(45 * 60_000);
+  });
+
+  it("treats an end equal to the start as unknown (default length), not a 24-hour session", () => {
+    const n = extractedToNormalized(base([session("2026-12-03T10:00", "10:00")]), { id: "u", url: "https://u.example/", timeZone: "Europe/London", collectedAt: "x" });
+    expect(n.sessions[0]).toMatchObject({ start: "2026-12-03T10:00:00+00:00", end: "2026-12-03T10:30:00+00:00" });
+  });
+
+  it("does not invent a booth from a hall alone", () => {
+    const companies = [
+      { name: "Hall Only", website: "", description: "", sponsorTier: "", booth: "", hall: "North", topics: [] },
+      { name: "Booth Co", website: "", description: "", sponsorTier: "", booth: "B7", hall: "North", topics: [] },
+    ] as unknown as Extracted["companies"];
+    const n = extractedToNormalized(base([], companies), { id: "u", url: "https://u.example/", timeZone: "Europe/London", collectedAt: "x" });
+    expect(n.companies.find((c) => c.name === "Hall Only")?.booth).toBeUndefined();
+    expect(n.companies.find((c) => c.name === "Booth Co")?.booth).toEqual({ label: "B7", hall: "North" });
   });
 });

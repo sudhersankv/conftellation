@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import { Readable } from "node:stream";
+import zlib from "node:zlib";
+import type { AddressInfo } from "node:net";
 import os from "node:os";
 import path from "node:path";
 import * as bd from "@/lib/brightdata";
@@ -18,10 +22,13 @@ beforeEach(async () => {
   dir = await mkdtemp(path.join(os.tmpdir(), "bd-cache-"));
   process.env.BRIGHTDATA_CACHE_DIR = dir;
   bd.resetRequestCount();
+  // Plain HTTP goes through the (stubbed) global fetch unless a test opts into the real pinned transport.
+  bd._setHttpForTests((u, i) => fetch(u, i));
 });
 afterEach(async () => {
   process.env = { ...env };
   _setLookupForTests(null);
+  bd._setHttpForTests(null);
   vi.unstubAllGlobals();
   await rm(dir, { recursive: true, force: true });
 });
@@ -110,12 +117,96 @@ describe("brightdata adapter", () => {
     expect(pulls).toBeLessThan(40);
   });
 
+  it("pins the connection to the vetted DNS answer, so a rebinding host never reaches an internal address", async () => {
+    let hits = 0;
+    const server: Server = createServer((_req, res) => {
+      hits++;
+      res.end("internal secret");
+    });
+    await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+    const { port } = server.address() as AddressInfo;
+    try {
+      bd._setHttpForTests(null);
+      let calls = 0;
+      // First answer (the pre-check) is public; the connect-time answer flips to loopback.
+      _setLookupForTests(async () => (calls++ === 0 ? [{ address: "93.184.216.34", family: 4 }] : [{ address: "127.0.0.1", family: 4 }]));
+      await expect(bd.fetchText(`http://rebind.example:${port}/admin`)).rejects.toThrow(/not public/);
+      expect(calls).toBe(2);
+      // A lookup failure at connect time fails the request instead of leaving it unchecked.
+      _setLookupForTests(async () => {
+        throw Object.assign(new Error("ENOTFOUND"), { code: "ENOTFOUND" });
+      });
+      await expect(bd.fetchText(`http://gone.example:${port}/admin`)).rejects.toThrow();
+      expect(hits).toBe(0);
+    } finally {
+      await new Promise((r) => server.close(r));
+    }
+  });
+
   it("CACHE_ONLY never touches the network", async () => {
     process.env.CACHE_ONLY = "true";
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
     await expect(bd.fetchText("https://nope.example")).rejects.toThrow(/cache miss/);
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe("pinned node:http transport", () => {
+  let server: Server;
+  let port = 0;
+  let handler: (req: IncomingMessage, res: ServerResponse) => void = (_q, s) => s.end();
+  beforeEach(async () => {
+    server = createServer((rq, rs) => handler(rq, rs));
+    await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+    port = (server.address() as AddressInfo).port;
+    // Pre-check sees a public answer; the transport under test is allowed to reach the local test server.
+    _setLookupForTests(async () => [{ address: "93.184.216.34", family: 4 }]);
+    bd._setHttpForTests(bd.makeNodeTransport(async () => [{ address: "127.0.0.1", family: 4 }]));
+  });
+  afterEach(async () => {
+    server.closeAllConnections();
+    await new Promise((r) => server.close(r));
+  });
+  const readBody = (rq: IncomingMessage) => new Promise<string>((r) => {
+    let b = "";
+    rq.on("data", (c) => (b += c));
+    rq.on("end", () => r(b));
+  });
+
+  it("sends string and form bodies with an explicit content-length, and refuses unsupported bodies", async () => {
+    const seen: { len?: string; te?: string; type?: string; body: string }[] = [];
+    handler = async (rq, rs) => {
+      seen.push({ len: rq.headers["content-length"], te: rq.headers["transfer-encoding"], type: rq.headers["content-type"], body: await readBody(rq) });
+      rs.end("ok");
+    };
+    const url = `http://api.example:${port}/search`;
+    expect((await bd.fetchText(url, { method: "POST", body: "type=session&size=50&from=0" })).data).toBe("ok");
+    expect(seen[0]).toMatchObject({ len: "27", te: undefined, body: "type=session&size=50&from=0" });
+    await bd.fetchText(`${url}?form`, { method: "POST", body: new URLSearchParams({ a: "1", b: "two" }) });
+    expect(seen[1]).toMatchObject({ len: "9", type: "application/x-www-form-urlencoded;charset=UTF-8", body: "a=1&b=two" });
+    await expect(bd.fetchText(`${url}?blob`, { method: "POST", body: new Blob(["x"]) })).rejects.toThrow(/unsupported request body/);
+    expect(seen).toHaveLength(2);
+  });
+
+  it("closes the connection when a compressed body passes the byte cap", async () => {
+    let closed = 0;
+    handler = (_rq, rs) => {
+      rs.writeHead(200, { "content-encoding": "gzip" });
+      const zeros = new Readable({ read() { this.push(Buffer.alloc(64 * 1024)); } });
+      const gz = zlib.createGzip();
+      zeros.pipe(gz).pipe(rs);
+      rs.on("close", () => {
+        closed = Date.now();
+        zeros.destroy();
+        gz.destroy();
+      });
+    };
+    const t0 = Date.now();
+    await expect(bd.fetchText(`http://big.example:${port}/endless`)).rejects.toThrow(/too large/);
+    for (let i = 0; i < 40 && !closed; i++) await new Promise((r) => setTimeout(r, 50));
+    expect(closed).toBeGreaterThan(0);
+    expect(closed - t0).toBeLessThan(5000);
   });
 });
 
