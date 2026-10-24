@@ -226,6 +226,7 @@ export interface SkyNode {
   at?: string; // replay order
   conferenceId?: string;
   isOtherUser?: boolean;
+  fit?: number; // 0..1: plan score / best plan score of the same type at that conference (goal: its weight); unset for unscored stars
 }
 
 export interface SkyLink { source: string; target: string; type: EdgeType }

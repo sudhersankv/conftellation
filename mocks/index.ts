@@ -5,7 +5,7 @@ import type {
   AddConferenceResponse, BriefResponse, Booth, CommunityResponse, ConferenceDetail, ConstellationResponse,
   CreateMomentResponse, Goal, IntrosResponse, MeetRequest, Moment, NetworkResponse, OnboardingResponse,
   PersonDetail, PlanItem, PlanResponse, Problem, RecordResponse, SearchResponse, Session, SteerResponse, TripReportResponse,
-  User, WhyPath,
+  User, WhyPath, EdgeType,
 } from "@/lib/types";
 
 const CONF = "ptc-2026";
@@ -36,15 +36,27 @@ export const booths: Booth[] = [
   { id: "b-falkor", conferenceId: CONF, companyId: "falkordb.com", label: "Booth 2", hall: "Expo", order: 2, company: { id: "falkordb.com", name: "FalkorDB", description: "Low-latency graph database with vector search, built for GraphRAG.", topics: ["graph database", "graphrag"], ...prov } },
 ];
 
-const why = (id: string, text: string, ...names: [string, any, string][]): WhyPath => ({
+// Each tuple: [id, label, name, edge type from the previous node (default ABOUT)].
+const why = (id: string, text: string, ...names: [string, any, string, EdgeType?][]): WhyPath => ({
   id, text,
   nodes: names.map(([nid, label, name]) => ({ id: nid, label, name })),
-  edges: names.slice(1).map(([nid], i) => ({ from: names[i][0], to: nid, type: "ABOUT" as const })),
+  edges: names.slice(1).map(([nid, , , type], i) => ({ from: names[i][0], to: nid, type: type ?? "ABOUT" })),
 });
 
 const pSessTracing = why("p1", "Matches your goal 'fix agent tracing' via topic Agent tracing", ["g-tracing", "Goal", "fix agent tracing"], ["agent tracing", "Topic", "Agent tracing"], ["s-tracing", "Session", "Tracing multi-agent systems"]);
-const pBoothAcme = why("p2", "Acme Trace offers agent tracing, your team's problem. You met their engineer Mike at lunch.", ["pr-tracing", "Problem", "agents fail in prod"], ["agent tracing", "Topic", "Agent tracing"], ["acmetrace.dev", "Company", "Acme Trace"], ["mike-okafor@acmetrace", "Person", "Mike Okafor"]);
-const pJake = why("p3", "Jake speaks on AI infrastructure. You met him at AI Engineer Summit in June.", ["g-infra", "Goal", "meet AI infra people"], ["ai infrastructure", "Topic", "AI infrastructure"], ["s-infra", "Session", "Running inference at scale"], ["jake-morales@falkordb", "Person", "Jake Morales"]);
+const pBoothAcme: WhyPath = {
+  id: "p2", text: "Acme Trace offers agent tracing, your team's problem. You met their engineer Mike at lunch.",
+  nodes: [
+    { id: "pr-tracing", label: "Problem", name: "agents fail in prod" }, { id: "agent tracing", label: "Topic", name: "Agent tracing" },
+    { id: "acmetrace.dev", label: "Company", name: "Acme Trace" }, { id: "b-acme", label: "Booth", name: "Booth 14" },
+    { id: "mike-okafor@acmetrace", label: "Person", name: "Mike Okafor" },
+  ],
+  edges: [
+    { from: "pr-tracing", to: "agent tracing", type: "ABOUT" }, { from: "acmetrace.dev", to: "agent tracing", type: "OFFERS" },
+    { from: "acmetrace.dev", to: "b-acme", type: "HAS_BOOTH" }, { from: "mike-okafor@acmetrace", to: "acmetrace.dev", type: "WORKS_AT" },
+  ],
+};
+const pJake = why("p3", "Jake speaks on AI infrastructure. You met him at AI Engineer Summit in June.", ["g-infra", "Goal", "meet AI infra people"], ["ai infrastructure", "Topic", "AI infrastructure"], ["s-infra", "Session", "Running inference at scale"], ["jake-morales@falkordb", "Person", "Jake Morales", "SPEAKS_AT"]);
 const pGraph = why("p4", "Matches your goal 'fix agent tracing' via topic Agent memory", ["g-tracing", "Goal", "fix agent tracing"], ["agent memory", "Topic", "Agent memory"], ["s-graphrag", "Session", "GraphRAG for agent memory"]);
 
 const item = (type: PlanItem["type"], id: string, title: string, subtitle: string, goalId: string, score: number, w: WhyPath, extra: Partial<PlanItem> = {}): PlanItem =>
@@ -95,15 +107,21 @@ export const constellation: ConstellationResponse = {
   nodes: [
     { id: "sam", type: "user", label: "Sam", state: "anchor" },
     { id: CONF, type: "conference", label: "Patch the Conference", state: "anchor", conferenceId: CONF },
-    ...goals.map((g) => ({ id: g.id, type: "goal" as const, label: g.text, state: "anchor" as const, goalId: g.id })),
-    { id: "pr-tracing", type: "problem", label: "agents fail in prod", state: "anchor", goalId: "g-tracing" },
-    { id: "s-graphrag", type: "session", label: "GraphRAG for agent memory", state: "done", goalId: "g-tracing", at: T("11:32"), conferenceId: CONF },
-    { id: "s-tracing", type: "session", label: "Tracing multi-agent systems", state: "planned", goalId: "g-tracing", conferenceId: CONF },
-    { id: "s-infra", type: "session", label: "Running inference at scale", state: "planned", goalId: "g-infra", conferenceId: CONF },
-    { id: "b-acme", type: "booth", label: "Booth 14 · Acme Trace", state: "planned", goalId: "g-tracing", conferenceId: CONF },
-    { id: "jake-morales@falkordb", type: "person", label: "Jake Morales", state: "planned", goalId: "g-infra" },
-    { id: "mike-okafor@acmetrace", type: "person", label: "Mike Okafor", state: "unplanned", goalId: "g-tracing", at: T("12:40") },
-    { id: "m2", type: "moment", label: "note", state: "done", at: T("11:50"), goalId: "g-tracing" },
+    ...goals.map((g) => ({ id: g.id, type: "goal" as const, label: g.text, state: "anchor" as const, goalId: g.id, conferenceId: CONF, fit: g.weight })),
+    { id: "pr-tracing", type: "problem", label: "agents fail in prod", state: "anchor", goalId: "g-tracing", conferenceId: CONF },
+    { id: "s-graphrag", type: "session", label: "GraphRAG for agent memory", state: "done", goalId: "g-tracing", at: T("11:32"), conferenceId: CONF, fit: 0.76 },
+    { id: "s-tracing", type: "session", label: "Tracing multi-agent systems", state: "planned", goalId: "g-tracing", conferenceId: CONF, fit: 1 },
+    { id: "s-infra", type: "session", label: "Running inference at scale", state: "planned", goalId: "g-infra", conferenceId: CONF, fit: 0.62 },
+    { id: "b-acme", type: "booth", label: "Booth 14 · Acme Trace", state: "planned", goalId: "g-tracing", conferenceId: CONF, fit: 1 },
+    { id: "jake-morales@falkordb", type: "person", label: "Jake Morales", state: "planned", goalId: "g-infra", conferenceId: CONF, fit: 1 },
+    { id: "mike-okafor@acmetrace", type: "person", label: "Mike Okafor", state: "unplanned", goalId: "g-tracing", at: T("12:40"), conferenceId: CONF },
+    { id: "emily-chen@tensorgrid", type: "person", label: "Emily Chen", state: "planned", goalId: "g-role", conferenceId: CONF, fit: 0.8 },
+    { id: "agent tracing", type: "topic", label: "agent tracing", state: "planned", goalId: "g-tracing", conferenceId: CONF },
+    { id: "agent memory", type: "topic", label: "agent memory", state: "planned", goalId: "g-tracing", conferenceId: CONF },
+    { id: "ai infrastructure", type: "topic", label: "ai infrastructure", state: "planned", goalId: "g-infra", conferenceId: CONF },
+    { id: "hiring", type: "topic", label: "hiring", state: "planned", goalId: "g-role", conferenceId: CONF },
+    { id: "acmetrace.dev", type: "company", label: "Acme Trace", state: "planned", goalId: "g-tracing", conferenceId: CONF },
+    { id: "m2", type: "moment", label: "note", state: "done", at: T("11:50"), goalId: "g-tracing", conferenceId: CONF },
     { id: "emily", type: "user", label: "Emily", state: "planned", isOtherUser: true, goalId: "g-role" },
     { id: "s-scrape", type: "session", label: "Live web data for agents", state: "dust", conferenceId: CONF },
   ],
@@ -115,6 +133,13 @@ export const constellation: ConstellationResponse = {
     { source: "s-infra", target: "jake-morales@falkordb", type: "SPEAKS_AT" }, { source: "b-acme", target: "mike-okafor@acmetrace", type: "WORKS_AT" },
     { source: "m2", target: "s-graphrag", type: "AT" }, { source: "emily", target: "s-graphrag", type: "PLANS" },
     { source: "sam", target: CONF, type: "ATTENDS" },
+    { source: "g-tracing", target: "agent tracing", type: "ABOUT" }, { source: "s-tracing", target: "agent tracing", type: "ABOUT" },
+    { source: "g-tracing", target: "agent memory", type: "ABOUT" }, { source: "s-graphrag", target: "agent memory", type: "ABOUT" },
+    { source: "g-infra", target: "ai infrastructure", type: "ABOUT" }, { source: "s-infra", target: "ai infrastructure", type: "ABOUT" },
+    { source: "pr-tracing", target: "agent tracing", type: "ABOUT" }, { source: "acmetrace.dev", target: "agent tracing", type: "OFFERS" },
+    { source: "acmetrace.dev", target: "b-acme", type: "HAS_BOOTH" }, { source: "mike-okafor@acmetrace", target: "acmetrace.dev", type: "WORKS_AT" },
+    { source: "g-role", target: "hiring", type: "ABOUT" }, { source: "hiring", target: "emily-chen@tensorgrid", type: "ABOUT" },
+    { source: "g-role", target: "emily-chen@tensorgrid", type: "PLANS" },
   ],
   coverage: [{ goalId: "g-tracing", covered: 2, planned: 4 }, { goalId: "g-infra", covered: 0, planned: 2 }, { goalId: "g-role", covered: 0, planned: 1 }],
 };
