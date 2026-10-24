@@ -70,6 +70,8 @@ export async function personDetail(id: string, opts: { confId?: string; userId?:
 // ---------- search ----------
 
 const MAX_DIST = 0.6;
+// Vector search cannot filter by conference. A short neighbor list from other conferences drops this one.
+const VECTOR_K = 400;
 
 export async function search(confId: string, text: string): Promise<SearchResponse> {
   const term = text.trim().toLowerCase();
@@ -100,11 +102,11 @@ export async function search(confId: string, text: string): Promise<SearchRespon
   const v = await vec;
   const [vp, vs, vb] = v
     ? await Promise.all([
-        vectorIds(`CALL db.idx.vector.queryNodes('Person', 'embedding', 15, vecf32($v)) YIELD node, score
+        vectorIds(`CALL db.idx.vector.queryNodes('Person', 'embedding', ${VECTOR_K}, vecf32($v)) YIELD node, score
                    MATCH (node)-[:SPEAKS_AT]->(:Session)<-[:HAS_SESSION]-(:Conference {id:$confId}) RETURN DISTINCT node.id AS id, score ORDER BY score`, v, confId),
-        vectorIds(`CALL db.idx.vector.queryNodes('Session', 'embedding', 15, vecf32($v)) YIELD node, score
+        vectorIds(`CALL db.idx.vector.queryNodes('Session', 'embedding', ${VECTOR_K}, vecf32($v)) YIELD node, score
                    MATCH (:Conference {id:$confId})-[:HAS_SESSION]->(node) RETURN node.id AS id, score ORDER BY score`, v, confId),
-        vectorIds(`CALL db.idx.vector.queryNodes('Company', 'embedding', 15, vecf32($v)) YIELD node, score
+        vectorIds(`CALL db.idx.vector.queryNodes('Company', 'embedding', ${VECTOR_K}, vecf32($v)) YIELD node, score
                    MATCH (:Conference {id:$confId})-[:HAS_BOOTH]->(b:Booth)<-[:HAS_BOOTH]-(node) RETURN b.id AS id, score ORDER BY score`, v, confId),
       ])
     : [[], [], []];

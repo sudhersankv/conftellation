@@ -6,7 +6,7 @@ import { fitWhy, toPerson } from "@/lib/agents/planner";
 import { fmtLike } from "@/lib/agents/planner/itinerary";
 import { conferenceDay, peopleByIds, sessionsByIds, type RawPath } from "@/lib/queries/plan";
 import {
-  busySlots, meetById, meetRequests, metBefore, networkOverlap, setMeetStatus, sharedGoalTopics, upsertMeetRequest, usersExist,
+  busySlots, dropMeet, meetById, meetRequests, metBefore, networkOverlap, setMeetStatus, sharedGoalTopics, upsertMeetRequest, userWindows, usersExist,
   warmIntros, writeMeet, type MeetRow,
 } from "@/lib/queries/network";
 import { ms } from "@/lib/time";
@@ -76,18 +76,25 @@ export function freeSlots(input: {
 }
 
 export async function getNetwork(userId: string, confId: string, now: string): Promise<NetworkResponse> {
-  const [rows, meets, day, mine] = await Promise.all([
-    networkOverlap(userId, confId), meetRequests(userId, confId), conferenceDay(confId), busySlots([userId], confId),
+  const [rows, meets, day, mine, mineWin] = await Promise.all([
+    networkOverlap(userId, confId), meetRequests(userId, confId), conferenceDay(confId), busySlots([userId], confId), userWindows([userId]),
   ]);
+  const me = mineWin.get(userId) ?? { from: null, to: null };
   const others = rows.map((r) => r.id);
   const [topics, theirs] = await Promise.all([sharedGoalTopics(userId, others), busySlots(others, confId)]);
   const topicsBy = new Map(topics.map((t) => [t.id, t.topics]));
   const users: NetworkUser[] = rows
     .map((r) => {
-      const shared = r.shared.map((s) => ({ id: s.id, title: s.title, type: (s.label === "Booth" ? "booth" : "session") as "session" | "booth" }));
+      const shared: NetworkUser["shared"] = [];
+      const seen = new Set<string>();
+      for (const s of r.shared) {
+        if (!s?.id || seen.has(s.id)) continue;
+        seen.add(s.id);
+        shared.push({ id: s.id, title: s.title, type: s.label === "Booth" ? "booth" : "session" });
+      }
       const sharedTopics = topicsBy.get(r.id) ?? [];
       const free = day.from && day.to
-        ? freeSlots({ day: { from: day.from, to: day.to }, now, windows: [{ from: r.availFrom, to: r.availTo }], busy: [...mine, ...theirs.filter((b) => b.id === r.id)] })
+        ? freeSlots({ day: { from: day.from, to: day.to }, now, windows: [me, { from: r.availFrom, to: r.availTo }], busy: [...mine, ...theirs.filter((b) => b.id === r.id)] })
         : [];
       return {
         user: { id: r.id, name: r.name, personId: r.personId ?? undefined, availFrom: r.availFrom, availTo: r.availTo, openTo: (r.openTo ?? []) as OpenTo[] },
@@ -131,11 +138,14 @@ export async function requestMeet(fromUserId: string, body: { toUserId: string; 
 export async function respondMeet(meetId: string, body: MeetRespondBody, now: string): Promise<MeetRequest> {
   const row = await meetById(meetId);
   if (!row) throw new MeetError("meet request not found", 404);
+  if (row.status === "declined") throw new MeetError("meet request is declined", 409);
   const req = toMeetRequest(row);
   if (body.action === "decline") {
+    await dropMeet(meetId);
     await setMeetStatus(meetId, "declined");
   } else if (body.action === "counter") {
     if (!body.proposal) throw new MeetError("counter needs a proposal", 400);
+    await dropMeet(meetId);
     await setMeetStatus(meetId, "countered", JSON.stringify(body.proposal));
   } else {
     const proposal = body.proposal ?? req.proposal;
@@ -152,13 +162,30 @@ export async function respondMeet(meetId: string, body: MeetRespondBody, now: st
 
 /** Explicit slot; else 20 min right after the proposed session; else the first slot both are free. */
 async function meetSlot(p: MeetProposal, confId: string, users: string[], now: string): Promise<{ from: string; to: string; place?: string } | null> {
-  if (p.slot?.from && p.slot?.to) return { from: p.slot.from, to: p.slot.to };
+  const day = await conferenceDay(confId);
+  let afterSession: { from: string; to: string; place?: string } | null = null;
   if (p.sessionId) {
     const [s] = await sessionsByIds([p.sessionId]);
-    if (s) return { from: s.end, to: fmtLike(ms(s.end) + 20 * 60_000, s.end), place: s.room ? `Outside ${s.room}` : undefined };
+    if (!s || s.conferenceId !== confId) throw new MeetError("session is not at this conference", 400);
+    afterSession = { from: s.end, to: fmtLike(ms(s.end) + 20 * 60_000, s.end), place: s.room ? `Outside ${s.room}` : undefined };
   }
-  const day = await conferenceDay(confId);
+  if (p.slot?.from || p.slot?.to) {
+    if (!p.slot.from || !p.slot.to) throw new MeetError("slot is backwards", 400);
+    rejectSlot(p.slot.from, p.slot.to, day, now, await busySlots(users, confId));
+    return { from: p.slot.from, to: p.slot.to };
+  }
+  if (afterSession) return afterSession;
   if (!day.from || !day.to) return null;
-  const busy = await busySlots(users, confId);
-  return freeSlots({ day: { from: day.from, to: day.to }, now, windows: [], busy })[0] ?? null;
+  const [busy, windows] = await Promise.all([busySlots(users, confId), userWindows(users)]);
+  const wins = users.map((id) => windows.get(id) ?? { from: null, to: null });
+  return freeSlots({ day: { from: day.from, to: day.to }, now, windows: wins, busy })[0] ?? null;
+}
+
+function rejectSlot(from: string, to: string, day: { from: string | null; to: string | null }, now: string, busy: { from: string; to: string }[]) {
+  const a = ms(from);
+  const b = ms(to);
+  if (!Number.isFinite(a) || !Number.isFinite(b) || a >= b) throw new MeetError("slot is backwards", 400);
+  if (!day.from || !day.to || a < ms(day.from) || b > ms(day.to)) throw new MeetError("slot is outside the conference", 400);
+  if (a < ms(now)) throw new MeetError("slot is in the past", 400);
+  if (busy.some((s) => ms(s.from) < b && a < ms(s.to))) throw new MeetError("slot is already committed", 400);
 }

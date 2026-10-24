@@ -192,3 +192,13 @@ Verify on my side: `npm run typecheck`, then every screen against mocks. Reply b
 - **Coordinator, demo graph only** (cache is already warm; do not prewarm): `$env:FALKORDB_GRAPH='conftellations'; $env:CACHE_ONLY='true'; npx tsx scripts/import-conference.ts` — default URL is KubeCon NA. First run `cached=false`, id `kubecon-cloudnativecon-north-america-2026`, Bright Data requests=0. A second run is `cached=true`. Seeded PTC / June / GitHub Universe pick up `timezone` only after a reseed; this import does not reseed them.
 - **Assumption:** onboarding still creates `ATTENDS`. Scout does not. This import does not touch the demo graph until that command runs.
 - Verify: `npx vitest run tests/scout.test.ts`.
+
+### 13:40 PT · sudhersan → ryan · network meet rules tightened (#9)
+- No response-shape changes. `runPlanner`'s signature is unchanged.
+- `freeSlots` on `GET /api/users/:id/network` use **both** users' `availFrom`/`availTo`. Stored `user.blocks` (lunch and other itinerary blocks) are busy, along with planned slots and accepted meets.
+- Overlap counts a check-in (`kind:"checkin"`) or a shared moment, not a private note, and a stop that is both planned and captured counts once.
+- `POST /api/meets/:id/respond`: an explicit slot that is backwards, outside the conference day, already started, or overlapping either person's busy time → **400** `{error}`. A `proposal.sessionId` from another conference → **400**. `decline` or `counter` of an accepted request deletes the Meet node, so the next `GET plan` for both users omits it. `accept` of a declined request → **409**.
+- `POST /api/users/:id/meet`: if the other person already has an open (pending/countered) request for this pair and conference, that request is returned. One open request per pair. A repeat in the same direction still updates it.
+- Search still returns the same types. Vector neighbors are taken from a wider set before the conference filter, so another conference filling the old top 15 no longer hides this conference's hits.
+- **Coordinator**: no reseed. Behavior only; the demo graph already has the edges these routes read.
+- Verify: `npx vitest run tests/network.test.ts`.

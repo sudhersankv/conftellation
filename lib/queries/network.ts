@@ -62,13 +62,13 @@ export async function networkOverlap(userId: string, confId: string): Promise<Ne
     `MATCH (me:User {id:$userId})
      OPTIONAL MATCH (me)-[r:PLANS]->(x) WHERE r.conferenceId = $confId AND (x:Session OR x:Booth)
      WITH me, collect(DISTINCT x.id) AS planned
-     OPTIONAL MATCH (me)-[:CAPTURED]->(mm:Moment)-[:AT]->(y) WHERE mm.conferenceId = $confId
+     OPTIONAL MATCH (me)-[:CAPTURED]->(mm:Moment)-[:AT]->(y) WHERE mm.conferenceId = $confId AND (mm.kind = 'checkin' OR mm.shared = true)
      WITH me, planned, collect(DISTINCT y.id) AS seen
      WITH me, planned + seen AS mine
      MATCH (o:User)-[:ATTENDS]->(:Conference {id:$confId}) WHERE o <> me
      OPTIONAL MATCH (o)-[ro:PLANS]->(x1) WHERE ro.conferenceId = $confId AND x1.id IN mine
      WITH o, mine, collect(DISTINCT x1) AS a
-     OPTIONAL MATCH (o)-[:CAPTURED]->(om:Moment)-[:AT]->(x2) WHERE om.conferenceId = $confId AND x2.id IN mine
+     OPTIONAL MATCH (o)-[:CAPTURED]->(om:Moment)-[:AT]->(x2) WHERE om.conferenceId = $confId AND (om.kind = 'checkin' OR om.shared = true) AND x2.id IN mine
      WITH o, a, collect(DISTINCT x2) AS b2
      WITH o, a + b2 AS xs
      OPTIONAL MATCH (o)-[:IS]->(p:Person)
@@ -90,17 +90,37 @@ export async function sharedGoalTopics(userId: string, others: string[]): Promis
   );
 }
 
-/** Busy intervals (planned slots + accepted meets) for each user at the conference. */
+/** Busy intervals: planned slots, accepted meets, and stored itinerary blocks (lunch and the like). */
 export async function busySlots(userIds: string[], confId: string): Promise<{ id: string; from: string; to: string }[]> {
   if (!userIds.length) return [];
-  return q(
-    `MATCH (o:User)-[r:PLANS]->() WHERE o.id IN $ids AND r.conferenceId = $confId AND r.slotStart IS NOT NULL AND r.slotEnd IS NOT NULL
-     RETURN o.id AS id, r.slotStart AS from, r.slotEnd AS to
-     UNION ALL
-     MATCH (o:User)-[:ATTENDS]->(mt:Meet) WHERE o.id IN $ids AND mt.conferenceId = $confId AND mt.status = 'accepted' AND mt.slotFrom IS NOT NULL
-     RETURN o.id AS id, mt.slotFrom AS from, mt.slotTo AS to`,
-    { ids: userIds, confId },
-  );
+  const [timed, stored] = await Promise.all([
+    q<{ id: string; from: string; to: string }>(
+      `MATCH (o:User)-[r:PLANS]->() WHERE o.id IN $ids AND r.conferenceId = $confId AND r.slotStart IS NOT NULL AND r.slotEnd IS NOT NULL
+       RETURN o.id AS id, r.slotStart AS from, r.slotEnd AS to
+       UNION ALL
+       MATCH (o:User)-[:ATTENDS]->(mt:Meet) WHERE o.id IN $ids AND mt.conferenceId = $confId AND mt.status = 'accepted' AND mt.slotFrom IS NOT NULL
+       RETURN o.id AS id, mt.slotFrom AS from, mt.slotTo AS to`,
+      { ids: userIds, confId },
+    ),
+    q<{ id: string; blocks: string | null }>(
+      `MATCH (o:User) WHERE o.id IN $ids AND o.blocks IS NOT NULL RETURN o.id AS id, o.blocks AS blocks`,
+      { ids: userIds },
+    ),
+  ]);
+  const out = [...timed];
+  for (const row of stored) {
+    let parsed: unknown = row.blocks;
+    if (typeof parsed === "string") {
+      try { parsed = JSON.parse(parsed); } catch { continue; }
+    }
+    if (!Array.isArray(parsed)) continue;
+    for (const b of parsed) {
+      if (b && typeof b === "object" && typeof (b as { from?: unknown }).from === "string" && typeof (b as { to?: unknown }).to === "string") {
+        out.push({ id: row.id, from: (b as { from: string }).from, to: (b as { to: string }).to });
+      }
+    }
+  }
+  return out;
 }
 
 // ---------- meet requests ----------
@@ -131,12 +151,24 @@ export async function usersExist(ids: string[]): Promise<Map<string, string>> {
   return new Map(rows.map((r) => [r.id, r.name]));
 }
 
-/** One open (pending/countered) request per pair and conference: a repeat updates it instead of duplicating. */
+export async function userWindows(ids: string[]): Promise<Map<string, { from: string | null; to: string | null }>> {
+  if (!ids.length) return new Map();
+  const rows = await q<{ id: string; from: string | null; to: string | null }>(
+    `MATCH (u:User) WHERE u.id IN $ids RETURN u.id AS id, u.availFrom AS from, u.availTo AS to`,
+    { ids },
+  );
+  return new Map(rows.map((r) => [r.id, { from: r.from, to: r.to }]));
+}
+
+/** One open (pending/countered) request per pair and conference, either direction. A same-direction repeat updates it; a reverse open request is returned as-is. */
 export async function upsertMeetRequest(m: { id: string; from: string; to: string; note: string; proposal: string; at: string; confId: string }): Promise<MeetRow> {
-  const [open] = await q<{ id: string }>(
-    `MATCH (:User {id:$from})-[r:REQUESTED_MEET]->(:User {id:$to}) WHERE r.conferenceId = $confId AND r.status IN ['pending', 'countered'] RETURN r.id AS id LIMIT 1`,
+  const [open] = await q<{ id: string; fromId: string }>(
+    `MATCH (a:User {id:$from})-[r:REQUESTED_MEET]-(b:User {id:$to})
+     WHERE r.conferenceId = $confId AND r.status IN ['pending', 'countered']
+     RETURN r.id AS id, startNode(r).id AS fromId LIMIT 1`,
     m,
   );
+  if (open && open.fromId !== m.from) return (await meetById(open.id))!;
   const id = open?.id ?? m.id;
   await q(
     `MATCH (a:User {id:$from}), (b:User {id:$to})
@@ -171,8 +203,9 @@ export async function writeMeet(m: { id: string; from: string; to: string; confI
   );
 }
 
+/** Delete an accepted Meet so it leaves both plans and is no longer busy. */
 export async function dropMeet(id: string) {
-  await q(`MATCH (mt:Meet {id:$id}) SET mt.status = 'cancelled'`, { id });
+  await q(`MATCH (mt:Meet {id:$id}) DETACH DELETE mt`, { id });
 }
 
 export interface AcceptedMeetRow extends RawPath { id: string; slotFrom: string; slotTo: string; place: string | null; otherName: string; otherUserId: string }

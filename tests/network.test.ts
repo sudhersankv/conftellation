@@ -73,6 +73,15 @@ describe("GET /api/users/:id/network", () => {
     });
     expect(slots).toEqual([{ from: T("14:30"), to: T("15:00") }]);
   });
+
+  it("freeSlots stays inside both availability windows", () => {
+    const slots = freeSlots({
+      day: { from: T("10:00"), to: T("18:00") }, now: T("12:30"),
+      windows: [{ from: T("13:00"), to: T("17:00") }, { from: null, to: T("14:00") }],
+      busy: [],
+    });
+    expect(slots).toEqual([{ from: T("13:00"), to: T("13:30") }]);
+  });
 });
 
 describe("meets", () => {
@@ -90,6 +99,16 @@ describe("meets", () => {
     expect((await network("emily")).body.incoming.find((x) => x.id === "meet-1")?.status).toBe("accepted");
   });
 
+  it("declining an accepted meet removes it from both plans", async () => {
+    const d = await respond("meet-1", { action: "decline" });
+    expect(d.status).toBe(200);
+    expect(d.body.status).toBe("declined");
+    for (const u of ["sam", "emily"]) {
+      expect((await plan(u)).body.itinerary.some((s) => s.item.id === "meet-1"), u).toBe(false);
+    }
+    expect((await respond("meet-1", { action: "accept" })).status).toBe(409);
+  });
+
   it("request → counter → accept with an explicit slot; decline; errors", async () => {
     const { status, body: r } = await meet("sam", { confId: "ptc-2026", toUserId: "u-ana", note: "Coffee?", proposal: {} });
     expect(status).toBe(200);
@@ -103,6 +122,9 @@ describe("meets", () => {
     expect(a.body.status).toBe("accepted");
     const anaPlan = (await plan("u-ana")).body;
     expect(anaPlan.itinerary.find((s) => s.item.id === r.id)).toMatchObject({ from: slot.from, to: slot.to, item: { type: "meet", subtitle: "Expo hall" } });
+    const dropped = await respond(r.id, { action: "counter", proposal: { slot: { from: T("16:40"), to: T("17:00") }, place: "Lobby" } });
+    expect(dropped.body.status).toBe("countered");
+    expect((await plan("u-ana")).body.itinerary.some((s) => s.item.id === r.id)).toBe(false);
 
     const d = await meet("sam", { confId: "ptc-2026", toUserId: "u-ben", note: "Hi", proposal: {} });
     expect((await respond(d.body.id, { action: "decline" })).body.status).toBe("declined");
@@ -111,6 +133,26 @@ describe("meets", () => {
     expect((await respond(r.id, { action: "counter" })).status).toBe(400);
     expect((await meet("sam", { confId: "ptc-2026", toUserId: "sam", note: "", proposal: {} })).status).toBe(400);
     expect((await meet("sam", { confId: "ptc-2026", toUserId: "nobody", note: "", proposal: {} })).status).toBe(404);
+  });
+
+  it("rejects a bad slot or a session from another conference, and keeps one open request per pair", async () => {
+    const err = async (id: string, b: unknown) => {
+      const res = await respond(id, b);
+      return { status: res.status, error: (res.body as { error?: string }).error };
+    };
+    const back = await meet("sam", { confId: "ptc-2026", toUserId: "u-gus", note: "back", proposal: {} });
+    expect(await err(back.body.id, { action: "accept", proposal: { slot: { from: T("16:00"), to: T("15:00") } } })).toEqual({ status: 400, error: "slot is backwards" });
+    const past = await meet("sam", { confId: "ptc-2026", toUserId: "u-hana", note: "past", proposal: {} });
+    expect(await err(past.body.id, { action: "accept", proposal: { slot: { from: T("10:10"), to: T("10:30") } } })).toEqual({ status: 400, error: "slot is in the past" });
+    const out = await meet("sam", { confId: "ptc-2026", toUserId: "u-ivan", note: "out", proposal: {} });
+    expect(await err(out.body.id, { action: "accept", proposal: { slot: { from: T("19:00"), to: T("19:20") } } })).toEqual({ status: 400, error: "slot is outside the conference" });
+    const other = await meet("sam", { confId: "ptc-2026", toUserId: "u-kai", note: "june", proposal: { sessionId: "aie-graph-memory" } });
+    expect(await err(other.body.id, { action: "accept" })).toEqual({ status: 400, error: "session is not at this conference" });
+
+    const ab = await meet("sam", { confId: "ptc-2026", toUserId: "u-lia", note: "coffee", proposal: {} });
+    const ba = await meet("u-lia", { confId: "ptc-2026", toUserId: "sam", note: "same", proposal: {} });
+    expect(ba.body.id).toBe(ab.body.id);
+    expect(ba.body.fromUserId).toBe("sam");
   });
 });
 
