@@ -155,7 +155,7 @@ export async function upsertConference(n: NormalizedConference): Promise<UpsertR
 }
 
 function companyProps(c: NormCompany & { id: string }, now: Record<string, string>) {
-  return { name: c.name, website: c.website, description: stripHtml(c.description), sponsorTier: c.sponsorTier, ...now, ...c.provenance };
+  return { name: c.name, website: c.website, description: stripHtml(c.description), sponsorTier: c.sponsorTier, enrichSkip: c.enrichSkip, ...now, ...c.provenance };
 }
 
 /** Map normalized topic id → canonical topic id (existing exact, existing near-duplicate, or itself, created). */
