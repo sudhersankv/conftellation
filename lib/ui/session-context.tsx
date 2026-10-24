@@ -7,7 +7,7 @@ export const DEMO_USERS: Record<string, string> = { sam: "Sam Rivera", emily: "E
 export const userName = (id: string) => DEMO_USERS[id] ?? id.charAt(0).toUpperCase() + id.slice(1);
 export const initials = (name: string) => name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
-const ID = /^[a-z0-9-]{1,40}$/i;
+const ID = /^[a-z0-9-]{1,80}$/i;
 const NOW_KEY = "ptc_now";
 const writeCookie = (k: string, v: string) => { document.cookie = `${k}=${encodeURIComponent(v)}; path=/; max-age=31536000; samesite=lax`; };
 

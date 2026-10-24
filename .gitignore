@@ -52,3 +52,6 @@ skills/
 # playwright
 /test-results/
 /playwright-report/
+
+# agent worktrees
+.claude/worktrees/

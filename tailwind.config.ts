@@ -1,35 +1,25 @@
 import type { Config } from "tailwindcss";
 
-// Colours are hex literals so opacity modifiers work (bg-ink/72). Keep in sync with lib/ui/tokens.ts and globals.css.
+// Neutral dark theme, one accent, type colours only for node/type coding (docs/DESIGN.md §2).
+// Hex literals so opacity modifiers work (bg-surface/80). Keep in sync with app/globals.css and lib/ui/tokens.ts.
 const config: Config = {
   content: ["./app/**/*.{js,ts,jsx,tsx,mdx}", "./components/**/*.{js,ts,jsx,tsx,mdx}", "./lib/ui/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        abyss: "#05071A", ink: "#0E1433", nebula: "#1C2452", hairline: "#2A3366",
-        star: "#F2F0FF", dust: "#8C93B8",
-        polaris: "#A78BFA", sun: "#FFC861", ember: "#FF8A5B", aurora: "#5EEAA8",
-        comet: "#5CE1E6", moment: "#FFFFFF", flare: "#FF6B8B",
+        bg: "#0B0B12", surface: "#14141D", surface2: "#1B1B27", border: "#272735", borderStrong: "#353548",
+        text: "#EDEDF2", muted: "#8E8EA3", faint: "#5C5C70",
+        accent: "#8B7CF6", accentStrong: "#A496FF", danger: "#F26B6B", ok: "#4FD1A0",
+        goal: "#F2C14E", session: "#8B7CF6", person: "#F28B5B", booth: "#4FD1A0", moment: "#FFFFFF", other: "#4FC3D9", conf: "#8E8EA3",
       },
-      opacity: { 72: "0.72" }, // bg-ink/72 (sheets)
-      fontFamily: {
-        sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
-        display: ["var(--font-caslon-display)", "serif"],
-        name: ["var(--font-caslon-text)", "serif"], // always with `italic`
+      fontFamily: { sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"] },
+      borderRadius: { md: "8px", lg: "10px", xl: "14px" },
+      transitionDuration: { fast: "150ms", sheet: "250ms" },
+      keyframes: {
+        pulseRing: { "0%": { boxShadow: "0 0 0 0 rgba(139,124,246,0.6)" }, "100%": { boxShadow: "0 0 0 10px rgba(139,124,246,0)" } },
+        fadeIn: { from: { opacity: "0", transform: "translateY(4px)" }, to: { opacity: "1", transform: "none" } },
       },
-      fontSize: {
-        "display-xl": ["44px", { lineHeight: "48px", fontWeight: "400" }],
-        display: ["30px", { lineHeight: "36px", fontWeight: "400" }],
-        title: ["20px", { lineHeight: "26px", fontWeight: "600" }],
-        body: ["16px", { lineHeight: "24px", fontWeight: "400" }],
-        meta: ["14px", { lineHeight: "20px", fontWeight: "450" }],
-        micro: ["12px", { lineHeight: "16px", fontWeight: "500" }],
-      },
-      borderRadius: { card: "18px", sheet: "28px", input: "14px" },
-      transitionDuration: { tap: "120ms", sheet: "320ms", light: "900ms", fly: "1100ms" },
-      transitionTimingFunction: { expo: "cubic-bezier(0.16, 1, 0.3, 1)", trace: "cubic-bezier(0.65, 0, 0.35, 1)" },
-      keyframes: { ring: { "0%": { transform: "scale(1)", opacity: "0.8" }, "100%": { transform: "scale(4)", opacity: "0" } } },
-      animation: { ring: "ring 900ms cubic-bezier(0.16, 1, 0.3, 1) forwards" }, // capture tile flare (#14)
+      animation: { pulseRing: "pulseRing 900ms ease-out 2", fadeIn: "fadeIn 200ms ease-out" },
     },
   },
   plugins: [],
