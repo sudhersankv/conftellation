@@ -237,11 +237,18 @@ export function ConstellationCanvas({ nodes, links, width, height, highlight, re
       const weight = isAnchor || isGoal ? 600 : 500;
       ctx.font = `${weight} ${fs}px ${FONT}`;
       const w = ctx.measureText(n.text).width + 2 * padX;
-      const x = n.x ?? 0, y = (n.y ?? 0) + n.r + 4 / scale + h / 2;
-      const box: [number, number, number, number] = [x - w / 2, y - h / 2, x + w / 2, y + h / 2];
+      const x = n.x ?? 0;
       const m = 2 / scale;
-      if (!always && placed.some((b) => box[0] < b[2] + m && box[2] > b[0] - m && box[1] < b[3] + m && box[3] > b[1] - m)) continue;
-      placed.push(box);
+      const boxAt = (cy: number): [number, number, number, number] => [x - w / 2, cy - h / 2, x + w / 2, cy + h / 2];
+      const hits = (bx: [number, number, number, number]) => placed.some((q) => bx[0] < q[2] + m && bx[2] > q[0] - m && bx[1] < q[3] + m && bx[3] > q[1] - m);
+      // Below the disc first, then above; always-on labels take the slot below anyway if both are taken.
+      const below = (n.y ?? 0) + n.r + 4 / scale + h / 2, above = (n.y ?? 0) - n.r - 4 / scale - h / 2;
+      let y = below;
+      if (hits(boxAt(below))) {
+        if (!hits(boxAt(above))) y = above;
+        else if (!always) continue;
+      }
+      placed.push(boxAt(y));
       roundRect(ctx, x - w / 2, y - h / 2, w, h, 5 / scale);
       ctx.fillStyle = isGoal || isAnchor ? rgba(lit ? YELLOW : PAPER, alpha) : rgba(lit ? YELLOW : PAPER, alpha * 0.96);
       ctx.fill();
