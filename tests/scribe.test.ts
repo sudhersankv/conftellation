@@ -5,7 +5,7 @@ import path from "node:path";
 import { POST as postMoment } from "@/app/api/users/[id]/moments/route";
 import { POST as postShare } from "@/app/api/moments/[id]/share/route";
 import { GET as getUpload } from "@/app/api/uploads/[file]/route";
-import { scribeIdle } from "@/lib/agents/scribe";
+import { quickTopics, scribeIdle } from "@/lib/agents/scribe";
 import { q } from "@/lib/falkor";
 import { momentForm } from "@/lib/client";
 import type { CreateMomentFields, CreateMomentResponse, Moment } from "@/lib/types";
@@ -26,10 +26,17 @@ const capture = async (fields: Omit<CreateMomentFields, "confId"> & { confId?: s
   const res = await postMoment(new Request(`http://test${url}`, { method: "POST", body: momentForm({ confId: "ptc-2026", ...fields }) }), { params: { id: user } });
   return { status: res.status, body: (await res.json()) as CreateMomentResponse & { error?: string } };
 };
-const share = async (id: string, to: unknown) => {
-  const res = await postShare(req(`/api/moments/${id}/share`, { to }), { params: { id } });
+const share = async (id: string, to: unknown, userId: string | null = "sam") => {
+  const res = await postShare(req(`/api/moments/${id}/share`, userId === null ? { to } : { to, userId }), { params: { id } });
   return { status: res.status, body: (await res.json()) as Moment & { error?: string } };
 };
+
+describe("quickTopics", () => {
+  it("matches a topic's display name and returns the canonical id", () => {
+    expect(quickTopics("we discussed Graph RAG today", [{ id: "graphrag", name: "Graph RAG" }], [])).toEqual(["graphrag"]);
+    expect(quickTopics("agent tracing at the booth", [{ id: "agent tracing", name: "Agent Tracing" }], ["hiring"])).toEqual(["agent tracing", "hiring"]);
+  });
+});
 
 describe("POST /api/users/:id/moments", () => {
   it("attaches an untargeted note to the planned session running now and returns lit ids fast", async () => {
@@ -96,10 +103,43 @@ describe("POST /api/users/:id/moments", () => {
     expect(status, body.error).toBe(200);
     expect(body.moment.mediaUrl).toMatch(/^\/api\/uploads\/.+\.jpg$/);
     const name = body.moment.mediaUrl!.split("/").pop()!;
-    const res = await getUpload(req(body.moment.mediaUrl!), { params: { file: name } });
+    const open = (qs: string) => getUpload(req(`${body.moment.mediaUrl}${qs}`), { params: { file: name } });
+    expect((await open("")).status).toBe(400);
+    expect((await open("?userId=emily")).status).toBe(403);
+    expect((await open(`?momentId=${body.moment.id}`)).status).toBe(403);
+    const res = await open("?userId=sam");
     expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe("private, no-store");
     expect(res.headers.get("content-type")).toBe("image/jpeg");
     expect(new Uint8Array(await res.arrayBuffer()).length).toBe(7);
+    expect((await share(body.moment.id, "network")).body.shared).toBe(true);
+    expect((await open(`?momentId=${body.moment.id}`)).status).toBe(200);
+  });
+
+  it("does not take over another user's moment or retarget a retry", async () => {
+    const a = await capture({ kind: "note", text: "mine", clientId: "c-own-1", targetId: "s-tracing" });
+    expect(a.status, a.body.error).toBe(200);
+    const stolen = await capture({ kind: "note", text: "stolen", clientId: "c-own-1", targetId: "s-gpu" }, { user: "emily" });
+    expect(stolen.status).toBe(409);
+    const otherConf = await capture({ kind: "note", text: "elsewhere", clientId: "c-own-1", confId: "ai-eng-summit-2026" });
+    expect(otherConf.status).toBe(409);
+    const [row] = await q<{ userId: string; text: string; conferenceId: string; owners: string[]; ats: string[] }>(
+      `MATCH (m:Moment {id:'c-own-1'})
+       OPTIONAL MATCH (u:User)-[:CAPTURED]->(m)
+       OPTIONAL MATCH (m)-[:AT]->(x)
+       RETURN m.userId AS userId, m.text AS text, m.conferenceId AS conferenceId,
+              collect(DISTINCT u.id) AS owners, collect(DISTINCT x.id) AS ats`,
+    );
+    expect(row).toMatchObject({ userId: "sam", text: "mine", conferenceId: "ptc-2026" });
+    expect(row.owners.filter(Boolean)).toEqual(["sam"]);
+    expect(row.ats.filter(Boolean)).toEqual(["s-tracing"]);
+
+    const [before] = await q<{ status: string | null }>(`MATCH (:User {id:'sam'})-[r:PLANS]->(:Session {id:'s-gpu'}) RETURN r.status AS status`);
+    const retry = await capture({ kind: "checkin", clientId: "c-own-1", targetId: "s-gpu" });
+    expect(retry.status, retry.body.error).toBe(200);
+    expect(retry.body.moment).toMatchObject({ kind: "note", targetId: "s-tracing", text: "mine" });
+    const [after] = await q<{ status: string | null }>(`MATCH (:User {id:'sam'})-[r:PLANS]->(:Session {id:'s-gpu'}) RETURN r.status AS status`);
+    expect(after?.status ?? null).toBe(before?.status ?? null);
   });
 
   it("rejects bad input", async () => {
@@ -116,6 +156,8 @@ describe("POST /api/moments/:id/share", () => {
   it("shares with the network, with users, and back to private", async () => {
     const { body } = await capture({ kind: "note", text: "worth sharing" });
     const id = body.moment.id;
+    expect((await share(id, "network", "emily")).status).toBe(403);
+    expect((await share(id, "network", null)).status).toBe(400);
     expect((await share(id, "network")).body.shared).toBe(true);
     const [n] = await q<{ n: number }>(`MATCH (:Moment {id:$id}) RETURN 1 AS n`, { id });
     expect(n.n).toBe(1);
