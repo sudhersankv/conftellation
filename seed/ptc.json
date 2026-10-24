@@ -5,7 +5,8 @@
     "url": "https://www.wemakedevs.org/hackathons/ptc",
     "startDate": "2026-10-24",
     "endDate": "2026-10-24",
-    "city": "San Francisco"
+    "city": "San Francisco",
+    "timezone": "America/Los_Angeles"
   },
   "provenance": { "source": "https://www.wemakedevs.org/hackathons/ptc", "collectedAt": "2026-10-24T16:00:00Z", "via": "seed" },
   "sessions": [

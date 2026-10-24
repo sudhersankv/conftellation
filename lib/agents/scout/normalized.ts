@@ -33,10 +33,11 @@ export interface NormCompany {
   topics: string[];
   booth?: { id?: string; label: string; hall?: string; order?: number };
   people?: NormPerson[]; // booth staff etc. (WORKS_AT only)
+  provenance?: { source: string; collectedAt: string; via: Via }; // e.g. enriched from the sponsor's own site
 }
 
 export interface NormalizedConference {
-  conference: { id: string; name: string; url: string; startDate: string; endDate: string; city?: string };
+  conference: { id: string; name: string; url: string; startDate: string; endDate: string; city?: string; timezone?: string };
   provenance: { source: string; collectedAt: string; via: Via };
   sessions: NormSession[];
   companies: NormCompany[];

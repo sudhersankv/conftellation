@@ -179,8 +179,9 @@ export const people: Record<string, PersonDetail> = {
 };
 
 export const conferenceDetail: ConferenceDetail = {
-  conference: { id: CONF, name: "Patch the Conference", url: "https://www.wemakedevs.org/hackathons/ptc", startDate: "2026-10-24", endDate: "2026-10-24", city: "San Francisco", ...prov },
+  conference: { id: CONF, name: "Patch the Conference", url: "https://www.wemakedevs.org/hackathons/ptc", startDate: "2026-10-24", endDate: "2026-10-24", city: "San Francisco", timezone: "America/Los_Angeles", ...prov },
   sessions, booths, topics: ["agent tracing", "observability", "graphrag", "agent memory", "ai infrastructure", "web scraping"],
+  sponsors: booths.map((b) => b.company),
 };
 
 export const addConference: AddConferenceResponse = { conference: conferenceDetail.conference, counts: { sessions: 4, people: 3, companies: 2, booths: 2 }, cached: false };

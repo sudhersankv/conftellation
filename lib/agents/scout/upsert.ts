@@ -155,7 +155,7 @@ export async function upsertConference(n: NormalizedConference): Promise<UpsertR
 }
 
 function companyProps(c: NormCompany & { id: string }, now: Record<string, string>) {
-  return { name: c.name, website: c.website, description: stripHtml(c.description), sponsorTier: c.sponsorTier, ...now };
+  return { name: c.name, website: c.website, description: stripHtml(c.description), sponsorTier: c.sponsorTier, ...now, ...c.provenance };
 }
 
 /** Map normalized topic id → canonical topic id (existing exact, existing near-duplicate, or itself, created). */
@@ -169,12 +169,14 @@ export async function resolveTopics(names: Map<string, string>): Promise<Map<str
   if (fresh.length === 0) return out;
   const vecs = await embed(fresh);
   const created: { id: string; name: string; v: number[] }[] = [];
-  for (let i = 0; i < fresh.length; i++) {
-    const near = await q<{ id: string; score: number }>(
+  const hits = await mapLimit(fresh, 8, (_, i) =>
+    q<{ id: string; score: number }>(
       `CALL db.idx.vector.queryNodes('Topic','embedding',1,vecf32($v)) YIELD node, score RETURN node.id AS id, score`,
       { v: vecs[i] },
-    ).catch(() => []);
-    const hit = near[0];
+    ).catch(() => []),
+  );
+  for (let i = 0; i < fresh.length; i++) {
+    const hit = hits[i][0];
     if (hit && 1 - hit.score >= TOPIC_MERGE_SIM && hit.id !== fresh[i]) out.set(fresh[i], hit.id);
     else {
       out.set(fresh[i], fresh[i]);
@@ -188,12 +190,24 @@ export async function resolveTopics(names: Map<string, string>): Promise<Map<str
 }
 
 export async function writeEmbeddings(label: "Session" | "Person" | "Company" | "Topic" | "Goal" | "Problem", items: { id: string; text: string }[]) {
-  for (const batch of chunks(items, EMBED_BATCH)) {
-    const vecs = await embed(batch.map((b) => b.text));
-    await q(`UNWIND $rows AS r MATCH (n:${label} {id:r.id}) SET n.embedding = vecf32(r.v)`, {
-      rows: batch.map((b, i) => ({ id: b.id, v: vecs[i] })),
-    });
-  }
+  const vecs = await embed(items.map((b) => b.text));
+  const rows = items.map((b, i) => ({ id: b.id, v: vecs[i] }));
+  await mapLimit(chunks(rows, EMBED_BATCH), 4, (batch) =>
+    q(`UNWIND $rows AS r MATCH (n:${label} {id:r.id}) SET n.embedding = vecf32(r.v)`, { rows: batch }),
+  );
+}
+
+/** Promise.all with at most `n` in flight; results keep input order. */
+export async function mapLimit<T, R>(xs: T[], n: number, fn: (x: T, i: number) => Promise<R>): Promise<R[]> {
+  const out = new Array<R>(xs.length);
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(n, xs.length) }, async () => {
+    while (next < xs.length) {
+      const i = next++;
+      out[i] = await fn(xs[i], i);
+    }
+  }));
+  return out;
 }
 
 function chunks<T>(xs: T[], n: number): T[][] {

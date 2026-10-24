@@ -13,7 +13,7 @@ export type EdgeType =
   | "SKIPPED" | "BOOSTED" | "STEERED" | "CAPTURED" | "AT" | "MET" | "MENTIONS"
   | "DURING" | "REQUESTED_MEET" | "SHARED_WITH" | "HAS_SUMMARY";
 
-export type Via = "studio" | "unlocker" | "serp" | "scraper-api" | "sessionize" | "sched" | "rainfocus" | "ics" | "seed" | "user";
+export type Via = "studio" | "unlocker" | "serp" | "scraper-api" | "sessionize" | "sched" | "rainfocus" | "ics" | "web" | "seed" | "user";
 
 /** Every scraped node carries this. Cards show "collected Xh ago". */
 export interface Provenance {
@@ -39,6 +39,7 @@ export interface Conference extends Partial<Provenance> {
   startDate: string; // ISO date
   endDate: string;
   city?: string;
+  timezone?: string; // IANA venue zone, e.g. "America/Denver"
 }
 
 export type SessionKind = "talk" | "workshop" | "keynote" | "panel" | "other";
@@ -278,7 +279,11 @@ export interface AddConferenceResponse {
   cached: boolean; // true if already in the shared layer
 }
 
-export interface ConferenceDetail { conference: Conference; sessions: Session[]; booths: Booth[]; topics: string[] }
+export interface ConferenceDetail {
+  conference: Conference; sessions: Session[]; booths: Booth[]; topics: string[];
+  /** Every sponsor/exhibitor (with or without a booth), tier order; enriched ones carry `description` + `via:"unlocker"`. */
+  sponsors?: Company[];
+}
 
 export interface OnboardingRequest {
   confId: string;

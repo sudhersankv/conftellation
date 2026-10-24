@@ -8,7 +8,7 @@ import path from "node:path";
 
 const API = "https://api.brightdata.com";
 
-export type BrightDataVia = "unlocker" | "serp" | "studio" | "scraper-api" | "http";
+export type BrightDataVia = "unlocker" | "serp" | "studio" | "scraper-api" | "http" | "memo";
 
 export interface Fetched<T> {
   data: T;
@@ -53,7 +53,7 @@ async function cached<T>(
     // miss
   }
   if (cacheOnly()) throw new Error(`cache miss (CACHE_ONLY): ${source}`);
-  if (via !== "http") {
+  if (via !== "http" && via !== "memo") {
     if (used >= maxRequests()) throw new Error(`Bright Data request cap reached (${maxRequests()})`);
     used++;
   }
@@ -151,4 +151,9 @@ export async function fetchText(url: string, init: RequestInit = {}): Promise<Fe
 export async function fetchJson<T = unknown>(url: string, init: RequestInit = {}): Promise<Fetched<T>> {
   const r = await fetchText(url, init);
   return { ...r, data: JSON.parse(r.data) as T };
+}
+
+/** Disk-memoize a derived result (e.g. an LLM extraction over a scraped page) next to the scrape cache. Not counted toward the cap. */
+export async function memo<T>(key: Record<string, unknown>, source: string, run: () => Promise<T>): Promise<Fetched<T>> {
+  return cached({ kind: "memo", ...key }, "memo", source, run);
 }
