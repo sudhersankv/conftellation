@@ -43,11 +43,11 @@ Small touches like "Scout found 574 sessions" or "Planner re-routed: −1 sessio
 
 **Heads-up on latency:** a live Bright Data import can take ~20 s per page; design the Add-conference result state with progress steps ("Reading agenda… Finding sponsors… Building your sky") rather than a bare spinner.
 
-### 12:11 PT � sudhersan ? ryan � contract additions (all additive, mocks updated)
-Closes gaps found while checking issues #11�#18 against the contract:
-- **#17 person card**: new `GET /api/people/:id?confId=&userId=` ? `PersonDetail { person, sessions, why, metBefore? }`. Client: `api.person(personId, { confId, userId })`. Mocks: `jake-morales@falkordb`, `emily-chen@tensorgrid`, `mike-okafor@acmetrace`; unknown id ? 404 `{error}`.
+### 12:11 PT · sudhersan → ryan · contract additions (all additive, mocks updated)
+Closes gaps found while checking issues #11–#18 against the contract:
+- **#17 person card**: new `GET /api/people/:id?confId=&userId=` → `PersonDetail { person, sessions, why, metBefore? }`. Client: `api.person(personId, { confId, userId })`. Mocks: `jake-morales@falkordb`, `emily-chen@tensorgrid`, `mike-okafor@acmetrace`; unknown id → 404 `{error}`.
 - **#14 "Now: {session}"**: `PlanResponse.now?: { targetId, title, type, from?, to? } | null` = where an untargeted capture attaches (same rule as the backend). Mock: `s-tracing`.
 - **#14 capture form**: `CreateMomentFields` type + `momentForm(fields)` helper in `lib/client.ts`; pass its result to `api.createMoment`.
 - **#18 my notes**: `api.community(sessionId, userId?)`; `myMoments` is empty without `userId`.
-- **#13 steer**: `ops: []` = not understood ? show `summary` as a hint, plan unchanged.
+- **#13 steer**: `ops: []` = not understood → show `summary` as a hint, plan unchanged.
 - **#12 Sky**: highlight why-paths by `edges[].from/to`. Real paths use any `EdgeType` (mocks only use `ABOUT`).
