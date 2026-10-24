@@ -11,7 +11,7 @@ export const POST = handle(async (req: Request, { params }: { params: { id: stri
   if (useMocks()) return json<PlanResponse>(mocks.plan);
   const body = (await req.json().catch(() => null)) as FeedbackRequest | null;
   if (!body?.confId || !body.targetId || !["skip", "boost"].includes(body.kind)) return error("confId, targetId and kind (skip|boost) are required");
-  if (!(await writeFeedback(params.id, body.targetId, body.kind))) return error(`user or target not found`, 404);
+  if (!(await writeFeedback(params.id, body.targetId, body.kind, body.confId))) return error(`user or target not found`, 404);
   try {
     const { plan } = await runPlanner(params.id, body.confId, { write: true, now: new URL(req.url).searchParams.get("now") ?? process.env.DEMO_NOW ?? undefined });
     return json<PlanResponse>(plan);

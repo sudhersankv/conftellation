@@ -235,3 +235,34 @@ Thanks for the direct feedback. I've thought about it and I'm keeping the direct
 - **Where I agree with you:** no space photos, no parallax, no sci-fi fonts, no big blooms. If a specific screen reads too shiny once #13–#18 land, point at it (screen + element) and I'll tone it down.
 - **I may switch to a simpler design later** (closer to your 12:05 note) if time allows or the demo needs it. To keep that cheap, colours, type and motion come only from the tokens in `tailwind.config.ts` / `app/globals.css` / `lib/ui/tokens.ts`, and the galaxy, nebula and Caslon are isolated (`app/(sky)/page.tsx`, `components/sky/**`, the font variables), so a simpler look is a token and home-page swap, not a rewrite. I'll post here before switching.
 - **No API or contract change** either way; nothing for you to do. The deployed page will change as the UI PRs merge.
+
+### 13:50 PT · sudhersan → ryan · share, uploads, and steer undo
+- **Share** (`POST /api/moments/:id/share`): body is still `{to}` plus required `userId` (JSON field or `?userId=`). Only the user who captured the moment can change sharing. Missing `userId` → 400 `{error:"userId is required"}`. Unknown id → 404. Another user's moment → 403. Success still returns the `Moment`. Client: `api.shareMoment(momentId, to, userId)` — pass the viewer id as the third arg. A call that omits it is rejected.
+- **Uploads** (`GET /api/uploads/:file`): require `?userId=` or `?momentId=` (400 if neither). The file must belong to a Moment. Allowed when that moment is `shared:true`, or when `userId` is its owner; otherwise 403. `Cache-Control` is `private, no-store`. `moment.mediaUrl` is still `/api/uploads/<file>` with no query. New helper `mediaSrc(mediaUrl, { userId, momentId })` in `lib/client.ts` — use it as the img/audio src. Private photos need the viewer's `userId`; a shared photo can use `momentId` alone.
+- **Steer undo**: `SteerOp` `add_goal` gained optional `goalId?`, `weight?`, `topics?`. Undo of `remove_goal` sends `add_goal` with the original `goalId` so that goal and its topic links are restored on that id, not created under a new slug. Post `res.undo` back unchanged; don't rebuild `add_goal` from the text alone.
+- **Onboarding person ids** (new users only): `slug(name)@user-<percent-encoded userId>` so user ids that slug the same do not merge. Seeded person ids are unchanged.
+- Assumption: still no server auth; `userId` is the demo caller the UI sends, same as other routes. Loading `mediaUrl` as a raw src returns 400.
+- Verify: `npx vitest run tests/scribe.test.ts tests/steer.test.ts tests/brief-cite.test.ts`. Share without `userId` → 400; `userId` of the owner → 200; another user → 403.
+
+### 14:45 PT · sudhersan → ryan · STOP the galaxy UI; full UI v2 overhaul in progress (branch ui/overhaul)
+Sudhersan decided to rebuild the UI completely. Please stop all UI work and do not merge any more UI PRs; #37 was the last.
+- New brief: docs/DESIGN.md v2 on branch ui/overhaul (calendar-first plan, neutral dark, "constellation" = connected graph, no starfield/nebula/serif).
+- ui/overhaul deletes app/(sky)/**, components/sky, components/shell, lib/ui/sky*; keeps session-context, use-api, format, middleware.
+- Four agents are building /, /add, /goals, /me, /plan, /graph, /sessions/[id], /people/[id], /network, /brief in parallel on ui/* branches, merged into ui/overhaul, then one PR to main.
+- Ownership change (CLAUDE.md): UI is now Sudhersan's. Ryan: demo prep (#20), rehearsal, backup video, FalkorDB Browser query, and testing the deployed app on two phones once ui/overhaul lands (~15:45 PT).
+
+### 13:43 PT · sudhersan → ryan · route GET /api/users/:id/constellation is live (#7)
+- **GET** `api.constellation(userId, confId?, { now? })`: real Sky (Q11). Omit `confId` for every conference the user ATTENDS. `?now=<ISO>` (or `DEMO_NOW`) is the same clock as plan/feedback — pass `session.nowIso()`. Unknown user, or a conference with nothing to draw → **200** `{nodes:[], links:[], coverage:[]}`.
+- **Contract, additive:** `SkyNode.fit?: number` (0..1). Planned session/person/booth: plan `score` / best score of that **type** at that conference (top of each type is 1). Goal `fit` is its weight, clamped to 0..1. Unscored stars omit `fit`.
+- Every node on a plan why-path, and on a stored brief/trip path, is in `nodes` with the same id (topics included). `conferenceId` is set on every node except the user anchor and `isOtherUser` stars. States: planned, done, unplanned, skipped, dust, anchor. A check-in shows up as `done` on the next GET. Capture `lit` ids (moment, target, person, goal) are in that response. Other users on your non-dust stars are `type:"user"`, `isOtherUser:true`. Dust ≤300 per conference; whole response ≤800 nodes.
+- **Mocks** (your path/Sky id note): booth path `p2` includes `b-acme`; topic nodes `agent tracing`, `agent memory`, `ai infrastructure`, `hiring` are in the mock sky; goals, problems, moments and persons carry `conferenceId`. `why()` can set the edge type (`SPEAKS_AT` on Jake).
+- **Client:** third arg `{ now?: string }` is optional. `api.constellation(userId, confId)` still works.
+- **Assumption:** `fit` is normalised within a type, not across the whole plan. Path highlight still matches `from`/`to` and ignores direction.
+- **Coordinator:** no reseed for this route. The sky is built on each GET. Brief/trip lines light up only when those Summary nodes exist (the existing `DEMO_MODE=true` seed). Scout's timezone reseed is separate and still stands.
+- Verify: `npx vitest run tests/constellation.test.ts tests/contract.test.ts`. `curl "localhost:3001/api/users/sam/constellation?confId=ptc-2026&now=2026-10-24T13:10:00-07:00"`.
+
+### 13:55 PT · sudhersan → ryan · constellation review fixes (#7)
+- **`SkyNode.conferenceIds?: string[]`** (additive): set only when the same id belongs to more than one attended conference. `conferenceId` stays the primary (newest, unless a stronger state such as `done` came from another). Galaxy fly-in can keep filtering on `conferenceId`; use `conferenceIds` when you want the star in every conference it belongs to.
+- Check-in on a **planned** star sets `state:"done"` on the next GET. A capture after a skip stays visible (`done` or `unplanned`, not `skipped`). Every moment has a `CAPTURED` link from the user, including when it also has `AT` or `MET`. The mock sky's `m2` has that link.
+- `?confId=` must be a conference the user `ATTENDS`; otherwise **200** empty, same as an unknown user. Other-user stars are attendees only. A person skip stores `conferenceId` on the edge and only hides that person in that conference's sky.
+- No reseed. Still built on each GET.

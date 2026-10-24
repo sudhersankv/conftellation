@@ -87,17 +87,35 @@ export interface MomentWrite {
   shared: boolean; targetId: string; personId: string; topics: string[];
 }
 
+export type WriteMomentResult = "created" | "retry" | "conflict" | "missing";
+
+/** Owner and conference already stored on a Moment, if the id exists. */
+export async function momentOwner(id: string): Promise<{ userId: string | null; conferenceId: string | null } | null> {
+  const [r] = await q<{ userId: string | null; conferenceId: string | null }>(
+    `MATCH (m:Moment {id:$id}) RETURN m.userId AS userId, m.conferenceId AS conferenceId`,
+    { id },
+  );
+  return r ?? null;
+}
+
 /**
- * MERGE the Moment on its id (a client retry is a no-op), link CAPTURED/DURING/AT/MET/MENTIONS,
- * add a per-conference `(User)-[:MET]->(Person)` shortcut, and flip matching PLANS edges to done.
- * Returns false when the user or conference doesn't exist.
+ * Create a Moment and its capture edges. An id that already belongs to this user and conference
+ * is a retry: the stored moment is left unchanged. An id owned by someone else, or another
+ * conference, is refused. Returns "missing" when the user or conference doesn't exist.
  */
-export async function writeMoment(w: MomentWrite): Promise<boolean> {
+export async function writeMoment(w: MomentWrite): Promise<WriteMomentResult> {
+  const existing = await momentOwner(w.id);
+  if (existing) {
+    if (existing.userId !== w.userId || existing.conferenceId !== w.confId) return "conflict";
+    return "retry";
+  }
   const rows = await q<{ id: string }>(
     `MATCH (u:User {id:$userId}), (c:Conference {id:$confId})
      MERGE (m:Moment {id:$id})
      ON CREATE SET m.kind = $kind, m.at = $at, m.text = $text, m.mediaUrl = $mediaUrl, m.shared = $shared,
                    m.userId = $userId, m.conferenceId = $confId, m.via = 'user', m.source = 'conftellations', m.collectedAt = $at
+     WITH u, c, m
+     WHERE m.userId = $userId AND m.conferenceId = $confId AND NOT (u)-[:CAPTURED]->(m)
      MERGE (u)-[:CAPTURED]->(m)
      MERGE (m)-[:DURING]->(c)
      WITH u, m
@@ -112,12 +130,17 @@ export async function writeMoment(w: MomentWrite): Promise<boolean> {
      RETURN m.id AS id`,
     { ...w },
   );
-  if (!rows.length) return false;
+  if (!rows.length) {
+    const again = await momentOwner(w.id);
+    if (!again) return "missing";
+    if (again.userId !== w.userId || again.conferenceId !== w.confId) return "conflict";
+    return "retry";
+  }
   await q(
     `MATCH (:User {id:$userId})-[r:PLANS]->(y) WHERE r.conferenceId = $confId AND y.id IN [$targetId, $personId] SET r.status = 'done'`,
     { userId: w.userId, confId: w.confId, targetId: w.targetId, personId: w.personId },
   );
-  return true;
+  return "created";
 }
 
 /** Add topics to an existing moment (background tagging). */
@@ -172,24 +195,36 @@ function toMoment(r: MomentRow): Moment {
   return out;
 }
 
+/** Moment that stores this upload filename, if any. */
+export async function momentByMedia(file: string): Promise<{ id: string; userId: string; shared: boolean } | null> {
+  const [r] = await q<{ id: string; userId: string; shared: boolean }>(
+    `MATCH (m:Moment) WHERE m.mediaUrl ENDS WITH $suffix
+     RETURN m.id AS id, m.userId AS userId, coalesce(m.shared, false) AS shared LIMIT 1`,
+    { suffix: `/${file}` },
+  );
+  return r ?? null;
+}
+
 export async function momentById(id: string): Promise<Moment | null> {
   const [r] = await q<MomentRow>(`MATCH (u:User)-[:CAPTURED]->(m:Moment {id:$id}) ${MOMENT}`, { id });
   return r ? toMoment(r) : null;
 }
 
-/** "network" → public to the session community (`shared:true`); user ids → SHARED_WITH edges; [] → private again. */
-export async function shareMoment(id: string, to: string[] | "network"): Promise<boolean> {
+const OWNED = `(u:User {id:$userId})-[:CAPTURED]->(m:Moment {id:$id}) WHERE m.userId = $userId`;
+
+/** "network" → public to the session community (`shared:true`); user ids → SHARED_WITH edges; [] → private again. Only the owner matches. */
+export async function shareMoment(id: string, to: string[] | "network", userId: string): Promise<boolean> {
   if (to === "network") {
-    return (await q(`MATCH (m:Moment {id:$id}) SET m.shared = true RETURN m.id AS id`, { id })).length > 0;
+    return (await q(`MATCH ${OWNED} SET m.shared = true RETURN m.id AS id`, { id, userId })).length > 0;
   }
   if (!to.length) {
-    const rows = await q(`MATCH (m:Moment {id:$id}) SET m.shared = false WITH m OPTIONAL MATCH (m)-[r:SHARED_WITH]->() DELETE r RETURN DISTINCT m.id AS id`, { id });
+    const rows = await q(`MATCH ${OWNED} SET m.shared = false WITH m OPTIONAL MATCH (m)-[r:SHARED_WITH]->() DELETE r RETURN DISTINCT m.id AS id`, { id, userId });
     return rows.length > 0;
   }
   const rows = await q(
-    `MATCH (m:Moment {id:$id}) WITH m UNWIND $to AS uid MATCH (o:User {id:uid}) MERGE (m)-[:SHARED_WITH]->(o) RETURN DISTINCT m.id AS id`,
-    { id, to },
+    `MATCH ${OWNED} WITH m UNWIND $to AS uid MATCH (o:User {id:uid}) MERGE (m)-[:SHARED_WITH]->(o) RETURN DISTINCT m.id AS id`,
+    { id, to, userId },
   );
   if (rows.length) return true;
-  return (await q(`MATCH (m:Moment {id:$id}) RETURN m.id AS id`, { id })).length > 0;
+  return (await q(`MATCH ${OWNED} RETURN m.id AS id`, { id, userId })).length > 0;
 }

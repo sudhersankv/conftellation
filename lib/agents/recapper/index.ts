@@ -5,7 +5,7 @@ import { hasLLM, structured } from "@/lib/llm";
 import type { BriefResponse, BriefSection, TripReportResponse, WhyPath } from "@/lib/types";
 import type { RawPath } from "@/lib/queries/plan";
 import {
-  beforePaths, briefHeader, introPaths, meetPaths, metPaths, notePaths, problemPaths, readSummary, seenPaths, writeSummary,
+  beforePaths, briefHeader, deleteSummary, introPaths, meetPaths, metPaths, notePaths, problemPaths, readSummary, seenPaths, writeSummary,
 } from "@/lib/queries/brief";
 import { parseSections } from "./cite";
 
@@ -186,7 +186,7 @@ export async function writeBrief(input: RecapInput): Promise<BriefResponse> {
   if (hasLLM()) {
     try {
       const out = await withTimeout(structured(LinesSchema, BRIEF_SYSTEM, factsPrompt(input), "brief"), LLM_TIMEOUT_MS);
-      const parsed = parseSections(out.sections, valid);
+      const parsed = parseSections(out.sections, valid, Object.values(SECTIONS));
       if (parsed.length) sections = parsed;
     } catch (e) {
       console.warn("[recapper] brief LLM failed, using template:", (e as Error).message);
@@ -232,7 +232,7 @@ export async function writeTrip(input: RecapInput): Promise<TripReportResponse> 
   if (hasLLM()) {
     try {
       const out = await withTimeout(structured(LinesSchema, TRIP_SYSTEM, factsPrompt(input), "trip_report"), LLM_TIMEOUT_MS);
-      const parsed = parseSections(out.sections, valid);
+      const parsed = parseSections(out.sections, valid, TRIP);
       if (parsed.length) sections = parsed;
     } catch (e) {
       console.warn("[recapper] trip LLM failed, using template:", (e as Error).message);
@@ -258,9 +258,12 @@ export async function getBrief(userId: string, confId: string, opts: { date?: st
     if (s) return { ...(JSON.parse(s.json) as BriefResponse), precomputed: true };
   }
   const input = await gatherFacts(userId, confId, date);
-  if (!input) return { sections: [], paths: [], generatedAt: new Date().toISOString(), precomputed: false };
+  if (!input) {
+    await deleteSummary(summaryId("brief", userId, confId, date));
+    return { sections: [], paths: [], generatedAt: new Date().toISOString(), precomputed: false };
+  }
   const brief = await writeBrief(input);
-  if (brief.sections.length) await store("brief", userId, confId, date, brief, brief.generatedAt);
+  await store("brief", userId, confId, date, brief, brief.generatedAt);
   return brief;
 }
 
@@ -270,9 +273,12 @@ export async function getTripReport(userId: string, confId: string, opts: { rege
     if (s) return JSON.parse(s.json) as TripReportResponse;
   }
   const input = await gatherFacts(userId, confId);
-  if (!input) return { markdown: "", paths: [] };
+  if (!input) {
+    await deleteSummary(summaryId("trip", userId, confId, null));
+    return { markdown: "", paths: [] };
+  }
   const trip = await writeTrip(input);
-  if (trip.paths.length) await store("trip", userId, confId, null, trip, new Date().toISOString());
+  await store("trip", userId, confId, null, trip, new Date().toISOString());
   return trip;
 }
 

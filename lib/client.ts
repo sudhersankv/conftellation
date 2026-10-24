@@ -7,6 +7,20 @@ import type {
   SearchResponse, SteerResponse, TripReportResponse, CreateMomentFields, PersonDetail, SteerOp,
 } from "@/lib/types";
 
+/** Append the demo access query required by GET /api/uploads/:file. Private media needs the owner's userId; shared media may use momentId. */
+export function mediaSrc(mediaUrl: string, opts: { userId?: string; momentId?: string } = {}): string {
+  const hashAt = mediaUrl.indexOf("#");
+  const hash = hashAt >= 0 ? mediaUrl.slice(hashAt) : "";
+  const withoutHash = hashAt >= 0 ? mediaUrl.slice(0, hashAt) : mediaUrl;
+  const qAt = withoutHash.indexOf("?");
+  const path = qAt >= 0 ? withoutHash.slice(0, qAt) : withoutHash;
+  const params = new URLSearchParams(qAt >= 0 ? withoutHash.slice(qAt + 1) : "");
+  if (opts.userId) params.set("userId", opts.userId);
+  if (opts.momentId) params.set("momentId", opts.momentId);
+  const qs = params.toString();
+  return `${path}${qs ? `?${qs}` : ""}${hash}`;
+}
+
 /** Typed builder for the multipart body of api.createMoment. */
 export function momentForm(fields: CreateMomentFields): FormData {
   const form = new FormData();
@@ -46,8 +60,10 @@ export const api = {
   search: (confId: string, q_: string) => call<SearchResponse>(`/api/search${q({ confId, q: q_ })}`),
   /** Build `form` with momentForm({ confId, kind, ... }) (fields: CreateMomentFields). */
   createMoment: (userId: string, form: FormData) => call<CreateMomentResponse>(`/api/users/${userId}/moments`, { method: "POST", body: form }),
-  shareMoment: (momentId: string, to: string[] | "network") => call<Moment>(`/api/moments/${momentId}/share`, post({ to })),
-  constellation: (userId: string, confId?: string) => call<ConstellationResponse>(`/api/users/${userId}/constellation${q({ confId })}`),
+  /** `userId` is required by the route (demo caller). Omit it and the share is rejected. */
+  shareMoment: (momentId: string, to: string[] | "network", userId?: string) =>
+    call<Moment>(`/api/moments/${momentId}/share${q({ userId })}`, post(userId ? { to, userId } : { to })),
+  constellation: (userId: string, confId?: string, opts: { now?: string } = {}) => call<ConstellationResponse>(`/api/users/${userId}/constellation${q({ confId, now: opts.now })}`),
   brief: (userId: string, confId: string, opts: { date?: string; regenerate?: boolean } = {}) =>
     call<BriefResponse>(`/api/users/${userId}/brief${q({ confId, date: opts.date, regenerate: opts.regenerate ? "1" : undefined })}`),
   tripReport: (userId: string, confId: string, opts: { regenerate?: boolean } = {}) =>

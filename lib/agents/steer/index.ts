@@ -1,9 +1,9 @@
 // Steer: text (or explicit ops) → resolved ops → graph writes → re-plan → diff + undo ops.
-import type { PlanDiff, SteerOp, SteerResponse, TargetKind } from "@/lib/types";
+import type { GoalKind, PlanDiff, SteerOp, SteerResponse, TargetKind } from "@/lib/types";
 import { NotFound, runPlanner } from "@/lib/agents/planner";
 import { conferenceDay, userState } from "@/lib/queries/plan";
 import {
-  clearTargets, conferenceTopics, markTargets, removeGoal, resolveMatch, setBlocks, setBoothMinutes, setGoalWeight, setWindow,
+  clearTargets, conferenceTopics, goalOwnedByOther, markTargets, removeGoal, resolveMatch, setBlocks, setBoothMinutes, setGoalWeight, setWindow,
   storeSteer, targetExists, targetMarks, topicsForText, upsertGoal,
 } from "@/lib/queries/steer";
 import { slug } from "@/lib/agents/scout/normalized";
@@ -25,7 +25,7 @@ export async function runSteer(userId: string, confId: string, input: { text: st
   };
 
   const parsed = input.ops ?? (input.text.trim() ? await parseSteer(input.text, ctx) : []);
-  const ops = await resolve(parsed, confId, ctx, state.goals.map((g) => g.id));
+  const ops = await resolve(parsed, confId, ctx, state.goals.map((g) => g.id), userId);
   if (!ops.length) {
     const { plan } = await runPlanner(userId, confId, { now, write: false });
     return { ops: [], diff: { added: [], removed: [], moved: [] }, summary: NOT_UNDERSTOOD, plan, undo: [] };
@@ -46,7 +46,10 @@ const toIso = (s: string | null, ctx: SteerContext) => {
   return parseTime(s, ctx);
 };
 
-async function resolve(ops: SteerOp[], confId: string, ctx: SteerContext, goalIds: string[]): Promise<SteerOp[]> {
+const derivedGoalId = (userId: string, text: string) => `g-${userId}-${slug(text).slice(0, 40)}`;
+
+async function resolve(ops: SteerOp[], confId: string, ctx: SteerContext, goalIds: string[], userId: string): Promise<SteerOp[]> {
+  const live = new Set(goalIds);
   const out: SteerOp[] = [];
   for (const op of ops) {
     switch (op.op) {
@@ -61,9 +64,13 @@ async function resolve(ops: SteerOp[], confId: string, ctx: SteerContext, goalId
         if (found) out.push({ ...op, kind: found.kind, resolvedIds: found.ids });
         break;
       }
-      case "reweight_goal":
       case "remove_goal":
-        if (goalIds.includes(op.goalId)) out.push(op);
+        if (!live.has(op.goalId)) break;
+        live.delete(op.goalId);
+        out.push(op);
+        break;
+      case "reweight_goal":
+        if (live.has(op.goalId)) out.push(op);
         break;
       case "pin":
         if (await targetExists(op.targetId)) out.push(op);
@@ -83,9 +90,22 @@ async function resolve(ops: SteerOp[], confId: string, ctx: SteerContext, goalId
       case "booth_time":
         if (op.minutes > 0 && op.minutes <= 120) out.push(op);
         break;
-      case "add_goal":
-        if (op.text.trim()) out.push(op);
+      case "add_goal": {
+        if (!op.text.trim()) break;
+        const goalId = op.goalId && !(await goalOwnedByOther(op.goalId, userId)) ? op.goalId : undefined;
+        if (op.goalId && !goalId) break;
+        const weight = typeof op.weight === "number" && Number.isFinite(op.weight) && op.weight > 0 && op.weight <= 1 ? op.weight : undefined;
+        const topics = Array.isArray(op.topics) && op.topics.every((t) => typeof t === "string") ? op.topics.filter((t) => t) : undefined;
+        const clean: SteerOp = {
+          op: "add_goal", text: op.text, kind: op.kind,
+          ...(goalId ? { goalId } : {}),
+          ...(weight != null ? { weight } : {}),
+          ...(topics ? { topics } : {}),
+        };
+        out.push(clean);
+        live.add(goalId ?? derivedGoalId(userId, op.text));
         break;
+      }
       case "clear":
         if (op.targetIds.length) out.push(op);
         break;
@@ -111,11 +131,15 @@ async function apply(userId: string, confId: string, ops: SteerOp[], state: Stat
         window = { from: op.from, to: op.to };
         await setWindow(userId, op.from, op.to);
         break;
-      case "block_time":
+      case "block_time": {
+        const prev = blocks.find((b) => b.from === op.from && b.to === op.to);
         blocks = [...blocks.filter((b) => !(b.from === op.from && b.to === op.to)), { from: op.from, to: op.to, label: op.label }];
+        // Returned undo is reversed, so the restore is pushed before the unblock and runs after it.
+        if (prev) undo.push({ op: "block_time", from: prev.from, to: prev.to, label: prev.label as "lunch" | "meeting" | "free" });
         undo.push({ op: "unblock_time", from: op.from, to: op.to });
         await setBlocks(userId, blocks);
         break;
+      }
       case "unblock_time": {
         const gone = blocks.filter((b) => Date.parse(b.from) === Date.parse(op.from) && Date.parse(b.to) === Date.parse(op.to));
         blocks = blocks.filter((b) => !gone.includes(b));
@@ -129,23 +153,31 @@ async function apply(userId: string, confId: string, ops: SteerOp[], state: Stat
         await setBoothMinutes(userId, op.minutes);
         break;
       case "reweight_goal": {
-        const g = goals.get(op.goalId)!;
+        const g = goals.get(op.goalId);
+        if (!g) break;
         undo.push({ op: "reweight_goal", goalId: g.id, weight: g.weight });
         g.weight = op.weight;
         await setGoalWeight(userId, op.goalId, op.weight);
         break;
       }
       case "remove_goal": {
-        const g = goals.get(op.goalId)!;
-        undo.push({ op: "add_goal", text: g.text, kind: g.kind as never });
+        const g = goals.get(op.goalId);
+        if (!g) break;
+        undo.push({
+          op: "add_goal", text: g.text, kind: g.kind as GoalKind, goalId: g.id, weight: g.weight,
+          topics: g.topics.filter((t) => typeof t === "string" && t),
+        });
         goals.delete(op.goalId);
         await removeGoal(userId, op.goalId);
         break;
       }
       case "add_goal": {
-        const id = `g-${userId}-${slug(op.text).slice(0, 40)}`;
-        const topics = await topicsForText(op.text, confId);
-        await upsertGoal(userId, { id, text: op.text, kind: op.kind, weight: 1, topics });
+        if (op.goalId && await goalOwnedByOther(op.goalId, userId)) break;
+        const id = op.goalId ?? derivedGoalId(userId, op.text);
+        const topics = op.topics ? op.topics.filter((t) => t) : await topicsForText(op.text, confId);
+        const weight = typeof op.weight === "number" && Number.isFinite(op.weight) && op.weight > 0 && op.weight <= 1 ? op.weight : 1;
+        await upsertGoal(userId, { id, text: op.text, kind: op.kind, weight, topics });
+        goals.set(id, { id, text: op.text, kind: op.kind, weight, topics });
         undo.push({ op: "remove_goal", goalId: id });
         break;
       }

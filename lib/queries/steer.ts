@@ -86,6 +86,15 @@ export async function setBoothMinutes(userId: string, minutes: number | null) {
   await q(`MATCH (u:User {id:$userId}) SET u.boothMinutes = $minutes`, { userId, minutes });
 }
 
+/** True when some other user already has this goal. An absent goal is not foreign (undo can recreate it). */
+export async function goalOwnedByOther(goalId: string, userId: string): Promise<boolean> {
+  const rows = await q<{ id: string }>(
+    `MATCH (:Goal {id:$goalId})<-[:HAS_GOAL]-(o:User) WHERE o.id <> $userId RETURN o.id AS id LIMIT 1`,
+    { goalId, userId },
+  );
+  return rows.length > 0;
+}
+
 export async function setGoalWeight(userId: string, goalId: string, weight: number) {
   await q(`MATCH (:User {id:$userId})-[:HAS_GOAL]->(g:Goal {id:$goalId}) SET g.weight = $weight`, { userId, goalId, weight });
 }
@@ -94,10 +103,13 @@ export async function removeGoal(userId: string, goalId: string) {
   await q(`MATCH (:User {id:$userId})-[:HAS_GOAL]->(g:Goal {id:$goalId}) DETACH DELETE g`, { userId, goalId });
 }
 
-/** MERGE a goal on id, link its topics, store its embedding. */
+/** MERGE a goal on id, link its topics, store its embedding. A goal another user already has is left alone. */
 export async function upsertGoal(userId: string, g: { id: string; text: string; kind: string; weight: number; topics: string[] }) {
   await q(
-    `MATCH (u:User {id:$userId}) MERGE (g:Goal {id:$id}) SET g.text = $text, g.kind = $kind, g.weight = $weight, g.embedding = vecf32($v)
+    `MATCH (u:User {id:$userId})
+     OPTIONAL MATCH (:Goal {id:$id})<-[:HAS_GOAL]-(o:User) WHERE o.id <> $userId
+     WITH u, o WHERE o IS NULL
+     MERGE (g:Goal {id:$id}) SET g.text = $text, g.kind = $kind, g.weight = $weight, g.embedding = vecf32($v)
      MERGE (u)-[:HAS_GOAL]->(g)
      WITH g UNWIND $topics AS tid MATCH (t:Topic {id:tid}) MERGE (g)-[:ABOUT]->(t)`,
     { userId, ...g, v: await embedOne(`${g.text}. Topics: ${g.topics.join(", ")}`) },

@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { GET as getBrief } from "@/app/api/users/[id]/brief/route";
 import { GET as getTrip } from "@/app/api/users/[id]/trip-report/route";
+import { q } from "@/lib/falkor";
 import type { BriefResponse, TripReportResponse, WhyPath } from "@/lib/types";
 import { req, seedOnce } from "./helpers";
 
@@ -111,5 +112,45 @@ describe("GET /api/users/:id/trip-report", () => {
     const { status, body } = await trip("nobody");
     expect(status).toBe(200);
     expect(body).toEqual({ markdown: "", paths: [] });
+  });
+
+  it("empty regeneration replaces a stored brief and trip report", async () => {
+    await q(
+      `MATCH (u:User {id:'mike'})
+       MERGE (b:Summary {id:'brief:mike:ptc-2026:all'})
+       SET b.kind = 'brief', b.conferenceId = 'ptc-2026', b.generatedAt = '2000-01-01T00:00:00.000Z', b.json = $brief
+       MERGE (u)-[:HAS_SUMMARY]->(b)
+       MERGE (t:Summary {id:'trip:mike:ptc-2026:all'})
+       SET t.kind = 'trip', t.conferenceId = 'ptc-2026', t.generatedAt = '2000-01-01T00:00:00.000Z', t.json = $trip
+       MERGE (u)-[:HAS_SUMMARY]->(t)`,
+      {
+        brief: JSON.stringify({ sections: [{ title: "What you learned", lines: [{ text: "STALE", pathId: "p1" }] }], paths: [], generatedAt: "2000-01-01T00:00:00.000Z", precomputed: false }),
+        trip: JSON.stringify({ markdown: "STALE REPORT", paths: [] }),
+      },
+    );
+    const briefRegen = await brief("mike", "confId=ptc-2026&regenerate=1");
+    expect(briefRegen.status).toBe(200);
+    expect(briefRegen.body.sections).toEqual([]);
+    expect(JSON.stringify(briefRegen.body)).not.toContain("STALE");
+    const briefAgain = await brief("mike");
+    expect(briefAgain.body.precomputed).toBe(true);
+    expect(briefAgain.body.sections).toEqual([]);
+    expect(JSON.stringify(briefAgain.body)).not.toContain("STALE");
+
+    const tripRegen = await trip("mike", "confId=ptc-2026&regenerate=1");
+    expect(tripRegen.body.paths).toEqual([]);
+    expect(tripRegen.body.markdown).not.toContain("STALE");
+    expect(tripRegen.body.markdown).toContain("Nothing captured yet");
+    const tripAgain = await trip("mike");
+    expect(tripAgain.body.paths).toEqual([]);
+    expect(tripAgain.body.markdown).not.toContain("STALE");
+  });
+
+  it("regenerating for an unknown user clears a stale trip summary", async () => {
+    await q(`MERGE (s:Summary {id:'trip:nobody:ptc-2026:all'}) SET s.json = $json`, {
+      json: JSON.stringify({ markdown: "STALE", paths: [] }),
+    });
+    expect((await trip("nobody", "confId=ptc-2026&regenerate=1")).body).toEqual({ markdown: "", paths: [] });
+    expect((await trip("nobody")).body).toEqual({ markdown: "", paths: [] });
   });
 });

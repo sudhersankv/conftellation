@@ -181,7 +181,7 @@ export interface PlanResponse {
 export type TargetKind = "session" | "person" | "booth" | "topic";
 
 export type SteerOp =
-  | { op: "add_goal"; text: string; kind: GoalKind }
+  | { op: "add_goal"; text: string; kind: GoalKind; goalId?: string; weight?: number; topics?: string[] }
   | { op: "remove_goal"; goalId: string }
   | { op: "reweight_goal"; goalId: string; weight: number }
   | { op: "set_window"; from: string | null; to: string | null }
@@ -224,7 +224,8 @@ export interface SkyNode {
   state: SkyNodeState;
   goalId?: string; // cluster
   at?: string; // replay order
-  conferenceId?: string;
+  conferenceId?: string; // primary conference (newest, unless a stronger state came from another)
+  conferenceIds?: string[]; // set when this id belongs to more than one attended conference
   isOtherUser?: boolean;
   fit?: number; // 0..1 magnitude (normalised plan score); UI uses 0.5 when absent
 }
@@ -258,8 +259,10 @@ export interface NetworkUser {
 }
 export interface NetworkResponse { users: NetworkUser[]; incoming: MeetRequest[]; outgoing: MeetRequest[] }
 
-export interface MeetRequestBody { toUserId: string; note: string; proposal: MeetProposal }
-export interface MeetRespondBody { action: "accept" | "decline" | "counter"; proposal?: MeetProposal }
+/** `userId` (optional): the acting user; when set it must equal the sender in the URL. */
+export interface MeetRequestBody { toUserId: string; note: string; proposal: MeetProposal; userId?: string }
+/** `userId`: the acting user (else `x-user-id` header or the `ptc_user` cookie). Required by the API: 401 without one, 403 if not allowed. */
+export interface MeetRespondBody { action: "accept" | "decline" | "counter"; proposal?: MeetProposal; userId?: string }
 
 // ---------- Session community ----------
 

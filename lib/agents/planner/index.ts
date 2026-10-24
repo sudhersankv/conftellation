@@ -2,7 +2,7 @@
 // score = goalScore + 0.1·(extra topics) + 0.5·boosted + 0.3·vectorSim  (+ people/booth bonuses below)
 import type { Booth, GoalPlan, Goal, GoalKind, ItinerarySlot, OpenTo, Person, PlanDiff, PlanItem, PlanResponse, Session, SessionKind, Via, WhyPath } from "@/lib/types";
 import { ms } from "@/lib/time";
-import { acceptedMeets } from "@/lib/queries/network";
+import { acceptedMeets, plannedMeets, setPlannedMeets } from "@/lib/queries/network";
 import { buildItinerary, type Block } from "./itinerary";
 import {
   boostedTopicPaths, boothPaths, boothsByIds, conferenceDay, peopleByIds, personPaths, sessionPaths, sessionSimilarity, sessionsByIds, userState, writePlans,
@@ -36,9 +36,9 @@ export async function runPlanner(userId: string, confId: string, opts: { now?: s
   const state = await userState(userId, confId);
   if (!state) throw new NotFound(`user ${userId} not found`);
   const now = opts.now ?? new Date().toISOString();
-  const [sPaths, sims, pPaths, bPaths, day, tBoosts, meets] = await Promise.all([
+  const [sPaths, sims, pPaths, bPaths, day, tBoosts, meets, prevMeets] = await Promise.all([
     sessionPaths(userId, confId), sessionSimilarity(userId, confId), personPaths(userId, confId), boothPaths(userId, confId), conferenceDay(confId),
-    boostedTopicPaths(userId, confId), acceptedMeets(userId, confId),
+    boostedTopicPaths(userId, confId), acceptedMeets(userId, confId), plannedMeets(userId, confId),
   ]);
   const meetById = new Map(meets.map((m) => [m.id, m]));
   const goalById = new Map(state.goals.map((g) => [g.id, g]));
@@ -142,8 +142,10 @@ export async function runPlanner(userId: string, confId: string, opts: { now?: s
     ...byGoal.flatMap((g) => g.people).map((p) => ({ id: p.id, goalId: p.goalId ?? null, score: p.score, status: p.status, slotStart: null, slotEnd: null })),
   ];
   const unique = [...new Map(edges.map((e) => [e.id, e])).values()];
-  const diff = diffPlans(state.prevPlans, unique, plan);
-  if (opts.write !== false) await writePlans(userId, confId, unique);
+  // Accepted meets are not PLANS edges; the last plan's meets are stored on the user so the diff can add/remove/move them too.
+  const meetItems = itinerary.filter((s) => s.item.type === "meet").map((s) => ({ id: s.item.id, slotStart: s.from as string | null, title: s.item.title }));
+  const diff = diffPlans([...state.prevPlans, ...prevMeets.map((m) => ({ ...m, type: "Meet" }))], [...unique, ...meetItems], plan);
+  if (opts.write !== false) await Promise.all([writePlans(userId, confId, unique), setPlannedMeets(userId, confId, meetItems)]);
   return { plan, diff };
 }
 
@@ -299,7 +301,7 @@ function diffPlans(prev: UserState["prevPlans"], next: { id: string; slotStart: 
   const items = new Map<string, PlanItem>();
   plan.itinerary.forEach((s) => items.set(s.item.id, s.item));
   plan.byGoal.forEach((g) => g.people.forEach((p) => items.set(p.id, p)));
-  const typeOf = (t: string) => (t === "Session" ? "session" : t === "Booth" ? "booth" : "person") as PlanItem["type"];
+  const typeOf = (t: string) => (t === "Session" ? "session" : t === "Booth" ? "booth" : t === "Meet" ? "meet" : "person") as PlanItem["type"];
   const prevMap = new Map(prev.map((p) => [p.id, p]));
   const nextMap = new Map(next.map((n) => [n.id, n]));
   return {

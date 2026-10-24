@@ -13,9 +13,10 @@ Full spec: `conftellations-spec.md`. API/graph contract: `lib/types.ts`. Agent-t
 - Always `MERGE` on id, never `CREATE` (identity rules: spec §5.3).
 
 ## Team & ownership
-- **Sudhersan** (`sudhersankv`): graph + backend: `lib/falkor.ts`, `lib/queries/`, `lib/agents/`, `lib/brightdata.ts`, `lib/llm.ts`, `app/api/**`, `seed/`, `scripts/`.
-- **Ryan** (`RyanV27`): product + UI: `app/(sky)/**` (galaxy, tabs, sessions, people, me), `app/add`, `app/onboarding`, `app/layout.tsx`, `app/globals.css`, `components/**`, `lib/ui/**`, `docs/DESIGN.md`, `docs/UI_DEPENDENCIES.md`. Route layout: `docs/DESIGN.md` §5. `app/api/**` stays outside `(sky)`.
+- **Sudhersan** (`sudhersankv`): everything in code: graph + backend (`lib/**`, `app/api/**`, `seed/`, `scripts/`) AND, since 14:45 PT, the UI (`app/(app)/**`, `components/**`, `lib/ui/**`, `docs/DESIGN.md`).
+- **Ryan** (`RyanV27`): demo prep (#20): rehearsal, backup video, FalkorDB Browser query, two-phone test of the deployed app. No UI code after #37.
 - Shared, change only by PR + note in COMMS.md: `lib/types.ts`, `lib/client.ts`, `mocks/index.ts`.
+- Only one agent drives at a time per person. Cursor's session for Sudhersan is closed as of 14:40 PT; Claude Code drives.
 
 ## UI design docs (required for all frontend work)
 For **any** frontend issue or implementation (pages, components, styling, copy, motion, Sky, tokens, `lib/ui/**`, UI GitHub issues #11–#18), read these first and follow them:

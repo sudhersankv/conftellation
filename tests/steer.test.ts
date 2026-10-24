@@ -3,6 +3,7 @@ import { POST as postSteer } from "@/app/api/users/[id]/steer/route";
 import { POST as postOnboarding } from "@/app/api/users/[id]/onboarding/route";
 import { GET as getPlan } from "@/app/api/users/[id]/plan/route";
 import { q } from "@/lib/falkor";
+import { attendeePersonId } from "@/lib/agents/onboarding";
 import { parseDeterministic, type SteerContext } from "@/lib/agents/steer/parse";
 import type { OnboardingResponse, PlanResponse, SteerOp, SteerResponse } from "@/lib/types";
 import { req, seedOnce } from "./helpers";
@@ -123,6 +124,44 @@ describe("POST /api/users/:id/steer", () => {
     const res = await postSteer(req(`/api/users/sam/steer`, { text: "x" }), { params: { id: "sam" } });
     expect(res.status).toBe(400);
   });
+
+  it("undo of a replaced block restores the previous label", async () => {
+    const first = await steer({ ops: [{ op: "block_time", from: T("16:00"), to: T("16:30"), label: "meeting" }] });
+    const second = await steer({ ops: [{ op: "block_time", from: T("16:00"), to: T("16:30"), label: "lunch" }] });
+    const [mid] = await q<{ blocks: string }>(`MATCH (u:User {id:'sam'}) RETURN u.blocks AS blocks`);
+    expect(JSON.parse(mid.blocks)).toEqual([{ from: T("16:00"), to: T("16:30"), label: "lunch" }]);
+    const undone = await steer({ ops: second.body.undo });
+    const [restored] = await q<{ blocks: string }>(`MATCH (u:User {id:'sam'}) RETURN u.blocks AS blocks`);
+    expect(JSON.parse(restored.blocks)).toEqual([{ from: T("16:00"), to: T("16:30"), label: "meeting" }]);
+    await steer({ ops: first.body.undo });
+    const [after] = await q<{ blocks: string | null }>(`MATCH (u:User {id:'sam'}) RETURN u.blocks AS blocks`);
+    const left = after.blocks ? JSON.parse(after.blocks) as { from: string }[] : [];
+    expect(left.some((b) => b.from === T("16:00"))).toBe(false);
+  });
+
+  it("drops a reweight after remove_goal, and undo restores the original goal id", async () => {
+    const [prior] = await q<{ w: number }>(`MATCH (:User {id:'sam'})-[:HAS_GOAL]->(g:Goal {id:'g-role'}) RETURN g.weight AS w`);
+    const { status, body } = await steer({
+      ops: [
+        { op: "remove_goal", goalId: "g-role" },
+        { op: "reweight_goal", goalId: "g-role", weight: 0.1 },
+      ],
+    });
+    expect(status).toBe(200);
+    expect(body.ops.map((o) => o.op)).toEqual(["remove_goal"]);
+    const [gone] = await q<{ n: number }>(`MATCH (:User {id:'sam'})-[:HAS_GOAL]->(g:Goal {id:'g-role'}) RETURN count(g) AS n`);
+    expect(gone.n).toBe(0);
+    expect(body.undo).toContainEqual(expect.objectContaining({ op: "add_goal", goalId: "g-role", weight: prior.w, topics: ["hiring"] }));
+    const undone = await steer({ ops: body.undo });
+    expect(undone.status).toBe(200);
+    const [g] = await q<{ id: string; w: number; topics: string[] }>(
+      `MATCH (:User {id:'sam'})-[:HAS_GOAL]->(g:Goal {id:'g-role'})
+       OPTIONAL MATCH (g)-[:ABOUT]->(t:Topic)
+       RETURN g.id AS id, g.weight AS w, collect(t.id) AS topics`,
+    );
+    expect(g).toMatchObject({ id: "g-role", w: prior.w });
+    expect(g.topics).toContain("hiring");
+  });
 });
 
 describe("POST /api/users/:id/onboarding", () => {
@@ -150,6 +189,43 @@ describe("POST /api/users/:id/onboarding", () => {
     const p = await plan("dana");
     expect(p.itinerary.length).toBeGreaterThan(0);
     expect(p.itinerary.every((s) => s.to <= T("16:00"))).toBe(true);
+  });
+
+  it("does not let add_goal adopt another user's goal id", async () => {
+    const [before] = await q<{ text: string; w: number }>(`MATCH (g:Goal {id:'g-role'}) RETURN g.text AS text, g.weight AS w`);
+    const { status, body } = await steer({
+      ops: [{ op: "add_goal", text: "stolen goal", kind: "learn", goalId: "g-role", weight: 0.2, topics: ["hiring"] }],
+    }, "emily");
+    expect(status).toBe(200);
+    expect(body.ops).toEqual([]);
+    const [after] = await q<{ text: string; w: number }>(`MATCH (g:Goal {id:'g-role'}) RETURN g.text AS text, g.weight AS w`);
+    expect(after).toEqual(before);
+    const [link] = await q<{ n: number }>(`MATCH (:User {id:'emily'})-[:HAS_GOAL]->(:Goal {id:'g-role'}) RETURN count(*) AS n`);
+    expect(link.n).toBe(0);
+  });
+
+  it("does not merge person ids when user ids slug the same", async () => {
+    expect(attendeePersonId("Alex Kim", "alex-kim")).not.toBe(attendeePersonId("Alex Kim", "alex kim"));
+    expect(attendeePersonId("Alex Kim", "alex kim")).toContain("alex%20kim");
+    const body = {
+      confId: "ptc-2026", name: "Alex Kim", openTo: ["learning" as const],
+      goals: [{ text: "learn about agent tracing", kind: "learn" as const }], problems: [] as string[],
+    };
+    for (const id of ["alex-kim", "alex kim"]) {
+      const res = await postOnboarding(
+        req(`/api/users/${encodeURIComponent(id)}/onboarding?now=${encodeURIComponent(NOW)}`, body),
+        { params: { id } },
+      );
+      expect(res.status, await res.clone().text()).toBe(200);
+    }
+    const rows = await q<{ u: string; p: string }>(
+      `MATCH (u:User)-[:IS]->(p:Person) WHERE u.id IN $ids RETURN u.id AS u, p.id AS p`,
+      { ids: ["alex-kim", "alex kim"] },
+    );
+    expect(rows).toHaveLength(2);
+    expect(new Set(rows.map((r) => r.p)).size).toBe(2);
+    expect(rows.find((r) => r.u === "alex kim")?.p).toBe(attendeePersonId("Alex Kim", "alex kim"));
+    expect(rows.find((r) => r.u === "alex-kim")?.p).toBe(attendeePersonId("Alex Kim", "alex-kim"));
   });
 
   it("404s for an unknown conference, 400s without goals", async () => {

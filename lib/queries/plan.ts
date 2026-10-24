@@ -26,6 +26,9 @@ export interface UserState {
   prevPlans: { id: string; slotStart: string | null; type: string; title: string }[];
 }
 
+/** Feedback edge `r` on `x` applies at $confId: unscoped (steer, legacy), scoped to it, or on a Topic (a global preference). */
+const FEEDBACK_IN_CONF = (r: string, x: string) => `(${r}.conferenceId IS NULL OR ${r}.conferenceId = $confId OR ${x}:Topic)`;
+
 export async function userState(userId: string, confId: string): Promise<UserState | null> {
   const [u] = await q<{ personId: string | null; availFrom: string | null; availTo: string | null; boothMinutes: number | null; blocks: string | null }>(
     `MATCH (u:User {id:$userId}) OPTIONAL MATCH (u)-[:IS]->(p:Person)
@@ -44,8 +47,11 @@ export async function userState(userId: string, confId: string): Promise<UserSta
        RETURN p.id AS id, p.text AS text, collect(t.id) AS topics`,
       { userId },
     ),
-    q<{ id: string }>(`MATCH (:User {id:$userId})-[:SKIPPED]->(x) RETURN x.id AS id`, { userId }),
-    q<{ id: string; pinned: boolean }>(`MATCH (:User {id:$userId})-[b:BOOSTED]->(x) RETURN x.id AS id, coalesce(b.pinned, false) AS pinned`, { userId }),
+    q<{ id: string }>(`MATCH (:User {id:$userId})-[r:SKIPPED]->(x) WHERE ${FEEDBACK_IN_CONF("r", "x")} RETURN DISTINCT x.id AS id`, { userId, confId }),
+    q<{ id: string; pinned: boolean }>(
+      `MATCH (:User {id:$userId})-[b:BOOSTED]->(x) WHERE ${FEEDBACK_IN_CONF("b", "x")} RETURN x.id AS id, coalesce(b.pinned, false) AS pinned`,
+      { userId, confId },
+    ),
     q<{ id: string }>(
       `MATCH (:User {id:$userId})-[:CAPTURED]->(m:Moment)-[:AT]->(x) WHERE m.conferenceId = $confId RETURN DISTINCT x.id AS id`,
       { userId, confId },
@@ -64,7 +70,10 @@ export async function userState(userId: string, confId: string): Promise<UserSta
   ]);
   return {
     ...u, goals, problems,
-    skipped: skipped.map((r) => r.id), boosted, doneIds: done.map((r) => r.id), metToday: met.map((r) => r.id),
+    skipped: skipped.map((r) => r.id),
+    // one target can carry several boosts (one per conference, plus an unscoped steer pin): pinned if any is
+    boosted: [...boosted.reduce((m, b) => m.set(b.id, { id: b.id, pinned: b.pinned || (m.get(b.id)?.pinned ?? false) }), new Map<string, { id: string; pinned: boolean }>()).values()],
+    doneIds: done.map((r) => r.id), metToday: met.map((r) => r.id),
     checkins, prevPlans: prev,
   };
 }
@@ -111,30 +120,37 @@ export interface PersonPathRow extends RawPath { goalId: string | null; personId
 
 /** Q2 + Q6: speakers on goal topics, sponsor staff on goal topics, and people met at earlier conferences who are here. */
 export async function personPaths(userId: string, confId: string): Promise<PersonPathRow[]> {
+  // people skipped at this conference (or unscoped); a skip at another conference does not hide them here
+  const skippedPeople = (
+    await q<{ id: string }>(
+      `MATCH (:User {id:$userId})-[sk:SKIPPED]->(pp:Person) WHERE sk.conferenceId IS NULL OR sk.conferenceId = $confId RETURN DISTINCT pp.id AS id`,
+      { userId, confId },
+    )
+  ).map((r) => r.id);
   const speakers = q<PersonPathRow>(
     `MATCH (u:User {id:$userId})-[:HAS_GOAL]->(g:Goal)
      MATCH p = (g)-[:ABOUT]->(t:Topic)<-[:ABOUT]-(s:Session)<-[:SPEAKS_AT]-(pp:Person)
      MATCH (:Conference {id:$confId})-[:HAS_SESSION]->(s)
-     WHERE NOT (u)-[:IS]->(pp) AND NOT (u)-[:SKIPPED]->(pp) AND NOT (u)-[:SKIPPED]->(t)
+     WHERE NOT (u)-[:IS]->(pp) AND NOT pp.id IN $skippedPeople AND NOT (u)-[:SKIPPED]->(t)
      RETURN g.id AS goalId, pp.id AS personId, 'speaker' AS via, ${PATH("p")}`,
-    { userId, confId },
+    { userId, confId, skippedPeople },
   );
   const staff = q<PersonPathRow>(
     `MATCH (u:User {id:$userId})-[:HAS_GOAL]->(g:Goal)
      MATCH (c:Conference {id:$confId})
      MATCH p = (g)-[:ABOUT]->(t:Topic)<-[:OFFERS]-(co:Company)<-[:WORKS_AT]-(pp:Person)
      MATCH (co)-[:SPONSORS]->(c)
-     WHERE NOT (u)-[:IS]->(pp) AND NOT (u)-[:SKIPPED]->(pp) AND NOT (u)-[:SKIPPED]->(t)
+     WHERE NOT (u)-[:IS]->(pp) AND NOT pp.id IN $skippedPeople AND NOT (u)-[:SKIPPED]->(t)
      RETURN g.id AS goalId, pp.id AS personId, 'sponsor' AS via, ${PATH("p")}`,
-    { userId, confId },
+    { userId, confId, skippedPeople },
   );
   const metBefore = q<PersonPathRow>(
     `MATCH (u:User {id:$userId})-[m:MET]->(pp:Person)
-     WHERE m.conferenceId <> $confId AND NOT (u)-[:SKIPPED]->(pp)
+     WHERE m.conferenceId <> $confId AND NOT pp.id IN $skippedPeople
      MATCH p = (u)-[:MET]->(pp)-[:SPEAKS_AT]->(s:Session)<-[:HAS_SESSION]-(:Conference {id:$confId})
      MATCH (prev:Conference {id:m.conferenceId})
      RETURN null AS goalId, pp.id AS personId, 'met_before' AS via, prev.name AS conferenceName, m.at AS metAt, ${PATH("p")}`,
-    { userId, confId },
+    { userId, confId, skippedPeople },
   );
   return (await Promise.all([speakers, staff, metBefore])).flat();
 }
