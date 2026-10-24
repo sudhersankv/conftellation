@@ -1,0 +1,17 @@
+node_modules
+.next
+.git
+.github
+.cursor
+.vercel
+.env*
+!.env.example
+skills/
+test-results/
+playwright-report/
+coverage/
+*.tsbuildinfo
+npm-debug.log*
+public/uploads/*
+!public/uploads/.gitkeep
+seed/raw/*.html
