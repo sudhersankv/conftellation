@@ -66,7 +66,7 @@ async function main() {
     await step("POST conferences (cached import, 0 credits)", () => call<AddConferenceResponse>("/api/conferences", post({ url: conf.conference.url })),
       (r) => assert(r.cached === true && r.counts.sessions > 0, `cached=${r.cached} sessions=${r.counts.sessions}`));
   }
-  await step("POST conferences rejects private URL", () => call("/api/conferences", post({ url: "http://127.0.0.1:6379/" }, 400)));
+  await step("POST conferences rejects private URL (422)", () => call("/api/conferences", post({ url: "http://127.0.0.1:6379/" }, 422)));
   await step("GET search", () => call<SearchResponse>(`/api/search?confId=${CONF}&q=tracing`),
     (r) => assert(r.sessions.length + r.booths.length + r.people.length > 0, "no results for 'tracing'"));
 
@@ -124,7 +124,8 @@ async function main() {
     (m) => assert(m.moment.personId === "jake-morales@falkordb", `personId=${m.moment.personId}`));
   await step("POST moment bad kind → 400", () => call(`/api/users/${A}/moments`, post({ confId: CONF, kind: "selfie" }, 400)));
   if (note) {
-    await step("POST share note → network", () => call<CreateMomentResponse["moment"]>(`/api/moments/${note.moment.id}/share`, post({ to: "network" })),
+    await step("POST share note without identity → 400", () => call(`/api/moments/${note.moment.id}/share`, post({ to: "network" }, 400)));
+    await step("POST share note → network (as A)", () => call<CreateMomentResponse["moment"]>(`/api/moments/${note.moment.id}/share`, post({ to: "network", userId: A })),
       (m) => assert(m.shared === true, "shared=false"));
   }
   await step("GET community as A (my notes, own note not duplicated)", () => call<CommunityResponse>(`/api/sessions/s-tracing/community?userId=${A}`),
