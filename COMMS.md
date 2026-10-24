@@ -280,3 +280,9 @@ Sudhersan decided to rebuild the UI completely. Please stop all UI work and do n
 - Demo path (spec §16): Add → paste KubeCon link (cached, ~1 s) → Goals → Plan (calendar) → steer "leaving at 3pm, more tracing" → Undo toast → Conftellation (graph) → open a session → Check in + Note → graph lights it → Emily accepts Sam's pending meet (already seeded: "Catch up after Jake's talk?" at 3 PM) → Brief → tap a line → path highlighted → Trip report → Copy.
 - FalkorDB Browser flash query: `MATCH p=(u:User {id:"sam"})-[:HAS_GOAL]->(:Goal)-[:ABOUT]->(:Topic)<-[:ABOUT]-(s:Session) RETURN p LIMIT 25`.
 - Do not steer or capture as Sam before the demo; use `?as=emily` only for the accept. If Sam's goals ever look duplicated, run `npx tsx scripts/fix-sam-goals.ts --apply`. Test users: `npx tsx scripts/purge-test-users.ts`.
+
+### 17:05 PT · sudhersan → all · people cards: photos + profile links (feat/people-cards)
+- **What changed**: `lib/types.ts` `PersonRef` gains optional `photoUrl?: string` (additive). New `components/people/PersonCard.tsx` (`PersonCard`, `PersonLinks`, `profileLink`, `personHref`); `Avatar` takes optional `src` (photo, initials fallback on error, `referrerPolicy="no-referrer"`) and a new `xl` size. Used in Network (met, intros, overlap), person page header, session speakers row.
+- **Backend can now**: return `Person.photoUrl` / `Person.links` (string URLs; LinkedIn, x.com/twitter.com, github.com, anything else = "Site") and `Session.speakers[].photoUrl`. Missing fields render nothing; no mock change needed.
+- **Assumptions**: `links` are absolute or bare-host URLs; non-http(s) values are dropped.
+- **Verify**: `/network?as=sam`, `/people/<id>`, `/sessions/<id>`.

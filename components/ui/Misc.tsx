@@ -3,6 +3,7 @@ import type { SkyNodeType } from "@/lib/types";
 import { cn } from "@/lib/ui/cn";
 import { TYPE_COLOR, TYPE_LABEL } from "@/lib/ui/tokens";
 import { initials } from "@/lib/ui/session-context";
+import { AvatarPhoto } from "./AvatarPhoto";
 
 /** Small coloured dot for a node type. */
 export function TypeDot({ type, className, size = 9 }: { type: SkyNodeType; className?: string; size?: number }) {
@@ -16,11 +17,13 @@ function fillFor(name: string) {
   return AVATAR_FILLS[h % AVATAR_FILLS.length];
 }
 
-export function Avatar({ name, size = "md", className, color }: { name: string; size?: "sm" | "md" | "lg"; className?: string; color?: string }) {
-  const s = { sm: "size-7 text-[10px]", md: "size-9 text-xs", lg: "size-12 text-sm" }[size];
+/** Initials disc in an ink ring. `src` shows a photo instead (object-cover), falling back to initials if it fails to load. */
+export function Avatar({ name, size = "md", className, color, src }: { name: string; size?: "sm" | "md" | "lg" | "xl"; className?: string; color?: string; src?: string }) {
+  const s = { sm: "size-7 text-[10px]", md: "size-9 text-xs", lg: "size-12 text-sm", xl: "size-20 text-xl md:size-24 md:text-2xl" }[size];
+  const text = initials(name);
   return (
-    <span className={cn("inline-flex shrink-0 items-center justify-center rounded-full border-2 border-border font-heading font-bold text-ink", s, className)} style={{ background: color ?? fillFor(name) }} aria-hidden>
-      {initials(name)}
+    <span className={cn("inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-border font-heading font-bold text-ink", s, className)} style={{ background: color ?? fillFor(name) }} aria-hidden>
+      {src ? <AvatarPhoto key={src} src={src} fallback={text} /> : text}
     </span>
   );
 }
