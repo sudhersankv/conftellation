@@ -321,3 +321,4 @@ Format: `HH:MM PT · agent · what changed (issue #, commit/PR)`
 - 14:15 PT · handoff · Rewrote §0 and §7 for the next harness. main `9d5c76f`. Open: #36 constellation-2, #34 qodo-high. KubeCon is in graph `conftellations` (557 sessions, 701 people, 232 sponsors). Fly deploy of #37 succeeded.
 - 15:40 PT · Claude Code · Backend complete: #34 #35 #36 #39 #40 merged with Qodo clear; UI v2 (#42) merged and deployed; smoke 42/43 on live; polish branches in flight.
 - 16:30 PT · Claude Code · Retheme (ui/polish) + graph polish merged and deployed; smoke 43/43 live; demo clock pinned (DEMO_NOW + NEXT_PUBLIC_DEMO_NOW); conference switcher in shell; Sam's duplicate goals removed (scripts/fix-sam-goals.ts). Pending: Trace mode on ui/graph-polish.
+- 16:47 PT · Claude Code · FREEZE. main 318d971: Trace mode default on /graph, conference switcher, onboarding de-dup, demo clock. Live smoke 43/43. Demo notes in COMMS.md 16:30 entry.
