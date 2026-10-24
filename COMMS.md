@@ -273,3 +273,10 @@ Sudhersan decided to rebuild the UI completely. Please stop all UI work and do n
 - **Assumption:** the UI keeps sending the conference the card belongs to. A person skip with the wrong `confId` hides them only at that conference.
 - A skip edge with no `conferenceId` still hides that session, booth, or person in the sky, same as the plan. A capture or a meeting stays visible.
 - No reseed. Verify: `npx vitest run tests/constellation.test.ts tests/planner.test.ts`.
+
+### 16:30 PT · sudhersan → ryan · demo prep (#20): what is live and how to run it
+- Live: https://conftellations.fly.dev. UI v2 (cream theme) + full backend. Demo clock is pinned to **13:05 PT** on server and client, so the plan, graph, captures and meet accept all agree. `?now=off` disables it per tab; `?now=<ISO>` overrides.
+- Two phones: Sam = `https://conftellations.fly.dev/plan?as=sam`, Emily = `.../network?as=emily`. The conference dropdown is in the sidebar / top bar.
+- Demo path (spec §16): Add → paste KubeCon link (cached, ~1 s) → Goals → Plan (calendar) → steer "leaving at 3pm, more tracing" → Undo toast → Conftellation (graph) → open a session → Check in + Note → graph lights it → Emily accepts Sam's pending meet (already seeded: "Catch up after Jake's talk?" at 3 PM) → Brief → tap a line → path highlighted → Trip report → Copy.
+- FalkorDB Browser flash query: `MATCH p=(u:User {id:"sam"})-[:HAS_GOAL]->(:Goal)-[:ABOUT]->(:Topic)<-[:ABOUT]-(s:Session) RETURN p LIMIT 25`.
+- Do not steer or capture as Sam before the demo; use `?as=emily` only for the accept. If Sam's goals ever look duplicated, run `npx tsx scripts/fix-sam-goals.ts --apply`. Test users: `npx tsx scripts/purge-test-users.ts`.

@@ -40,18 +40,27 @@ export async function onboard(userId: string, body: OnboardingRequest, now?: str
   );
   if (body.availFrom !== undefined || body.availTo !== undefined) await setWindow(userId, body.availFrom ?? null, body.availTo ?? null);
 
+  // Re-onboarding (the Goals screen prefills existing goals): reuse the user's existing Goal/Problem with the same text,
+  // so seeded ids like g-tracing are kept and nothing is duplicated.
+  const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
+  const existing = await q<{ label: string; id: string; text: string }>(
+    `MATCH (u:User {id:$userId})-[:HAS_GOAL|HAS_PROBLEM]->(x) RETURN labels(x)[0] AS label, x.id AS id, x.text AS text`,
+    { userId },
+  );
+  const existingId = (label: "Goal" | "Problem", text: string) => existing.find((e) => e.label === label && norm(e.text ?? "") === norm(text))?.id;
+
   const goals: Goal[] = [];
   for (const [i, g] of (body.goals ?? []).entries()) {
     if (!g.text?.trim()) continue;
     const topics = await linkTopics(g.text, g.topics, body.confId);
-    const goal: Goal = { id: `g-${userId}-${slug(g.text).slice(0, 40)}`, text: g.text.trim(), kind: g.kind ?? "learn", weight: weightAt(i), topics };
+    const goal: Goal = { id: existingId("Goal", g.text) ?? `g-${userId}-${slug(g.text).slice(0, 40)}`, text: g.text.trim(), kind: g.kind ?? "learn", weight: weightAt(i), topics };
     await upsertGoal(userId, goal);
     goals.push(goal);
   }
   const problems: Problem[] = [];
   for (const text of body.problems ?? []) {
     if (!text?.trim()) continue;
-    const p: Problem = { id: `pr-${userId}-${slug(text).slice(0, 40)}`, text: text.trim(), topics: await linkTopics(text, undefined, body.confId) };
+    const p: Problem = { id: existingId("Problem", text) ?? `pr-${userId}-${slug(text).slice(0, 40)}`, text: text.trim(), topics: await linkTopics(text, undefined, body.confId) };
     await upsertProblem(userId, p);
     problems.push(p);
   }
