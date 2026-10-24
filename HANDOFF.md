@@ -19,8 +19,9 @@ Living, harness-agnostic handoff for whichever agent is driving (Claude Code, Cu
 - **State**: **#2 done** (adapters), **#1 done** (demo graph seeded on the hosted instance with **real OpenAI embeddings**). All routes still serve mocks. 11 tests pass (`npm test`, ~20 s, seeds `_test` graph with the fake embedder).
 - **Working mode (user, 11:50 PT)**: go **module by module**, test each live before moving on, ask the user on use-case questions instead of assuming.
 - **LLM**: `OPENAI_MODEL=gpt-5.4-nano` (user's choice; verified live, ~2 s structured call). `lib/llm.ts` sends `reasoning_effort` (env `OPENAI_REASONING_EFFORT`, default `low`) instead of `temperature` for gpt-5*/o* models.
-- **Bright Data: BLOCKED on the user.** Key is valid (`GET /zone/get_active_zones` → 200 `[]`) but the account has **no zones**, and the key is not admin: `POST /zone` and `bdata budget` → 403 "lacks the required permissions". Fix (user): either run `npx bdata login` (browser OAuth; auto-creates `cli_unlocker`), or give the key admin permissions at brightdata.com/cp/setting/users and then run `npx tsx scripts/bd-zones.ts --create` (creates `conftellations_unlocker` + `conftellations_serp`), then set `BRIGHTDATA_UNLOCKER_ZONE` / `BRIGHTDATA_SERP_ZONE`. Plain-HTTP platform imports (Sessionize, RainFocus, sched) don't need it.
-- **Your next task**: unblock Bright Data zones, then **#3** Scout (live demo = **KubeCon NA 2026 via Sessionize + Bright Data sponsor enrichment**), **#4** Planner, **#7** Constellation. See §7.
+- **Bright Data: working** (12:04 PT). User ran `npx bdata login`, which created zones `cli_unlocker` (unblocker) + `cli_browser`. `.env.local`: `BRIGHTDATA_UNLOCKER_ZONE=cli_unlocker`, `BRIGHTDATA_SERP_ZONE=cli_unlocker` (SERP via the unlocker zone works with `&brd_json=1`). Verified live: `unlock()` ~23 s/page, `serp()` ~18 s, 9 organic results. **Slow: pre-warm the cache before the demo.** Our API key still can't create zones (not admin); `scripts/bd-zones.ts` lists them.
+- **UI direction** posted to Ryan in COMMS.md (12:05 PT): dark, sleek, Gen Z, restrained neon; constellation not galaxy; conference cues; surface Scout/Planner/Steer/Scribe/Recapper subtly.
+- **Your next task**: **#3** Scout (live demo = **KubeCon NA 2026 via Sessionize + Bright Data sponsor enrichment**), **#4** Planner, **#7** Constellation. See §7.
 
 ---
 
@@ -254,7 +255,7 @@ npx skills@latest add mattpocock/skills -a cursor
 ## 9. Open questions for the user (blocking or soon-blocking)
 
 1. ~~OPENAI_API_KEY~~ set (11:47 PT). Model `gpt-5.4-nano`.
-2. ~~BRIGHTDATA_API_KEY~~ set, but **no zones exist** on the account and the key lacks permissions for budget. User said "do what you can to fix it" (11:56 PT). Need an Unlocker zone + SERP zone.
+2. ~~Bright Data zones~~ → `cli_unlocker` for both Unlocker and SERP (12:04 PT).
 3. Which sponsor gave the **$50 credits**, and is it applied to the account?
 4. Fly.io: confirm app name `conftellations`, region `sjc`, and that the personal org has billing set up.
 5. ~~Real PTC details~~ → fabricated is fine (user, 11:56 PT).
@@ -288,3 +289,4 @@ Format: `HH:MM PT · agent · what changed (issue #, commit/PR)`
 - 11:53 PT · Cursor · #1 done: shared `upsertConference()` + identity rules, RainFocus adapter, `seed/ptc.json`, June conf, personal layer, `npm run seed` (real embeddings, ~45 s), `npm run inspect`, `tests/seed.test.ts`. `Via` widened (`rainfocus`, `ics`; COMMS note). 11/11 tests pass.
 - 11:56 PT · Cursor · Model → `gpt-5.4-nano` (verified live). Bright Data: no zones on account, budget 403. Decisions: KubeCon is the live import demo; fabricated PTC is fine; work module by module.
 - 11:59 PT · Cursor · Bright Data key can list zones (none) but can't create them (403). `scripts/bd-zones.ts` added. Waiting on user: `bdata login` or admin key.
+- 12:05 PT · Cursor · User ran `bdata login` → `cli_unlocker`. Unlocker + SERP verified live (~20 s each, 2 credits total). UI direction + backend agent vocabulary posted to Ryan in COMMS.md. Next: #3 Scout step 1 (Sessionize/KubeCon).

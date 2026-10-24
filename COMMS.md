@@ -22,3 +22,21 @@ Don't use it for: status chatter (use issues), secrets (never).
 ### 11:52 PT · sudhersan → ryan · contract: `Via` widened + real seed
 - `lib/types.ts`: `Via` gains `"rainfocus" | "ics"` (additive; GitHub Universe nodes carry `via:"rainfocus"`, PTC/June seed data carries `via:"seed"`). If you switch on `via` for the "collected Xh ago" chip, add a default case.
 - Demo graph is seeded (`npm run seed`): PTC (13 sessions, 7 booths), AI Engineer Summit June, GitHub Universe (157 sessions). All mock ids exist in the graph with the same meaning. Extra PTC ids you may see: sessions `s-opening s-falkor-intro s-evals s-review s-truefoundry s-otel s-gpu s-hiring s-demos`, booths `b-brightdata b-truefoundry b-qodo b-tensorgrid b-lumen`.
+
+### 12:05 PT · sudhersan → ryan · UI direction (from Sudhersan, please follow)
+**Look & feel.** It's called *Conftellations* for a reason: the Sky (constellation) is the product's identity, so make it feel like one, but stay useful first.
+- **Dark, sleek, Gen Z, slightly neon.** Near-black background (think `#0B0B12`), one violet accent plus restrained neon highlights (cyan/teal/amber) for state. Neon as **thin lines, small glows on focus and lit stars**, not big blooms or gradients everywhere. **Not too shiny, not "galactic".** No nebula wallpapers, starfield parallax, space photos or sci-fi fonts. Nothing cringe.
+- **Constellation, not galaxy.** Stars are crisp dots, links are thin lines, labels are clean (system font / Inter). Planned = dim outline, done = lit with a short pulse, unplanned = bright, other users = small teal stars, the rest of the conference = faint dust. Tap a brief line → its path lights up, everything else dims to ~15%.
+- **Conference theme too.** Weave in conference cues so it doesn't read as an astronomy app: badge/lanyard-style cards, session time chips, room/booth labels ("Stage B", "Booth 14"), "collected 2h ago" provenance chips, track-colored topic tags.
+- **Usable on a phone at a busy venue**: 390px, big tap targets, high contrast, the 5-second capture rule, readable in bright light (keep body text contrast high even on dark).
+- Spec §12 still holds for screens and the color mapping (Goal/Problem gold, Session violet, Person orange, Company/Booth green, Moment white, other users teal).
+
+**Backend vocabulary you can surface in the UI** (these are real backend "agents" that coordinate only through the graph; no chatbot anywhere):
+- **Scout**: imports a conference from a pasted URL (Sessionize/RainFocus/sched fast paths; Bright Data Unlocker + SERP for other sites and sponsor "what they do"). Shows counts + "collected just now".
+- **Planner**: builds the day plan from goals; every card has a `why` (a real graph path you can light up in the Sky).
+- **Steer**: the one-line steer bar ("leaving at 3pm", "more tracing, less hiring") → structured ops → diff toast. Not a chat.
+- **Scribe**: capture (check-in, note, photo, met someone) → lights stars, returns `lit` node ids to pulse.
+- **Recapper**: nightly brief + trip report; every sentence cites a path id.
+Small touches like "Scout found 574 sessions" or "Planner re-routed: −1 session" are welcome; keep them subtle (status lines, not mascots).
+
+**Heads-up on latency:** a live Bright Data import can take ~20 s per page; design the Add-conference result state with progress steps ("Reading agenda… Finding sponsors… Building your sky") rather than a bare spinner.
