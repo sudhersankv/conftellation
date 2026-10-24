@@ -16,8 +16,8 @@ Living, harness-agnostic handoff for whichever agent is driving (Claude Code, Cu
 
 - **What**: Conftellations, an attendee-owned conference brain. Hackathon: Patch the Conference (WeMakeDevs), **Sat Oct 24 2026, SF. Code freeze 16:45 PT, demo 17:30 PT.** Main track FalkorDB, secondary Bright Data, Qodo reviews PRs.
 - **Team**: **Sudhersan** (`sudhersankv`, you/Cursor) = graph + backend + deploy. **Ryan** (`RyanV27`, his own agent) = UI. Ryan is setting up Qodo on the repo right now.
-- **State**: scaffold, contract, mock-backed routes, FalkorDB client and tests are pushed to `main`. 20 work issues plus the spec issue are on GitHub. **No real backend logic yet.**
-- **Your next task**: issue **#2** (`lib/llm.ts`, `lib/brightdata.ts`), then **#1** (seed), then **#3** (Scout) and **#4** (Planner). See §7.
+- **State**: scaffold, contract, mock-backed routes, FalkorDB client and tests on `main`. **#2 done** (`lib/llm.ts` with a fake embedder fallback, `lib/brightdata.ts` with disk cache + cap). Env verified 11:38 PT (install, falkor:ping, tests all pass).
+- **Your next task**: **#1** (seed), then **#3** (Scout), **#4** (Planner), **#7** (Constellation). See §7.
 - **Blocked on the user**: `OPENAI_API_KEY`, `BRIGHTDATA_API_KEY` + zone names, which sponsor the "$50 credits" belong to, Fly.io go-ahead, any real PTC details. See §9.
 
 ---
@@ -58,6 +58,9 @@ npm run smoke           # NOT WRITTEN YET: tsx scripts/smoke.ts
 | `app/api/**/route.ts` | 18 route stubs (all spec §11 routes), each returning its mock. Replace the body with the real handler and keep the return type. Use `handle()` and `json<T>()` / `error()` from `lib/http.ts`. |
 | `lib/http.ts` | `json`, `error`, `handle` (turns throws into `{error}` JSON), `useMocks()`. |
 | `lib/falkor.ts` | FalkorDB singleton (survives HMR via `globalThis`), `q()` (read/write), `ro()` (read-only), `vecf32()` inline literal helper. Uses HOST/PORT/TLS if `FALKORDB_HOST` is set, else `FALKORDB_URL`. |
+| `lib/llm.ts` | `embed(texts)` (batched 100), `embedOne`, `structured(zodSchema, system, user)` via `chat.completions.parse` + `zodResponseFormat`, `hasLLM()`, `embedderName()`. **No key (or `EMBED_FAKE=true`) → `fakeEmbed`**: deterministic 1536-d feature hashing of words + bigrams (lexical similarity, so vector search still ranks sensibly). `structured()` throws without a key; callers must check `hasLLM()` and fall back. |
+| `lib/brightdata.ts` | `unlock(url,{format})`, `serp(query)`, `studio(collectorId, inputs)`, `scraperApi(datasetId, inputs)`, plus `fetchText`/`fetchJson` for plain HTTP. All return `{data, cached, collectedAt, via, source}`. Cache: `seed/raw/cache/<sha1(key)>.json` (override `BRIGHTDATA_CACHE_DIR`). Cap: `BRIGHTDATA_MAX_REQUESTS` per process, counts only Bright Data calls (not plain HTTP). `CACHE_ONLY=true` = offline, miss throws. |
+| `tests/adapters.test.ts` | Primed cache → 0 network calls for every adapter fn; cap; CACHE_ONLY; fake embedder sanity. |
 | `scripts/falkor-ping.ts` | Connectivity + vector sanity check. |
 | `tests/setup.ts`, `tests/contract.test.ts`, `vitest.config.ts` | vitest with `@` alias. Setup forces graph `<name>_test`. Contract tests check the fixture invariants (3 passing). |
 | `CLAUDE.md` | Principles, ownership, run commands, FalkorDB facts. **Cursor should treat it as the project rules** (`AGENTS.md` and `.cursor/rules/` point to it). |
@@ -178,8 +181,8 @@ The backend load is heavy, so prioritise by spec §15 "never cut": Sky with why-
 
 ## 7. Next steps for Cursor (in order)
 
-1. **#2 `lib/llm.ts`**: `embed(texts: string[]): Promise<number[][]>` (batch ≤ 100, model `OPENAI_EMBED_MODEL`); `structured<T>(schema: ZodType<T>, system: string, user: string): Promise<T>` using OpenAI structured outputs (`zodResponseFormat` from `openai/helpers/zod`) with `OPENAI_MODEL`. Keep the module tiny so tests can `vi.mock("@/lib/llm")`.
-2. **#2 `lib/brightdata.ts`**: `unlock(url, {format:"markdown"})` → `POST https://api.brightdata.com/request` `{zone, url, format:"raw", data_format:"markdown"}` with `Authorization: Bearer $BRIGHTDATA_API_KEY`; `serp(query)` (same endpoint, SERP zone, a google URL); a disk cache keyed by sha1(request) in `seed/raw/cache/`; a request counter that throws past `BRIGHTDATA_MAX_REQUESTS`. Also `fetchJson`/`fetchText` with the same cache for the plain-HTTP platform paths.
+1. ~~#2 adapters~~ **done** (see §2).
+2. ~~(merged into 1)~~
 3. **#1 seed** (`seed/seed.ts`, `npm run seed`): wipe the graph → indexes (spec §5.4) → load PTC (hand-written `seed/ptc.json`: sponsors FalkorDB, Bright Data, TrueFoundry, Qodo + fictional Acme Trace Booth 14) → GitHub Universe from `seed/raw/github-universe-2026-sessions.slim.json` → AI Eng Summit June (6 sessions, Sam met Jake) → users (`sam`, `emily`, `mike` + 10–15 generated) → Sam's day → embeddings. **Ids must match `mocks/index.ts`.** Without an OpenAI key, write a deterministic fake embedder (hash → 1536-d vector) behind a flag so the graph can be built now and re-embedded later.
 4. **#3 Scout**: platform adapters (`sessionize`, `sched`, `rainfocus`, `ics`, `unlocker+llm`) → `NormalizedConference` → shared `upsertConference()` used by both the seed and the route.
 5. **#4 Planner** then **#7 Constellation**: these unblock Ryan's Sky (#12) and Plan (#13) on real data. Post `route X is live` in COMMS.md each time.
@@ -253,3 +256,5 @@ Format: `HH:MM PT · agent · what changed (issue #, commit/PR)`
 - 11:35 PT · Claude Code · Issues #1–#20 created and assigned; spec issue #21 (`ready-for-agent`).
 - 11:40 PT · Claude Code · Scrape probe done (GitHub Universe RainFocus, KubeCon Sessionize); findings on #3; raw data in `seed/raw/`.
 - 11:50 PT · Claude Code · HANDOFF.md, AGENTS.md, `.cursor/rules/conftellations.mdc`; handed to Cursor. Next: #2 → #1 → #3 → #4.
+- 11:38 PT · Cursor · Env check: `npm install`, `falkor:ping`, `npm test` all pass. OpenAI + Bright Data keys still empty.
+- 11:42 PT · Cursor · #2 done: `lib/llm.ts` (fake hash embedder fallback), `lib/brightdata.ts` (sha1 disk cache, cap, CACHE_ONLY), `tests/adapters.test.ts` (7/7 pass). Next: #1 seed.
