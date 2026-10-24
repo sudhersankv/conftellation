@@ -11,6 +11,7 @@ import { Button, Card, Chip, EmptyState, ErrorState, PageHeader, SectionHeader, 
 import { IntroCard } from "@/components/network/IntroCard";
 import { BriefSections } from "./BriefLines";
 import { TripReport } from "./TripReport";
+import { AskPanel } from "@/components/ask/AskPanel";
 
 type Tab = "brief" | "trip";
 
@@ -58,6 +59,8 @@ export function BriefView() {
       />
 
       <Segmented value={tab} onChange={setTab} options={[{ value: "brief", label: "Brief" }, { value: "trip", label: "Trip report" }]} className="self-start" />
+
+      <AskPanel userId={userId} confId={confId} />
 
       {tab === "brief" ? (
         <>
