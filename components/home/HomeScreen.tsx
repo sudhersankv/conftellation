@@ -1,4 +1,5 @@
 "use client";
+import { LogoMark } from "@/components/shell/Logo";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, CalendarPlus } from "lucide-react";
@@ -23,7 +24,7 @@ export function HomeScreen() {
   return (
     <div>
       <PageHeader
-        title={`${name}'s conferences`}
+        title={<span className="flex flex-wrap items-center gap-x-3"><LogoMark size={40} className="shadow-hard" />{`${name}'s conferences`}<span className="-rotate-3 font-hand text-2xl font-semibold text-[#C2185B] md:text-3xl">your conference brain</span></span>}
         subtitle="Pick one to open its plan, or pull a new agenda."
         actions={rec.data && confs.length === 0 ? undefined : <Link href="/add" className={buttonClass()}><Plus className="size-4" />Add a conference</Link>}
       />

@@ -6,13 +6,13 @@ import { cn } from "@/lib/ui/cn";
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md" | "lg";
 
-const BASE = "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition duration-fast select-none active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40 whitespace-nowrap";
-const SIZES: Record<ButtonSize, string> = { sm: "h-8 px-3 text-xs", md: "h-10 px-4 text-sm", lg: "h-12 px-5 text-base" };
+const BASE = "inline-flex items-center justify-center gap-2 rounded-full font-heading font-bold tracking-tight select-none disabled:pointer-events-none disabled:opacity-40 whitespace-nowrap";
+const SIZES: Record<ButtonSize, string> = { sm: "h-8 px-3.5 text-xs", md: "h-10 px-5 text-sm", lg: "h-12 px-6 text-base" };
 const VARIANTS: Record<ButtonVariant, string> = {
-  primary: "bg-accent text-bg hover:bg-accentStrong",
-  secondary: "border border-border bg-surface text-text hover:bg-surface2 hover:border-borderStrong",
-  ghost: "text-muted hover:text-text hover:bg-surface2",
-  danger: "border border-danger/40 text-danger hover:bg-danger/10",
+  primary: "press border-2 border-border bg-accent text-ink shadow-hard hover:bg-accentStrong",
+  secondary: "press-sm border-2 border-border bg-surface text-ink shadow-hardSm hover:bg-surface2",
+  ghost: "border-2 border-transparent text-muted transition duration-fast hover:border-border hover:bg-surface hover:text-text",
+  danger: "press-sm border-2 border-border bg-pink text-ink shadow-hardSm hover:bg-danger",
 };
 
 /** Class string so a <Link> can look like a button. */

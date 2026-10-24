@@ -40,7 +40,7 @@ export function TopicPicker({ topics, value, onChange, idPrefix }: { topics: str
               onClick={() => toggle(t)}
               className={cn(
                 "inline-flex h-10 items-center gap-1 rounded-md border px-2.5 text-xs transition duration-fast md:h-7",
-                on ? "border-accent/50 bg-accent/10 text-accentStrong" : "border-border bg-surface text-muted hover:border-borderStrong hover:text-text",
+                on ? "border-border bg-accent shadow-hardSm text-text" : "border-border bg-surface text-muted hover:border-borderStrong hover:text-text",
               )}
             >
               {on && <Check className="size-3" aria-hidden />}

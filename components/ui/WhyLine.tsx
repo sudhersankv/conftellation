@@ -15,15 +15,15 @@ export function WhyLine({ paths, confId, className, compact }: { paths: WhyPath[
     <Link
       href={graphHref(ids, confId)}
       onClick={(e) => e.stopPropagation()}
-      className={cn("group flex items-start gap-2 text-left text-xs leading-5 text-muted hover:text-text", compact ? "" : "py-1", className)}
+      className={cn("group flex items-start gap-2 text-left text-xs leading-5 text-muted hover:text-text hover:underline decoration-accent decoration-2 underline-offset-2", compact ? "" : "py-1", className)}
       title="Show in graph"
     >
-      <span className="mt-[7px] size-1.5 shrink-0 rounded-full" style={{ background: colorOf(path.nodes[0]?.label ?? "Topic") }} aria-hidden />
+      <span className="mt-[6px] size-2 shrink-0 rounded-full ring-1 ring-ink" style={{ background: colorOf(path.nodes[0]?.label ?? "Topic") }} aria-hidden />
       <span className="min-w-0">
         {path.text}
         {extra > 0 && <span className="text-faint"> · +{extra} more</span>}
       </span>
-      <GitBranch className="ml-auto mt-1 size-3.5 shrink-0 text-faint group-hover:text-accent" aria-hidden />
+      <GitBranch className="ml-auto mt-1 size-3.5 shrink-0 text-faint group-hover:text-text" aria-hidden />
     </Link>
   );
 }
@@ -32,7 +32,7 @@ export function WhyLine({ paths, confId, className, compact }: { paths: WhyPath[
 export function WhyList({ paths, confId }: { paths: WhyPath[]; confId?: string }) {
   if (paths.length === 0) return null;
   return (
-    <ul className="divide-y divide-border rounded-lg border border-border bg-surface px-3">
+    <ul className="divide-y divide-ink/15 rounded-xl border-2 border-border bg-surface px-3">
       {paths.map((p) => <li key={p.id}><WhyLine paths={[p]} confId={confId} className="py-2" /></li>)}
     </ul>
   );

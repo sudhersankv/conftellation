@@ -23,6 +23,7 @@ export async function capture(userId: string, fields: CreateMomentFields, what?:
 export function CaptureRow({ userId, confId, sessionId, onSaved }: { userId: string; confId: string; sessionId: string; onSaved(): void }) {
   const [mode, setMode] = useState<Mode>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [photoShared, setPhotoShared] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const run = async (key: string, fields: Omit<CreateMomentFields, "confId" | "targetId">, what?: string) => {
@@ -41,8 +42,8 @@ export function CaptureRow({ userId, confId, sessionId, onSaved }: { userId: str
   };
 
   const btn = (active: boolean) => cn(
-    "flex h-14 flex-col items-center justify-center gap-1 rounded-lg border text-xs transition duration-fast active:scale-[0.98] disabled:opacity-40 md:h-11 md:flex-row md:gap-2 md:text-sm",
-    active ? "border-accent/60 bg-accent/10 text-text" : "border-border bg-surface text-muted hover:border-borderStrong hover:text-text",
+    "press-sm flex h-16 flex-col items-center justify-center gap-1 rounded-full border-2 border-border font-heading text-xs font-bold text-ink shadow-hardSm disabled:opacity-40 md:h-12 md:flex-row md:gap-2 md:text-sm",
+    active ? "bg-accent" : "bg-surface hover:bg-surface2",
   );
 
   return (
@@ -61,6 +62,10 @@ export function CaptureRow({ userId, confId, sessionId, onSaved }: { userId: str
           <UserPlus className="size-4" />Met
         </button>
       </div>
+      <label className="mt-2 flex w-fit cursor-pointer items-center gap-2 text-xs text-muted">
+        <input type="checkbox" checked={photoShared} onChange={(e) => setPhotoShared(e.target.checked)} className="size-4 accent-[#111111]" />
+        Share photos with attendees
+      </label>
       <input
         ref={fileRef}
         type="file"
@@ -70,7 +75,7 @@ export function CaptureRow({ userId, confId, sessionId, onSaved }: { userId: str
         onChange={(e) => {
           const file = e.target.files?.[0];
           e.target.value = "";
-          if (file) void run("photo", { kind: "photo", file }, "Photo saved");
+          if (file) void run("photo", { kind: "photo", file, shared: photoShared }, "Photo saved");
         }}
       />
       {mode === "note" && <NoteForm busy={busy === "note"} onCancel={() => setMode(null)} onSave={(text, shared) => run("note", { kind: "note", text, shared })} />}
@@ -84,13 +89,13 @@ function NoteForm({ busy, onSave, onCancel }: { busy: boolean; onSave(text: stri
   const [shared, setShared] = useState(false);
   return (
     <form
-      className="mt-3 rounded-lg border border-border bg-surface p-3"
+      className="mt-3 rounded-xl border-2 border-border bg-surface p-3 shadow-hard"
       onSubmit={(e) => { e.preventDefault(); if (text.trim()) void onSave(text.trim(), shared); }}
     >
       <Textarea autoFocus value={text} onChange={(e) => setText(e.target.value)} placeholder="What stood out" className="min-h-20" aria-label="Note" />
       <div className="mt-2 flex items-center justify-between gap-2">
         <label className="flex cursor-pointer items-center gap-2 text-xs text-muted">
-          <input type="checkbox" checked={shared} onChange={(e) => setShared(e.target.checked)} className="size-4 accent-[#8B7CF6]" />
+          <input type="checkbox" checked={shared} onChange={(e) => setShared(e.target.checked)} className="size-4 accent-[#111111]" />
           Share with attendees
         </label>
         <div className="flex gap-2">
@@ -125,7 +130,7 @@ function MetForm({ confId, busy, onSave, onCancel }: { confId: string; busy: boo
   }, [q, confId]);
 
   return (
-    <div className="mt-3 rounded-lg border border-border bg-surface p-3">
+    <div className="mt-3 rounded-xl border-2 border-border bg-surface p-3 shadow-hard">
       <div className="mb-2 flex items-center justify-between">
         <span className="text-xs font-medium text-muted">{adding ? "Add someone new" : "Who did you meet"}</span>
         <button type="button" onClick={onCancel} className="rounded-md p-1 text-muted hover:text-text" aria-label="Close"><X className="size-4" /></button>
@@ -161,7 +166,7 @@ function MetForm({ confId, busy, onSave, onCancel }: { confId: string; busy: boo
             ))}
             {q.trim().length >= 2 && !searching && people.length === 0 && <li className="px-2 py-2 text-xs text-muted">No one matches.</li>}
           </ul>
-          <button type="button" onClick={() => { setAdding(true); setName(q); }} className="mt-1 flex items-center gap-2 rounded-md px-2 py-2 text-sm text-accentStrong hover:bg-surface2">
+          <button type="button" onClick={() => { setAdding(true); setName(q); }} className="mt-1 flex items-center gap-2 rounded-md px-2 py-2 text-sm text-text hover:bg-surface2">
             <UserPlus className="size-4" />Add new{q.trim() ? `: ${q.trim()}` : ""}
           </button>
         </>

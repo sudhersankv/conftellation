@@ -32,7 +32,7 @@ function Progress({ step }: { step: number }) {
           const state = i < step ? "done" : i === step ? "active" : "todo";
           return (
             <li key={s} className={cn("flex items-center gap-2.5 text-sm", state === "todo" ? "text-faint" : state === "active" ? "text-text" : "text-muted")}>
-              {state === "done" ? <Check className="size-4 text-ok" aria-hidden /> : state === "active" ? <Loader2 className="size-4 animate-spin text-accent motion-reduce:animate-none" aria-hidden /> : <Circle className="size-4" aria-hidden />}
+              {state === "done" ? <Check className="size-4 text-[#0B7A52]" aria-hidden /> : state === "active" ? <Loader2 className="size-4 animate-spin text-text motion-reduce:animate-none" aria-hidden /> : <Circle className="size-4" aria-hidden />}
               {s}
             </li>
           );

@@ -2,8 +2,8 @@
 import type { NodeLabel, SkyNodeType } from "@/lib/types";
 
 export const TYPE_COLOR: Record<SkyNodeType, string> = {
-  goal: "#F2C14E", problem: "#F2C14E", session: "#8B7CF6", person: "#F28B5B", company: "#4FD1A0", booth: "#4FD1A0",
-  moment: "#FFFFFF", user: "#4FC3D9", conference: "#8E8EA3", topic: "#8E8EA3", meet: "#4FC3D9",
+  goal: "#FFD23F", problem: "#FFD23F", session: "#A78BFA", person: "#FF8C42", company: "#3DDC97", booth: "#3DDC97",
+  moment: "#111111", user: "#4DA3FF", conference: "#B8B2C2", topic: "#B8B2C2", meet: "#FF6FAE",
 };
 
 export const TYPE_LABEL: Record<SkyNodeType, string> = {

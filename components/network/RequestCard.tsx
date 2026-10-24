@@ -10,9 +10,9 @@ import { proposalText, type SessionLookup } from "./proposal";
 
 const STATUS: Record<MeetStatus, { label: string; cls: string }> = {
   pending: { label: "Pending", cls: "text-muted" },
-  accepted: { label: "Accepted", cls: "border-ok/40 text-ok" },
-  declined: { label: "Declined", cls: "border-danger/40 text-danger" },
-  countered: { label: "New time suggested", cls: "border-goal/40 text-goal" },
+  accepted: { label: "Accepted", cls: "border-border text-[#0B7A52]" },
+  declined: { label: "Declined", cls: "border-border text-[#D7263D]" },
+  countered: { label: "New time suggested", cls: "border-border text-[#7A5C00]" },
 };
 
 export function StatusChip({ status }: { status: MeetStatus }) {

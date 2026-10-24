@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { Camera, GitBranch, MapPin, Mic, Share2, StickyNote, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import type { CommunityResponse, Moment, MomentKind } from "@/lib/types";
-import { api } from "@/lib/client";
+import { api, mediaSrc } from "@/lib/client";
 import { apiKey, useApi } from "@/lib/ui/use-api";
 import { useSession } from "@/lib/ui/session-context";
 import { fmtDay, fmtRange, fmtTime } from "@/lib/ui/format";
@@ -120,16 +120,17 @@ function MemoCard({ memo, userId, confId, sessionId, onSaved }: { memo?: Moment;
 }
 
 function MomentRow({ m, onShared }: { m: Moment; onShared(): void }) {
+  const { userId } = useSession();
   const Icon = KIND_ICON[m.kind] ?? StickyNote;
   const [busy, setBusy] = useState(false);
   const share = async () => {
     setBusy(true);
-    try { await api.shareMoment(m.id, "network"); toast("Shared with attendees"); onShared(); }
+    try { await api.shareMoment(m.id, "network", userId); toast("Shared with attendees"); onShared(); }
     catch (e) { toast.error(`Couldn't share: ${e instanceof Error ? e.message : "unknown error"}`); }
     finally { setBusy(false); }
   };
   return (
-    <li className="flex gap-3 rounded-lg border border-border bg-surface p-3">
+    <li className="flex gap-3 rounded-xl border-2 border-border bg-surface p-3 shadow-hardSm">
       <Icon className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 text-xs text-muted">
@@ -138,7 +139,7 @@ function MomentRow({ m, onShared }: { m: Moment; onShared(): void }) {
         {m.text && <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-text">{m.text}</p>}
         {m.mediaUrl && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={m.mediaUrl} alt="" className="mt-2 max-h-64 rounded-md border border-border object-cover" loading="lazy" />
+          <img src={mediaSrc(m.mediaUrl, { userId })} alt="" className="mt-2 max-h-64 rounded-lg border-2 border-border object-cover" loading="lazy" />
         )}
       </div>
       {(m.kind === "note" || m.kind === "photo") && (
@@ -151,6 +152,7 @@ function MomentRow({ m, onShared }: { m: Moment; onShared(): void }) {
 }
 
 function Community({ data }: { data: CommunityResponse }) {
+  const { userId } = useSession();
   const noteIds = new Set(data.sharedNotes.map((n) => n.id));
   const jump = (id: string) => {
     const el = document.getElementById(`moment-${id}`);
@@ -166,14 +168,14 @@ function Community({ data }: { data: CommunityResponse }) {
       <section>
         <SectionHeader title="Crowd summary" action={data.crowdSummary && <span className="text-xs text-faint">as of {fmtTime(data.crowdSummary.updatedAt)}</span>} />
         {data.crowdSummary && data.crowdSummary.lines.length > 0 ? (
-          <ul className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-3">
+          <ul className="flex flex-col gap-2 rounded-xl border-2 border-border bg-surface p-3 shadow-hardSm">
             {data.crowdSummary.lines.map((l, i) => (
               <li key={i} className="flex items-start gap-2 text-sm leading-6 text-text">
                 <span className="mt-[9px] size-1.5 shrink-0 rounded-full bg-accent" aria-hidden />
                 <span className="min-w-0 flex-1">
                   {l.text}{" "}
                   {noteIds.has(l.momentId)
-                    ? <button type="button" onClick={() => jump(l.momentId)} className="font-mono text-[10px] text-faint hover:text-accentStrong">[{l.momentId}]</button>
+                    ? <button type="button" onClick={() => jump(l.momentId)} className="font-mono text-[10px] text-faint hover:text-text">[{l.momentId}]</button>
                     : <span className="font-mono text-[10px] text-faint">[{l.momentId}]</span>}
                 </span>
               </li>
@@ -185,7 +187,7 @@ function Community({ data }: { data: CommunityResponse }) {
       <section>
         <SectionHeader title="Hot moments" />
         {data.hotMoments.length > 0 ? (
-          <div className="rounded-lg border border-border bg-surface p-3">
+          <div className="rounded-xl border-2 border-border bg-surface p-3 shadow-hardSm">
             <div className="flex h-24 items-end gap-1">
               {data.hotMoments.map((h) => (
                 <div key={h.binStart} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1" title={`${fmtTime(h.binStart)} · ${h.count} captures`}>
@@ -210,14 +212,14 @@ function Community({ data }: { data: CommunityResponse }) {
         ) : (
           <ul className="flex flex-col gap-2">
             {[...data.sharedNotes].sort((a, b) => a.at.localeCompare(b.at)).map((n) => (
-              <li key={n.id} id={`moment-${n.id}`} className="rounded-lg border border-border bg-surface p-3 transition duration-fast">
+              <li key={n.id} id={`moment-${n.id}`} className="rounded-xl border-2 border-border bg-surface p-3 shadow-hardSm transition duration-fast">
                 <div className="flex items-center gap-2 text-xs text-muted">
                   <span className="text-text">{n.author}</span><span className="tabular text-faint">{fmtTime(n.at)}</span>
                 </div>
                 {n.text && <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-text">{n.text}</p>}
                 {n.mediaUrl && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={n.mediaUrl} alt="" className="mt-2 max-h-64 rounded-md border border-border object-cover" loading="lazy" />
+                  <img src={mediaSrc(n.mediaUrl, { userId, momentId: n.id })} alt="" className="mt-2 max-h-64 rounded-lg border-2 border-border object-cover" loading="lazy" />
                 )}
               </li>
             ))}

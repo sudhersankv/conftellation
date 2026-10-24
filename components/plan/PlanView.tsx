@@ -2,7 +2,7 @@
 // /plan: the calendar. Header + summary, day tabs, steer bar + proposal, hour grid (md+) / time list (phone), By goal view.
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { CalendarDays, Lock, LockOpen, Target } from "lucide-react";
+import { CalendarDays, Lock, LockOpen, PenLine, Target } from "lucide-react";
 import { toast } from "sonner";
 import type { ConferenceDetail, Goal, ItinerarySlot, PlanResponse, SteerResponse } from "@/lib/types";
 import { api } from "@/lib/client";
@@ -93,10 +93,10 @@ export function PlanView() {
       {/* Header */}
       <header className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0">
-          <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted">
+          <div className="inline-flex items-center gap-1.5 rounded-full border-2 border-border bg-accent px-2.5 py-0.5 font-heading text-[11px] font-bold uppercase tracking-wide text-ink">
             <CalendarDays className="size-3.5" aria-hidden />Your plan
           </div>
-          <h1 className="mt-1 text-xl font-semibold tracking-tight md:text-2xl">{conf?.name ?? confId}</h1>
+          <h1 className="mt-2 font-heading text-[28px] font-bold leading-[1.05] tracking-tight md:text-4xl">{conf?.name ?? confId}</h1>
           <p className="tabular mt-1 text-sm text-muted">
             {conf ? `${dateRangeLabel(conf.startDate, conf.endDate)}${conf.city ? ` · ${conf.city}` : ""}` : " "}
             <span className="text-faint"> · </span>
@@ -105,16 +105,21 @@ export function PlanView() {
           {goalCounts.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1.5">
               {goalCounts.map(({ goal, n }) => (
-                <Chip key={goal.id} kind="goal" dot={TYPE_COLOR.goal} className="max-w-full"><span className="truncate">{goal.text}</span><span className="tabular text-goal/70">{n}</span></Chip>
+                <Chip key={goal.id} kind="goal" dot={TYPE_COLOR.goal} className="max-w-full"><span className="truncate">{goal.text}</span><span className="tabular text-muted">{n}</span></Chip>
               ))}
             </div>
           )}
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {plan.now && (
+            <Link href={`/sessions/${encodeURIComponent(plan.now.targetId)}`} className={buttonClass({ variant: "primary", className: "h-10" })} title={`Capture now: ${plan.now.title}`}>
+              <PenLine className="size-4" aria-hidden />Capture now
+            </Link>
+          )}
           <Segmented<View> value={view} onChange={setView} options={[{ value: "day", label: "Day" }, { value: "goal", label: "By goal" }]} className="h-10" />
           {final ? (
-            <div className="flex h-10 items-center gap-1 rounded-lg border border-border bg-surface pl-3 pr-1 text-sm">
-              <Lock className="size-3.5 text-ok" aria-hidden /><span className="text-text">Plan locked</span>
+            <div className="flex h-10 items-center gap-1 rounded-full border-2 border-border bg-surface pl-3 pr-1 text-sm font-heading font-bold shadow-hardSm">
+              <Lock className="size-3.5 text-[#0B7A52]" aria-hidden /><span className="text-text">Plan locked</span>
               <Button variant="ghost" size="sm" className="ml-1" onClick={() => { setFinal(false); toast("Plan unlocked"); }}><LockOpen className="size-3.5" aria-hidden />Edit</Button>
             </div>
           ) : (
@@ -127,17 +132,17 @@ export function PlanView() {
 
       {/* Day tabs */}
       {view === "day" && days.length > 1 && (
-        <div role="tablist" aria-label="Days" className="scrollbar-thin -mx-4 flex gap-1 overflow-x-auto border-b border-border px-4 md:mx-0 md:px-0">
+        <div role="tablist" aria-label="Days" className="scrollbar-thin -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
           {days.map((d) => {
             const n = visible.filter((s) => dayKey(s.from, tz) === d).length;
             const sel = d === day;
             return (
               <button key={d} role="tab" type="button" aria-selected={sel} onClick={() => setDay(d)}
-                className={cn("relative flex h-10 shrink-0 items-center gap-2 px-3 text-sm transition duration-fast", sel ? "text-text" : "text-muted hover:text-text")}>
+                className={cn("relative flex h-10 shrink-0 items-center gap-2 rounded-full border-2 border-border px-4 font-heading text-sm font-bold transition duration-fast", sel ? "bg-ink text-cream" : "bg-surface text-text hover:bg-accent/40")}>
                 <span className="md:hidden">{dayShort(d)}</span><span className="hidden md:inline">{dayLabel(d)}</span>
-                {d === today && <span className="size-1.5 rounded-full bg-danger" aria-label="Today" />}
-                <span className="tabular text-xs text-faint">{n}</span>
-                {sel && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-accent" />}
+                {d === today && <span className="size-2 rounded-full bg-pink ring-1 ring-ink" aria-label="Today" />}
+                <span className={cn("tabular text-xs", sel ? "text-cream/70" : "text-muted")}>{n}</span>
+                
               </button>
             );
           })}
@@ -146,7 +151,7 @@ export function PlanView() {
 
       {/* Steer + proposal (sticky under the top bar on phones, top of page on md+) */}
       {!final && (
-        <div className="sticky top-[var(--topbar-h)] z-20 -mx-4 border-b border-border bg-bg/95 px-4 py-3 backdrop-blur md:top-0 md:mx-0 md:rounded-lg md:border md:bg-bg/95 md:px-3">
+        <div className="sticky top-[var(--topbar-h)] z-20 -mx-4 border-b-2 border-border bg-bg px-4 py-3 md:top-2 md:mx-0 md:rounded-full md:border-2 md:bg-surface md:py-2 md:pl-2 md:pr-2 md:shadow-hard">
           <SteerBar onPlan={mutate} onProposal={setProposal} />
         </div>
       )}
@@ -154,7 +159,7 @@ export function PlanView() {
 
       {view === "day" ? (
         <>
-          {days.length === 1 && day && <div className="-mb-1 text-xs font-medium text-muted">{dayLabel(day)}{day === today && <span className="text-danger"> · Today</span>}</div>}
+          {days.length === 1 && day && <div className="-mb-1 flex items-baseline gap-2 font-heading text-sm font-bold text-text">{dayLabel(day)}{day === today && <span className="rounded-full border-2 border-border bg-pink px-2 text-[11px] uppercase leading-5 text-ink">Today</span>}</div>}
           {daySlots.length === 0 ? (
             <EmptyState title={`Nothing planned on ${day ? dayLabel(day) : "this day"}`} text={days.length > 1 ? "Pick another day, or steer to add sessions here." : "Steer to add sessions, e.g. “more tracing”."} />
           ) : (

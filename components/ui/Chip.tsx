@@ -3,21 +3,21 @@ import { cn } from "@/lib/ui/cn";
 
 const KINDS = {
   time: "tabular text-text",
-  room: "text-muted",
-  booth: "border-booth/40 text-booth",
+  room: "text-text",
+  booth: "bg-[#E2FAF0] text-text",
   topic: "text-muted",
-  goal: "border-goal/40 text-goal",
+  goal: "bg-[#FFF3C4] text-text",
   status: "text-muted",
-  accent: "border-accent/40 text-accentStrong bg-accent/10",
+  accent: "bg-accent text-text",
 } as const;
 
 export type ChipKind = keyof typeof KINDS;
 
-/** Small inline label: time, room/booth, topic, goal, status. */
+/** Small inline pill: time, room/booth, topic, goal, status. */
 export function Chip({ kind = "topic", children, className, dot }: { kind?: ChipKind; children: ReactNode; className?: string; dot?: string }) {
   return (
-    <span className={cn("inline-flex h-6 items-center gap-1.5 rounded-md border border-border bg-surface px-2 text-xs leading-none", KINDS[kind], className)}>
-      {dot && <span className="size-1.5 shrink-0 rounded-full" style={{ background: dot }} aria-hidden />}
+    <span className={cn("inline-flex h-6 items-center gap-1.5 rounded-full border-[1.5px] border-border bg-surface px-2.5 font-heading text-[11px] font-medium leading-none", KINDS[kind], className)}>
+      {dot && <span className="size-2 shrink-0 rounded-full ring-1 ring-ink" style={{ background: dot }} aria-hidden />}
       {children}
     </span>
   );
