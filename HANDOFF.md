@@ -224,7 +224,7 @@ The backend load is heavy, so prioritise by spec §15 "never cut": Sky with why-
 
 ## 7. Next steps (in order)
 
-1. Wait for / verify `seed/catalog-community.ts` results: `curl "https://conftellations.fly.dev/api/sessions/<id>/community?userId=sam"` on a past-conference session shows ≥4 shared notes, a crowd summary with cited moment ids, and hot moments.
+1. DONE 19:20 PT: `seed/catalog-community.ts` ran (21 sessions, 103 notes, crowd summaries, hot-moment peaks); verified on live.
 2. Final pass: `npm run smoke https://conftellations.fly.dev`, `npx tsx scripts/purge-test-users.ts`, phone + desktop screenshots of every route.
 3. Nice-to-haves if time: smooth Trace replay; a trace view for "All conferences"; conference-name cleanup for sched-imported events is done in `scripts/catalog.ts` only (the generic adapter now handles it for new imports).
 4. If anything breaks: `git revert` the merge on main; Fly redeploys automatically. Manual: `fly deploy --remote-only --ha=false`.
@@ -315,3 +315,4 @@ Format: `HH:MM PT · agent · what changed (issue #, commit/PR)`
 - 16:47 PT · Claude Code · FREEZE. main 318d971: Trace mode default on /graph, conference switcher, onboarding de-dup, demo clock. Live smoke 43/43. Demo notes in COMMS.md 16:30 entry.
 - 17:32 PT · Claude Code · Post-freeze additions deployed (7d2627e): real GraphRAG Ask (POST /ask) on /brief and /graph, relevant companies in the web, People you have met (network.met), /sessions tab, memo as Markdown + export. Fly build flaked once on next/font (Google Fonts fetch); re-run succeeded.
 - 19:05 PT · Claude Code · Session crashed twice (OOM). Recovered WIP from worktrees; merged scout-v2 (name import, clean names, photos/links, GET /conferences), catalog UI, people cards, catalogue data (4 real conferences, seeded visits), phone fixes + calendar meets, photo backfill. Community seeding in flight.
+- 19:20 PT · Claude Code · Community layer seeded and verified; photo backfill (1,340 speakers); final smoke 43/43 on live; demo graph clean (no test users, Sam 3 goals, 1 pending meet to Emily).
