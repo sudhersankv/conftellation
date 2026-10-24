@@ -159,7 +159,7 @@ export function PlanView() {
 
       {view === "day" ? (
         <>
-          {days.length === 1 && day && <div className="-mb-1 flex items-baseline gap-2 font-heading text-sm font-bold text-text">{dayLabel(day)}{day === today && <span className="-rotate-2 font-hand text-xl font-semibold leading-none text-[#D7263D]">today!</span>}</div>}
+          {days.length === 1 && day && <div className="-mb-1 flex items-baseline gap-2 font-heading text-sm font-bold text-text">{dayLabel(day)}{day === today && <span className="rounded-full border-2 border-border bg-pink px-2 text-[11px] uppercase leading-5 text-ink">Today</span>}</div>}
           {daySlots.length === 0 ? (
             <EmptyState title={`Nothing planned on ${day ? dayLabel(day) : "this day"}`} text={days.length > 1 ? "Pick another day, or steer to add sessions here." : "Steer to add sessions, e.g. “more tracing”."} />
           ) : (
