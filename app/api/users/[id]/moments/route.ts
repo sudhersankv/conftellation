@@ -2,6 +2,7 @@
 import * as mocks from "@/mocks";
 import { error, handle, json, useMocks } from "@/lib/http";
 import { capture, MOMENT_KINDS, newMomentId, ScribeError } from "@/lib/agents/scribe";
+import { momentOwner } from "@/lib/queries/moments";
 import { MAX_UPLOAD_BYTES, saveUpload } from "@/lib/uploads";
 import type { CreateMomentResponse, MomentKind } from "@/lib/types";
 
@@ -32,7 +33,22 @@ export const POST = handle(async (req: Request, { params }: { params: { id: stri
   if (file && file.size > MAX_UPLOAD_BYTES) return error("file too large (max 10 MB)", 413);
 
   const momentId = clientId ?? newMomentId();
-  const mediaUrl = file && file.size > 0 ? await saveUpload(momentId, file) : undefined;
+  const existing = clientId ? await momentOwner(clientId) : null;
+  if (existing && (existing.userId !== params.id || existing.conferenceId !== confId)) {
+    return error(`moment ${clientId} belongs to another capture`, 409);
+  }
+  let mediaUrl: string | undefined;
+  if (file && file.size > 0 && !existing) {
+    const saved = await saveUpload(momentId, file);
+    if (!saved.created && clientId) {
+      const again = await momentOwner(clientId);
+      if (again && (again.userId !== params.id || again.conferenceId !== confId)) return error(`moment ${clientId} belongs to another capture`, 409);
+      // Same-owner retry: capture returns the stored moment. No moment yet: keep the existing file's url.
+      if (!again) mediaUrl = saved.url;
+    } else {
+      mediaUrl = saved.url;
+    }
+  }
   try {
     const res = await capture({
       userId: params.id, confId, kind, momentId, mediaUrl,

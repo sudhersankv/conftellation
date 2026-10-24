@@ -17,6 +17,16 @@ describe("brief citation parser", () => {
     expect(parseLine("Mike [p1] and Jake [p9].", ids)).toBeNull();
     expect(parseLine("[p1]", ids)).toBeNull();
   });
+  it("rejects a second sentence after a mid-line citation", () => {
+    expect(parseLine("Known fact [p1]. Invented uncited sentence.", ids)).toBeNull();
+    expect(parseLine("Known fact [p1] and then more.", ids)).toBeNull();
+    expect(parseLine("Fact one [p1]. Fact two [p2].", ids)).toBeNull();
+  });
+  it("keeps a cited sentence that names dotted tech", () => {
+    expect(parseLine("Meet the Next.js maintainers [p1].", ids)).toEqual({ text: "Meet the Next.js maintainers.", pathId: "p1" });
+    expect(parseLine("Shipped v2.0 today [p2].", ids)).toEqual({ text: "Shipped v2.0 today.", pathId: "p2" });
+    expect(parseLine("See e.g. the tracing talk [p3].", ids)).toEqual({ text: "See e.g. the tracing talk.", pathId: "p3" });
+  });
   it("drops rejected lines and sections left empty", () => {
     const out = parseSections(
       [
@@ -26,5 +36,21 @@ describe("brief citation parser", () => {
       ids,
     );
     expect(out).toEqual([{ title: "What you learned", lines: [{ text: "Edges beat logs.", pathId: "p1" }] }]);
+  });
+  it("drops unknown and duplicate section titles", () => {
+    const out = parseSections(
+      [
+        { title: "Invented heading", lines: ["Edges [p1]."] },
+        { title: "Follow up with", lines: ["Talk to Mike [p2]."] },
+        { title: "What you learned", lines: ["Edges beat logs [p1]."] },
+        { title: "What you learned", lines: ["Duplicate [p3]."] },
+      ],
+      ids,
+      ["What you learned", "Follow up with", "Seen before"],
+    );
+    expect(out).toEqual([
+      { title: "What you learned", lines: [{ text: "Edges beat logs.", pathId: "p1" }] },
+      { title: "Follow up with", lines: [{ text: "Talk to Mike.", pathId: "p2" }] },
+    ]);
   });
 });

@@ -181,7 +181,7 @@ export interface PlanResponse {
 export type TargetKind = "session" | "person" | "booth" | "topic";
 
 export type SteerOp =
-  | { op: "add_goal"; text: string; kind: GoalKind }
+  | { op: "add_goal"; text: string; kind: GoalKind; goalId?: string; weight?: number; topics?: string[] }
   | { op: "remove_goal"; goalId: string }
   | { op: "reweight_goal"; goalId: string; weight: number }
   | { op: "set_window"; from: string | null; to: string | null }
