@@ -1,5 +1,5 @@
-// Scout: any conference URL â†’ NormalizedConference â†’ shared graph.
-// Router: RainFocus (known sites) â†’ Sessionize â†’ sched/.ics â†’ generic (Bright Data Unlocker + LLM). Sponsor pages are read on every path
+// Scout: any conference URL -> NormalizedConference -> shared graph.
+// Router: RainFocus (known sites) -> Sessionize -> sched/.ics -> generic (Bright Data Unlocker + LLM). Sponsor pages are read on every path
 // that doesn't bring its own, and the top sponsors are enriched from their own sites (enrich.ts).
 import { fetchJson, fetchText, requestsUsed } from "@/lib/brightdata";
 import { ensureIndexes } from "@/lib/schema";
@@ -178,7 +178,7 @@ async function findSponsors(html: string, url: string): Promise<NormCompany[]> {
 }
 
 function metaEvent(html: string): PageEvent {
-  const name = (meta(html, "og:title") ?? title(html))?.split(/\s+[|â€“â€”]\s+/)[0]?.trim();
+  const name = (meta(html, "og:title") ?? title(html))?.split(/\s+[|\u2013\u2014]\s+/)[0]?.trim();
   return name ? { name } : {};
 }
 
