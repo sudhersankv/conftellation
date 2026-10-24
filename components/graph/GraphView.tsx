@@ -177,7 +177,7 @@ export function GraphView() {
 
         {/* Highlight pill */}
         {highlight.size > 0 && (
-          <div className="absolute bottom-12 left-1/2 z-10 -translate-x-1/2 md:bottom-auto md:top-3">
+          <div className="absolute bottom-[76px] left-1/2 z-10 -translate-x-1/2 md:bottom-auto md:top-3">
             <div className="flex items-center gap-2 whitespace-nowrap rounded-full border border-accent/40 bg-surface px-3 py-1.5 text-xs shadow-xl">
               <span className="size-1.5 rounded-full bg-accent" aria-hidden />
               <span className="text-text">Showing: why path</span>

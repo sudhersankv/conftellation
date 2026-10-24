@@ -196,7 +196,7 @@ function Community({ data }: { data: CommunityResponse }) {
             </div>
             <div className="mt-1 flex gap-1">
               {data.hotMoments.map((h, i) => (
-                <span key={h.binStart} className="tabular min-w-0 flex-1 truncate text-center text-[10px] text-faint">{i % step === 0 ? fmtTime(h.binStart) : ""}</span>
+                <span key={h.binStart} className="tabular min-w-0 flex-1 truncate text-center text-[10px] text-faint">{i % step === 0 ? fmtTime(h.binStart).replace(/\s?[AP]M$/, "") : ""}</span>
               ))}
             </div>
           </div>

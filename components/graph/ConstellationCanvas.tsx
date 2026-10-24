@@ -56,7 +56,7 @@ interface Props {
 
 export function ConstellationCanvas({ nodes, links, width, height, highlight, revealed, anchorId, onNodeClick, handleRef }: Props) {
   const fg = useRef<ForceGraphMethods<GNode, GLink> | undefined>(undefined);
-  useImperativeHandle(handleRef, () => ({ zoomToFit: (ms = 400) => fg.current?.zoomToFit(ms, 40) }), []);
+  useImperativeHandle(handleRef, () => ({ zoomToFit: (ms = 400) => fg.current?.zoomToFit(ms, 60) }), []);
 
   // Copy: the force engine mutates node/link objects. Skipped nodes are not rendered.
   const data = useMemo(() => {
@@ -155,7 +155,11 @@ export function ConstellationCanvas({ nodes, links, width, height, highlight, re
   }, []);
 
   const didFit = useRef(false);
-  useEffect(() => { didFit.current = false; }, [data]);
+  useEffect(() => {
+    didFit.current = false;
+    const t = setTimeout(() => fg.current?.zoomToFit(400, 60), 1500);
+    return () => clearTimeout(t);
+  }, [data]);
 
   return (
     <ForceGraph2D<GNode, GLink>
@@ -178,7 +182,7 @@ export function ConstellationCanvas({ nodes, links, width, height, highlight, re
       warmupTicks={data.nodes.length > 400 ? 20 : 0}
       onNodeClick={(n) => onNodeClick(n as SkyNode)}
       onEngineStop={() => {
-        if (!didFit.current) { didFit.current = true; fg.current?.zoomToFit(400, 40); }
+        if (!didFit.current) { didFit.current = true; fg.current?.zoomToFit(400, 60); }
       }}
     />
   );
