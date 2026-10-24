@@ -102,8 +102,14 @@ export async function search(confId: string, text: string): Promise<SearchRespon
   const v = await vec;
   const [vp, vs, vb] = v
     ? await Promise.all([
+        // Same eligibility as the name search: speakers, attendees (a User IS them), and staff of a company with a booth here.
         vectorIds(`CALL db.idx.vector.queryNodes('Person', 'embedding', ${VECTOR_K}, vecf32($v)) YIELD node, score
-                   MATCH (node)-[:SPEAKS_AT]->(:Session)<-[:HAS_SESSION]-(:Conference {id:$confId}) RETURN DISTINCT node.id AS id, score ORDER BY score`, v, confId),
+                   MATCH (c:Conference {id:$confId})
+                   OPTIONAL MATCH (node)-[:SPEAKS_AT]->(sp:Session)<-[:HAS_SESSION]-(c)
+                   OPTIONAL MATCH (node)<-[:IS]-(:User)-[at:ATTENDS]->(c)
+                   OPTIONAL MATCH (node)-[:WORKS_AT]->(:Company)-[hb:HAS_BOOTH]->(:Booth)<-[:HAS_BOOTH]-(c)
+                   WITH node, score, count(sp) + count(at) + count(hb) AS here WHERE here > 0
+                   RETURN DISTINCT node.id AS id, score ORDER BY score`, v, confId),
         vectorIds(`CALL db.idx.vector.queryNodes('Session', 'embedding', ${VECTOR_K}, vecf32($v)) YIELD node, score
                    MATCH (:Conference {id:$confId})-[:HAS_SESSION]->(node) RETURN node.id AS id, score ORDER BY score`, v, confId),
         vectorIds(`CALL db.idx.vector.queryNodes('Company', 'embedding', ${VECTOR_K}, vecf32($v)) YIELD node, score

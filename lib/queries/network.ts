@@ -2,8 +2,10 @@
 import { q } from "@/lib/falkor";
 import type { RawPath } from "@/lib/queries/plan";
 
+// A Moment in a path is named by its kind, never its text (it can be another user's note).
 const PATH = (p: string, as = "") => `
-  [n IN nodes(${p}) | {id:n.id, label:labels(n)[0], name:coalesce(n.name, n.title, n.text, n.label, n.id)}] AS ${as ? `${as}Nodes` : "nodes"},
+  [n IN nodes(${p}) | {id:n.id, label:labels(n)[0],
+    name:CASE WHEN labels(n)[0] = 'Moment' THEN coalesce(n.kind, 'moment') ELSE coalesce(n.name, n.title, n.text, n.label, n.id) END}] AS ${as ? `${as}Nodes` : "nodes"},
   [r IN relationships(${p}) | {from:startNode(r).id, to:endNode(r).id, type:type(r)}] AS ${as ? `${as}Edges` : "edges"}`;
 
 // ---------- intros ----------
@@ -13,11 +15,15 @@ export interface WarmIntroRow extends RawPath {
   tailNodes: RawPath["nodes"]; tailEdges: RawPath["edges"];
 }
 
-/** Q5: you met a user here → they checked in at a session → its speaker also speaks here on your problem/goal topic. */
+/**
+ * Q5: you met a user here (a MET edge for this conference) → they checked in at (or shared a moment from) a session → its speaker
+ * also speaks here on your problem/goal topic. Private notes never count.
+ */
 export async function warmIntros(userId: string, confId: string): Promise<WarmIntroRow[]> {
   return q<WarmIntroRow>(
-    `MATCH p = (u:User {id:$userId})-[:MET]->(a:Person)<-[:IS]-(au:User)-[:CAPTURED]->(m:Moment)-[:AT]->(s:Session)<-[:SPEAKS_AT]-(b:Person)
-     WHERE m.conferenceId = $confId AND NOT (u)-[:MET]->(b) AND NOT (u)-[:IS]->(b) AND au <> u
+    `MATCH p = (u:User {id:$userId})-[met:MET]->(a:Person)<-[:IS]-(au:User)-[:CAPTURED]->(m:Moment)-[:AT]->(s:Session)<-[:SPEAKS_AT]-(b:Person)
+     WHERE met.conferenceId = $confId AND m.conferenceId = $confId AND (m.kind = 'checkin' OR m.shared = true)
+       AND NOT (u)-[:MET]->(b) AND NOT (u)-[:IS]->(b) AND au <> u
      MATCH tail = (b)-[:SPEAKS_AT]->(s2:Session)-[:ABOUT]->(t:Topic)<-[:ABOUT]-(x)<-[:HAS_PROBLEM|HAS_GOAL]-(u)
      MATCH (:Conference {id:$confId})-[:HAS_SESSION]->(s2)
      WITH p, tail, a, b, s, s2, t, labels(x)[0] = 'Problem' AS isProblem
@@ -129,10 +135,12 @@ export async function busySlots(userIds: string[], confId: string, exceptMeetId?
 export interface MeetRow {
   id: string; fromUserId: string; toUserId: string; fromName: string; toName: string; note: string | null;
   proposal: string | null; status: string; at: string; conferenceId: string | null;
+  /** Who made the latest counter (null: never countered). */
+  counteredBy: string | null;
 }
 
 const MEET_RETURN = `r.id AS id, a.id AS fromUserId, b.id AS toUserId, coalesce(a.name, a.id) AS fromName, coalesce(b.name, b.id) AS toName,
-  r.note AS note, r.proposal AS proposal, r.status AS status, r.at AS at, r.conferenceId AS conferenceId`;
+  r.note AS note, r.proposal AS proposal, r.status AS status, r.at AS at, r.conferenceId AS conferenceId, r.counteredBy AS counteredBy`;
 
 export async function meetRequests(userId: string, confId: string): Promise<MeetRow[]> {
   return q<MeetRow>(
@@ -161,52 +169,92 @@ export async function userWindows(ids: string[]): Promise<Map<string, { from: st
   return new Map(rows.map((r) => [r.id, { from: r.from, to: r.to }]));
 }
 
-/** One open (pending/countered) request per pair and conference, either direction. A same-direction repeat updates it; a reverse open request is returned as-is. */
+/**
+ * One open (pending/countered) request per pair and conference, either direction. A same-direction repeat updates it; a reverse
+ * open request is returned as-is. Lookup and write are one graph query, so FalkorDB's per-query write lock makes it atomic:
+ * two concurrent calls for the same pair cannot both create a request.
+ */
 export async function upsertMeetRequest(m: { id: string; from: string; to: string; note: string; proposal: string; at: string; confId: string }): Promise<MeetRow> {
-  const [open] = await q<{ id: string; fromId: string }>(
-    `MATCH (a:User {id:$from})-[r:REQUESTED_MEET]-(b:User {id:$to})
-     WHERE r.conferenceId = $confId AND r.status IN ['pending', 'countered']
-     RETURN r.id AS id, startNode(r).id AS fromId LIMIT 1`,
+  const [row] = await q<{ id: string }>(
+    `MATCH (a:User {id:$from}), (b:User {id:$to})
+     OPTIONAL MATCH (a)-[o:REQUESTED_MEET]-(b) WHERE o.conferenceId = $confId AND o.status IN ['pending', 'countered']
+     WITH a, b, collect(o) AS open
+     WITH a, b, [x IN open WHERE startNode(x).id = $from] AS mine, [x IN open WHERE startNode(x).id = $to] AS theirs
+     FOREACH (x IN CASE WHEN size(theirs) = 0 THEN mine[0..1] ELSE [] END |
+       SET x.note = $note, x.proposal = $proposal, x.status = 'pending', x.at = $at, x.counteredBy = null)
+     FOREACH (_ IN CASE WHEN size(theirs) = 0 AND size(mine) = 0 THEN [1] ELSE [] END |
+       CREATE (a)-[:REQUESTED_MEET {id:$id, note:$note, proposal:$proposal, status:'pending', at:$at, conferenceId:$confId}]->(b))
+     RETURN CASE WHEN size(theirs) > 0 THEN theirs[0].id WHEN size(mine) > 0 THEN mine[0].id ELSE $id END AS id`,
     m,
   );
-  if (open && open.fromId !== m.from) return (await meetById(open.id))!;
-  const id = open?.id ?? m.id;
-  await q(
-    `MATCH (a:User {id:$from}), (b:User {id:$to})
-     MERGE (a)-[r:REQUESTED_MEET {id:$id}]->(b)
-     SET r.note = $note, r.proposal = $proposal, r.status = 'pending', r.at = $at, r.conferenceId = $confId`,
-    { ...m, id },
-  );
-  return (await meetById(id))!;
+  return (await meetById(row?.id ?? m.id))!;
 }
 
-export async function setMeetStatus(id: string, status: string, proposal?: string) {
-  await q(
-    `MATCH ()-[r:REQUESTED_MEET {id:$id}]->() SET r.status = $status, r.proposal = coalesce($proposal, r.proposal), r.respondedAt = $at`,
-    { id, status, proposal: proposal ?? null, at: new Date().toISOString() },
-  );
-}
-
-/** Accepted request → Meet node, both users ATTENDS it, AT the session if one was proposed, DURING the conference. */
-export async function writeMeet(m: { id: string; from: string; to: string; confId: string; slotFrom: string | null; slotTo: string | null; place: string | null; sessionId: string | null; title: string }) {
-  await q(
-    `MATCH (a:User {id:$from}), (b:User {id:$to})
+/**
+ * Accept, in one atomic query: the request becomes accepted and its Meet node (both users ATTENDS it, AT the proposed session,
+ * DURING the conference) is written. Applies only while the request still has status `expect`; false when it changed meanwhile.
+ */
+export async function acceptMeet(m: {
+  id: string; expect: string; proposal: string | null; confId: string; slotFrom: string; slotTo: string; place: string | null; sessionId: string | null; title: string;
+}): Promise<boolean> {
+  const rows = await q<{ id: string }>(
+    `MATCH (a:User)-[r:REQUESTED_MEET {id:$id}]->(b:User) WHERE r.status = $expect
+     SET r.status = 'accepted', r.proposal = coalesce($proposal, r.proposal), r.respondedAt = $at
      MERGE (mt:Meet {id:$id})
      SET mt.status = 'accepted', mt.at = $at, mt.slotFrom = $slotFrom, mt.slotTo = $slotTo, mt.place = $place, mt.conferenceId = $confId, mt.title = $title
      MERGE (a)-[:ATTENDS]->(mt) MERGE (b)-[:ATTENDS]->(mt)
+     WITH mt
+     OPTIONAL MATCH (mt)-[old:AT]->(:Session)
+     WITH mt, collect(old) AS olds
+     FOREACH (x IN olds | DELETE x)
      WITH mt
      OPTIONAL MATCH (c:Conference {id:$confId})
      FOREACH (_ IN CASE WHEN c IS NULL THEN [] ELSE [1] END | MERGE (mt)-[:DURING]->(c))
      WITH mt
      OPTIONAL MATCH (s:Session {id:$sessionId})
-     FOREACH (_ IN CASE WHEN s IS NULL THEN [] ELSE [1] END | MERGE (mt)-[:AT]->(s))`,
+     FOREACH (_ IN CASE WHEN s IS NULL THEN [] ELSE [1] END | MERGE (mt)-[:AT]->(s))
+     RETURN mt.id AS id`,
     { ...m, at: new Date().toISOString() },
   );
+  return rows.length > 0;
 }
 
-/** Delete an accepted Meet so it leaves both plans and is no longer busy. */
-export async function dropMeet(id: string) {
-  await q(`MATCH (mt:Meet {id:$id}) DETACH DELETE mt`, { id });
+/**
+ * Decline or counter, in one atomic query: set the request status (and the counter proposal) and delete its Meet node if one
+ * was accepted, so it leaves both plans. Applies only while the request still has status `expect`; false when it changed meanwhile.
+ */
+export async function closeMeet(m: { id: string; expect: string; status: "declined" | "countered"; proposal: string | null; by: string }): Promise<boolean> {
+  const rows = await q<{ id: string }>(
+    `MATCH ()-[r:REQUESTED_MEET {id:$id}]->() WHERE r.status = $expect
+     SET r.status = $status, r.proposal = coalesce($proposal, r.proposal), r.respondedAt = $at,
+         r.counteredBy = CASE WHEN $status = 'countered' THEN $by ELSE r.counteredBy END
+     WITH r
+     OPTIONAL MATCH (mt:Meet {id:$id})
+     WITH r, collect(mt) AS meets
+     FOREACH (x IN meets | DETACH DELETE x)
+     RETURN r.id AS id`,
+    { ...m, at: new Date().toISOString() },
+  );
+  return rows.length > 0;
+}
+
+/** Meets that were in the user's last stored plan for this conference (for plan diffs). */
+export async function plannedMeets(userId: string, confId: string): Promise<{ id: string; slotStart: string | null; title: string }[]> {
+  const [row] = await q<{ v: string | null }>(`MATCH (u:User {id:$userId}) RETURN u.planMeets AS v`, { userId });
+  try {
+    const all = row?.v ? (JSON.parse(row.v) as Record<string, { id: string; slotStart: string | null; title: string }[]>) : {};
+    return Array.isArray(all[confId]) ? all[confId] : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function setPlannedMeets(userId: string, confId: string, meets: { id: string; slotStart: string | null; title: string }[]) {
+  const [row] = await q<{ v: string | null }>(`MATCH (u:User {id:$userId}) RETURN u.planMeets AS v`, { userId });
+  let all: Record<string, unknown> = {};
+  try { all = row?.v ? JSON.parse(row.v) : {}; } catch { /* reset */ }
+  all[confId] = meets;
+  await q(`MATCH (u:User {id:$userId}) SET u.planMeets = $v`, { userId, v: JSON.stringify(all) });
 }
 
 export interface AcceptedMeetRow extends RawPath { id: string; slotFrom: string; slotTo: string; place: string | null; otherName: string; otherUserId: string }
