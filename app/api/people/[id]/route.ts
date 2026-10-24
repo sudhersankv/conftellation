@@ -1,12 +1,18 @@
-// GET /api/people/[id] — person card: ?confId=&userId=
-// STUB: returns mocks until the real handler lands (see GitHub issues).
+// GET /api/people/[id] — person card: ?confId=&userId=. Unknown person → 404.
 import * as mocks from "@/mocks";
-import { error, json } from "@/lib/http";
+import { error, handle, json, useMocks } from "@/lib/http";
+import { personDetail } from "@/lib/agents/people";
 import type { PersonDetail } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
-  const p = mocks.people[decodeURIComponent(params.id)];
-  return p ? json<PersonDetail>(p) : error("person not found", 404);
-}
+export const GET = handle(async (req: Request, { params }: { params: { id: string } }) => {
+  const id = decodeURIComponent(params.id);
+  if (useMocks()) {
+    const p = mocks.people[id];
+    return p ? json<PersonDetail>(p) : error("person not found", 404);
+  }
+  const url = new URL(req.url);
+  const detail = await personDetail(id, { confId: url.searchParams.get("confId") ?? undefined, userId: url.searchParams.get("userId") ?? undefined });
+  return detail ? json<PersonDetail>(detail) : error("person not found", 404);
+});
