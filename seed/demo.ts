@@ -9,6 +9,8 @@ import type { NormalizedConference } from "@/lib/agents/scout/normalized";
 import { seedPersonal } from "./personal";
 import { runPlanner } from "@/lib/agents/planner";
 import { precomputeRecaps } from "@/lib/agents/recapper";
+import { precomputeCrowds } from "@/lib/agents/recapper/crowd";
+import { sessionsWithSharedMoments } from "@/lib/queries/community";
 
 const dir = path.join(process.cwd(), "seed");
 const readJson = <T,>(rel: string): T => JSON.parse(readFileSync(path.join(dir, rel), "utf8")) as T;
@@ -57,4 +59,9 @@ export async function seedDemo(opts: { githubUniverse?: boolean; log?: (s: strin
   const { plan } = await runPlanner("sam", "ptc-2026", { write: true, now: process.env.DEMO_NOW ?? "2026-10-24T12:30:00-07:00" });
   log(`plan(sam): ${plan.itinerary.length} slots`);
   if (process.env.DEMO_MODE === "true") log(`recaps(sam): ${JSON.stringify(await precomputeRecaps("sam", "ptc-2026"))}`);
+  if (process.env.DEMO_MODE === "true") {
+    const ids = await sessionsWithSharedMoments("ptc-2026");
+    const sessions = ptc.sessions.filter((s) => s.id && ids.includes(s.id)).map((s) => ({ id: s.id!, title: s.title, conferenceId: "ptc-2026" }));
+    log(`crowd summaries: ${await precomputeCrowds(sessions)}`);
+  }
 }
