@@ -4,7 +4,7 @@ import type { Booth, GoalPlan, Goal, GoalKind, ItinerarySlot, OpenTo, Person, Pl
 import { ms } from "@/lib/time";
 import { buildItinerary, type Block } from "./itinerary";
 import {
-  boothPaths, boothsByIds, conferenceDay, peopleByIds, personPaths, sessionPaths, sessionSimilarity, sessionsByIds, userState, writePlans,
+  boostedTopicPaths, boothPaths, boothsByIds, conferenceDay, peopleByIds, personPaths, sessionPaths, sessionSimilarity, sessionsByIds, userState, writePlans,
   type BoothRow, type PersonRow, type RawPath, type SessionRow, type UserState,
 } from "@/lib/queries/plan";
 
@@ -35,14 +35,15 @@ export async function runPlanner(userId: string, confId: string, opts: { now?: s
   const state = await userState(userId, confId);
   if (!state) throw new NotFound(`user ${userId} not found`);
   const now = opts.now ?? new Date().toISOString();
-  const [sPaths, sims, pPaths, bPaths, day] = await Promise.all([
+  const [sPaths, sims, pPaths, bPaths, day, tBoosts] = await Promise.all([
     sessionPaths(userId, confId), sessionSimilarity(userId, confId), personPaths(userId, confId), boothPaths(userId, confId), conferenceDay(confId),
+    boostedTopicPaths(userId, confId),
   ]);
   const goalById = new Map(state.goals.map((g) => [g.id, g]));
   const boosted = new Map(state.boosted.map((b) => [b.id, b]));
   const done = new Set([...state.doneIds, ...state.metToday]);
 
-  const sessions = scoreSessions(state, sPaths, sims, boosted, goalById);
+  const sessions = scoreSessions(state, sPaths, sims, boosted, goalById, tBoosts);
   const people = scorePeople(state, pPaths, boosted, goalById);
   const booths = scoreBooths(state, bPaths, boosted, goalById);
 
@@ -140,8 +141,11 @@ export async function runPlanner(userId: string, confId: string, opts: { now?: s
 
 function scoreSessions(
   state: UserState, rows: Awaited<ReturnType<typeof sessionPaths>>, sims: { goalId: string; sessionId: string; sim: number }[],
-  boosted: Map<string, { pinned: boolean }>, goals: Map<string, UserState["goals"][number]>,
+  boosted: Map<string, { pinned: boolean }>, goals: Map<string, UserState["goals"][number]>, topicBoosts: Awaited<ReturnType<typeof boostedTopicPaths>> = [],
 ): Cand[] {
+  const boostOf = new Map<string, RawPath>();
+  for (const r of topicBoosts) if (!boostOf.has(r.sessionId)) boostOf.set(r.sessionId, r);
+  const boostWhy = (p: RawPath) => whyOf(p, `You asked for more ${nameOf(p, "Topic")}`) as WhyPath;
   const by = new Map<string, Map<string, { topics: Set<string>; path: RawPath }>>();
   for (const r of rows) {
     const g = by.get(r.sessionId) ?? new Map();
@@ -157,9 +161,15 @@ function scoreSessions(
     const entries = [...gmap.entries()].map(([gid, e]) => ({ gid, e, w: goals.get(gid)?.weight ?? 1 }))
       .sort((a, b) => b.w * (1 + 0.1 * b.e.topics.size) - a.w * (1 + 0.1 * a.e.topics.size));
     const topics = new Set(entries.flatMap((x) => [...x.e.topics]));
-    const score = entries.reduce((s, x) => s + x.w, 0) + 0.1 * (topics.size - 1) + (boosted.has(sid) ? 0.5 : 0) + 0.3 * (simOf.get(sid) ?? 0);
+    const tb = boostOf.get(sid);
+    const score = entries.reduce((s, x) => s + x.w, 0) + 0.1 * (topics.size - 1) + (boosted.has(sid) ? 0.5 : 0) + 0.3 * (simOf.get(sid) ?? 0) + (tb ? 0.6 : 0);
     const why = entries.slice(0, 2).map((x) => whyOf(x.e.path, `Matches your goal '${goals.get(x.gid)?.text}' via topic ${nameOf(x.e.path, "Topic")}`)) as WhyPath[];
-    out.push({ id: sid, score, goalId: entries[0].gid, goalIds: new Set(entries.map((x) => x.gid)), why });
+    if (tb) why.splice(1, 0, boostWhy(tb));
+    out.push({ id: sid, score, goalId: entries[0].gid, goalIds: new Set(entries.map((x) => x.gid)), why: why.slice(0, 2) });
+  }
+  for (const [sid, p] of boostOf) {
+    if (by.has(sid)) continue;
+    out.push({ id: sid, score: 0.6 + (boosted.has(sid) ? 0.5 : 0) + 0.3 * (simOf.get(sid) ?? 0), goalId: null, goalIds: new Set(), why: [boostWhy(p)] });
   }
   return out.sort((a, b) => b.score - a.score);
 }

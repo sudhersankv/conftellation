@@ -80,6 +80,7 @@ export const steer: SteerResponse = {
   diff: { added: [], removed: [{ id: "s-infra", title: "Running inference at scale", type: "session" }], moved: [] },
   summary: "−1 session (leaving at 3pm)",
   plan: { ...plan, itinerary: plan.itinerary.slice(0, 3) },
+  undo: [{ op: "set_window", from: null, to: null }, { op: "reweight_goal", goalId: "g-role", weight: 0.5 }],
 };
 
 export const moments: Moment[] = [
