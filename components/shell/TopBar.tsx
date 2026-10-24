@@ -4,23 +4,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
+import { ConstellationGlyph } from "@/components/sky/ConstellationGlyph";
 import { api } from "@/lib/client";
-import { hashSeed, mulberry32 } from "@/lib/ui/rand";
 import { initials, useSession, userName } from "@/lib/ui/session-context";
 import { useSky } from "@/lib/ui/sky-store";
 import { apiKey, useApi } from "@/lib/ui/use-api";
-
-/** #12 swaps this for the galaxy's MST shape. */
-export function ConstellationGlyph({ seed, size = 20 }: { seed: string; size?: number }) {
-  const r = mulberry32(hashSeed(seed));
-  const pts = Array.from({ length: 5 }, () => [2 + r() * (size - 4), 2 + r() * (size - 4)] as const);
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden className="shrink-0">
-      <polyline points={pts.map((p) => p.join(",")).join(" ")} fill="none" stroke="#A78BFA" strokeOpacity={0.6} strokeWidth={1} />
-      {pts.map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r={1.3} fill="#F2F0FF" />)}
-    </svg>
-  );
-}
 
 export function Avatar({ userId, size = 36 }: { userId: string; size?: number }) {
   return (
@@ -47,7 +35,7 @@ export function TopBar() {
         onClick={() => { useSky.getState().zoomOut(); router.push("/"); }}
       >
         <ChevronLeft className="size-4 text-dust" aria-hidden />
-        <ConstellationGlyph seed={confId} />
+        <ConstellationGlyph confId={confId} />
         {name ? <span className="truncate font-name text-[17px] italic">{name}</span> : <span className="h-4 w-40 rounded-full bg-nebula/60" />}
       </button>
       <Link

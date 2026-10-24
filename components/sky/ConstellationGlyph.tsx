@@ -27,9 +27,9 @@ export function ConstellationGlyph({ confId, size = 20 }: { confId: string; size
     return { pts, lines: mst(pts) };
   }, [resp, confId, size]);
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden className="shrink-0">
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden className="shrink-0 text-polaris">
       {lines.map(([a, b], i) => <line key={i} x1={pts[a].x} y1={pts[a].y} x2={pts[b].x} y2={pts[b].y} stroke="currentColor" strokeOpacity={0.6} strokeWidth={1} />)}
-      {pts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r={1.5} fill="currentColor" />)}
+      {pts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r={1.5} fill="#F2F0FF" />)}
     </svg>
   );
 }

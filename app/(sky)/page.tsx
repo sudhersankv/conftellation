@@ -1,51 +1,41 @@
 "use client";
-// Galaxy placeholder: the live galaxy replaces the body.
+// Galaxy home: the canvas draws the constellations; this page floats the title, avatar and add pill over it.
+import { useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
 import { Avatar } from "@/components/shell/TopBar";
 import { buttonClass } from "@/components/ui/Button";
-import { EmptyState, ErrorState, Skeleton } from "@/components/ui/States";
-import { api } from "@/lib/client";
-import { fmtDay } from "@/lib/ui/format";
+import { ErrorState } from "@/components/ui/States";
 import { useSession } from "@/lib/ui/session-context";
 import { useSky } from "@/lib/ui/sky-store";
-import { apiKey, useApi } from "@/lib/ui/use-api";
+import { useGalaxy } from "@/lib/ui/sky/use-galaxy";
 
 export default function GalaxyPage() {
-  const { userId, setConfId } = useSession();
-  const router = useRouter();
-  const { data, error, loading, reload } = useApi(apiKey("record", userId), () => api.record(userId));
+  const { userId } = useSession();
+  const g = useGalaxy();
+  useEffect(() => {
+    const s = useSky.getState();
+    s.setCovered(false);
+    if (s.mode !== "galaxy") s.setMode("galaxy");
+  }, []);
   return (
-    <main className="mx-auto max-w-md px-4 pb-24 pt-[calc(env(safe-area-inset-top)+24px)]">
-      <Link href="/me" aria-label="My record" className="absolute right-4 top-[calc(env(safe-area-inset-top)+8px)] grid size-12 place-items-center">
-        <Avatar userId={userId} />
+    <main className="pointer-events-none fixed inset-0 z-10 flex flex-col px-4 pt-[max(16px,env(safe-area-inset-top))]">
+      <header className="flex items-start justify-between">
+        <h1 className="font-display text-display">Your conferences</h1>
+        <Link href="/me" aria-label="My record" className="pointer-events-auto grid size-12 place-items-center">
+          <Avatar userId={userId} />
+        </Link>
+      </header>
+      {g.error && !g.data && <div className="pointer-events-auto mt-6 rounded-card bg-ink/72 backdrop-blur-xl"><ErrorState what="your conferences" onRetry={g.reload} /></div>}
+      {g.data && g.data.record.conferences.length === 0 && (
+        <p className="mt-auto mb-28 text-center text-body text-dust">Add a conference to start your sky</p>
+      )}
+      <Link
+        href="/add"
+        className={buttonClass({ className: "pointer-events-auto fixed bottom-[calc(24px+env(safe-area-inset-bottom))] right-4 shadow-lg" })}
+      >
+        <Plus className="size-4" aria-hidden />Add conference
       </Link>
-      <h1 className="font-display text-display">Your conferences</h1>
-      <div className="mt-6">
-        {loading ? <Skeleton rows={2} />
-          : error && !data ? <ErrorState what="your conferences" onRetry={reload} />
-          : !data || data.conferences.length === 0 ? (
-            <EmptyState text="Add a conference to start your sky" action={<Link href="/add" className={buttonClass()}>Add conference</Link>} />
-          ) : (
-            <ul className="flex flex-col gap-3">
-              {data.conferences.map(({ conference: c, sessions, people }) => (
-                <li key={c.id}>
-                  <button
-                    type="button"
-                    className="min-h-12 w-full rounded-card border border-hairline bg-ink p-4 text-left"
-                    onClick={() => { setConfId(c.id); useSky.getState().setMode("conference", c.id); router.push("/plan"); }}
-                  >
-                    <span className="block font-name text-title font-normal italic">{c.name}</span>
-                    <span className="block text-meta text-dust" suppressHydrationWarning>
-                      {fmtDay(`${c.startDate.slice(0, 10)}T12:00:00Z`, "UTC")} · {sessions} sessions, {people} people
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-      </div>
-      <Link href="/add" className={buttonClass({ className: "mt-6" })}>Add conference</Link>
     </main>
   );
 }
