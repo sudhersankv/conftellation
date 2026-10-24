@@ -15,6 +15,8 @@ import { buttonClass, Drawer, EmptyState, ErrorState } from "@/components/ui";
 import { CREAM, INK, NODE_COLOR, YELLOW, titleCase } from "./palette";
 import type { CanvasHandle } from "./ConstellationCanvas";
 
+const TraceView = dynamic(() => import("./TraceView").then((m) => m.TraceView), { ssr: false, loading: () => <CanvasLoading /> });
+
 const ConstellationCanvas = dynamic(() => import("./ConstellationCanvas").then((m) => m.ConstellationCanvas), {
   ssr: false,
   loading: () => <CanvasLoading />,
@@ -81,7 +83,11 @@ export function GraphView() {
   const hlRaw = params.get("hl") ?? "";
   const highlight = useMemo(() => new Set(hlRaw.split(",").map((s) => s.trim()).filter(Boolean)), [hlRaw]);
 
+  // Trace (time × lane) is the default and per conference; "All conferences" always uses the force-directed Web view.
+  const trace = !all && params.get("view") !== "web";
   const { data, error, loading, reload } = useApi(apiKey("constellation", userId, all ? "all" : conf, now ?? "live"), () => api.constellation(userId, all ? undefined : conf, { now }));
+  const { data: plan } = useApi(apiKey("plan", userId, conf, now ?? "live"), () => api.plan(userId, conf, { now }));
+  const slotFrom = useMemo(() => new Map((plan?.itinerary ?? []).map((s) => [s.item.id, s.from])), [plan]);
   const [wrapRef, size] = useSize<HTMLDivElement>();
   const canvas = useRef<CanvasHandle>(null);
   const [selected, setSelected] = useState<SkyNode | null>(null);
@@ -102,8 +108,10 @@ export function GraphView() {
     if (!data) return;
     stopReplay();
     const base = data.nodes.filter((n) => !n.at && (n.state === "anchor" || n.type === "goal" || n.type === "problem" || n.type === "conference"));
-    const timed = data.nodes.filter((n) => n.at).sort((a, b) => a.at!.localeCompare(b.at!));
-    const rest = data.nodes.filter((n) => !n.at && !base.includes(n));
+    // Trace mode: everything on the timeline appears in time order (done at `at`, planned at its slot start).
+    const tOf = (n: SkyNode) => n.at ?? (trace ? slotFrom.get(n.id) : undefined);
+    const timed = data.nodes.filter((n) => tOf(n) && !base.includes(n)).sort((a, b) => Date.parse(tOf(a)!) - Date.parse(tOf(b)!));
+    const rest = data.nodes.filter((n) => !tOf(n) && !base.includes(n));
     const shown = new Set(base.map((n) => n.id));
     setRevealed(new Set(shown));
     const order = [...timed, ...rest];
@@ -112,10 +120,12 @@ export function GraphView() {
       timers.current.push(setTimeout(() => { shown.add(n.id); setRevealed(new Set(shown)); }, 400 + i * step));
     });
     timers.current.push(setTimeout(() => setRevealed(null), REPLAY_MS + 400));
-  }, [data, stopReplay]);
+  }, [data, stopReplay, trace, slotFrom]);
 
   const byId = useMemo(() => new Map((data?.nodes ?? []).map((n) => [n.id, n])), [data]);
   const goals = useMemo(() => (data?.coverage ?? []).map((c) => ({ ...c, label: byId.get(c.goalId)?.label ?? c.goalId })), [data, byId]);
+  const confName = useMemo(() => data?.nodes.find((n) => n.type === "conference" && (n.id === conf || n.conferenceId === conf))?.label
+    ?? data?.nodes.find((n) => n.type === "conference")?.label ?? conf, [data, conf]);
   const hlCount = useMemo(() => [...highlight].filter((id) => byId.has(id)).length, [highlight, byId]);
 
   return (
@@ -133,6 +143,19 @@ export function GraphView() {
           <div className="grid size-full place-items-center p-4">
             <EmptyState title="Nothing here yet" text="Set goals and build a plan; your sessions, people and notes connect here." action={<Link href="/goals" className={buttonClass({ size: "sm" })}>Set goals</Link>} />
           </div>
+        ) : size.w > 0 && trace ? (
+          <TraceView
+            nodes={data.nodes}
+            links={data.links}
+            itinerary={plan?.itinerary ?? []}
+            coverage={data.coverage}
+            width={size.w}
+            height={size.h}
+            highlight={highlight}
+            revealed={revealed}
+            nowIso={now}
+            onNodeClick={setSelected}
+          />
         ) : size.w > 0 && (
           <ConstellationCanvas
             handleRef={canvas}
@@ -148,8 +171,17 @@ export function GraphView() {
           />
         )}
 
-        {/* Coverage (top-left) */}
-        {goals.length > 0 && (
+        {/* Header (trace mode): coverage lives on the goal row of the trace itself */}
+        {trace && (
+          <div className="pointer-events-none absolute left-3 top-3 max-w-[calc(100%-140px)] md:left-5 md:max-w-[50%]">
+            <h1 className="text-xl font-extrabold leading-6 tracking-tight text-[#111] md:text-2xl">My conftellation</h1>
+            <div className="truncate text-sm font-semibold text-[#111]">{confName}</div>
+            <p className="mt-0.5 hidden text-xs text-[#111]/70 md:block">Your trace through the day. Replay it, or tap a star to open it.</p>
+          </div>
+        )}
+
+        {/* Coverage (top-left, web mode) */}
+        {!trace && goals.length > 0 && (
           <div className="pointer-events-none absolute left-3 top-3 flex max-w-[46%] flex-col gap-1.5 md:max-w-xs">
             {goals.map((g) => {
               const pct = g.planned ? Math.min(1, g.covered / g.planned) : 0;
@@ -170,6 +202,12 @@ export function GraphView() {
 
         {/* Controls (top-right) */}
         <div className="absolute right-3 top-3 flex flex-col items-end gap-2 md:flex-row md:items-center">
+          {!all && (
+            <div className="flex gap-1.5" role="radiogroup" aria-label="View">
+              <button type="button" role="radio" aria-checked={trace} onClick={() => setParam("view", null)} className={pill(trace, "px-2.5 md:px-3")}>Trace</button>
+              <button type="button" role="radio" aria-checked={!trace} onClick={() => setParam("view", "web")} className={pill(!trace, "px-2.5 md:px-3")}>Web</button>
+            </div>
+          )}
           <div className="flex gap-1.5" role="radiogroup" aria-label="Scope">
             <button type="button" role="radio" aria-checked={!all} onClick={() => setParam("all", null)} className={pill(!all, "px-2.5 md:px-3")}>
               <span className="md:hidden">Conf</span><span className="hidden md:inline">This conference</span>
@@ -191,6 +229,7 @@ export function GraphView() {
             <button
               type="button"
               onClick={() => canvas.current?.zoomToFit()}
+              disabled={trace}
               className={pill(false, "px-2.5 md:px-3")}
               aria-label="Reset view"
               title="Reset view"
