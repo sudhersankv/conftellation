@@ -42,7 +42,7 @@ function UserSwitcher() {
         aria-label="Demo user"
         value={userId}
         onChange={(e) => setUserId(e.target.value)}
-        className="h-8 rounded-md border border-border bg-surface px-2 text-xs text-text focus:border-accent focus:outline-none"
+        className="h-10 max-w-[9.5rem] rounded-md border border-border bg-surface px-2 text-xs text-text hover:border-borderStrong focus:border-accent focus:outline-none md:h-8"
       >
         {ids.map((id) => <option key={id} value={id}>{userName(id)}</option>)}
       </select>
@@ -65,8 +65,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {NAV.map((n) => <NavLink key={n.href} {...n} active={isActive(n.href)} />)}
         </nav>
         <div className="mt-4 border-t border-border pt-4">
-          <Link href="/add" className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-muted hover:bg-surface hover:text-text"><Plus className="size-4" />Add conference</Link>
-          <Link href="/me" className={cn("flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm hover:bg-surface hover:text-text", isActive("/me") ? "bg-surface2 text-text" : "text-muted")}><UserCircle2 className="size-4" />My record</Link>
+          <Link href="/add" aria-current={isActive("/add") ? "page" : undefined} className={cn("flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm hover:bg-surface hover:text-text", isActive("/add") ? "bg-surface2 text-text" : "text-muted")}><Plus className="size-4" />Add conference</Link>
+          <Link href="/me" aria-current={isActive("/me") ? "page" : undefined} className={cn("flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm hover:bg-surface hover:text-text", isActive("/me") ? "bg-surface2 text-text" : "text-muted")}><UserCircle2 className="size-4" />My record</Link>
         </div>
         <div className="mt-auto px-1"><UserSwitcher /></div>
       </aside>
@@ -79,7 +79,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span className="text-sm font-semibold tracking-tight">Conftellations</span>
           </Link>
           <div className="flex items-center gap-2">
-            <Link href="/add" className="rounded-md p-1.5 text-muted hover:bg-surface hover:text-text" aria-label="Add conference"><Plus className="size-5" /></Link>
+            <Link href="/add" aria-current={isActive("/add") ? "page" : undefined} className={cn("grid size-10 place-items-center rounded-md hover:bg-surface hover:text-text", isActive("/add") ? "bg-surface2 text-text" : "text-muted")} aria-label="Add conference"><Plus className="size-5" /></Link>
             <UserSwitcher />
           </div>
         </header>

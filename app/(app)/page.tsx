@@ -1,6 +1,5 @@
-// Home: placeholder until the Home agent lands (docs/DESIGN.md §3). Replaced by the real conferences list.
-import { redirect } from "next/navigation";
+import { HomeScreen } from "@/components/home/HomeScreen";
 
 export default function Home() {
-  redirect("/plan");
+  return <HomeScreen />;
 }
