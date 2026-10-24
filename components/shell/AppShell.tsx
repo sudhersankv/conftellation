@@ -5,12 +5,14 @@ import { usePathname } from "next/navigation";
 import { CalendarDays, GitBranch, Users, FileText, Plus, UserCircle2 } from "lucide-react";
 import { cn } from "@/lib/ui/cn";
 import { DEMO_USERS, useSession, userName } from "@/lib/ui/session-context";
+import { apiKey, useApi } from "@/lib/ui/use-api";
+import { api } from "@/lib/client";
 import { Avatar } from "@/components/ui/Misc";
 import { Logo } from "@/components/shell/Logo";
 
 const NAV = [
   { href: "/plan", label: "Plan", icon: CalendarDays },
-  { href: "/graph", label: "Graph", icon: GitBranch },
+  { href: "/graph", label: "Conftellation", icon: GitBranch },
   { href: "/network", label: "Network", icon: Users },
   { href: "/brief", label: "Brief", icon: FileText },
 ] as const;
@@ -52,6 +54,28 @@ function UserSwitcher() {
   );
 }
 
+/** Pick which conference every screen shows (the user's attended conferences, from their record). */
+function ConferenceSwitcher({ compact }: { compact?: boolean }) {
+  const { userId, confId, setConfId } = useSession();
+  const { data } = useApi(apiKey("record", userId), () => api.record(userId));
+  const confs = data?.conferences.map((c) => c.conference) ?? [];
+  const known = confs.some((c) => c.id === confId);
+  const options = known ? confs : [{ id: confId, name: confId, url: "", startDate: "", endDate: "" }, ...confs];
+  return (
+    <label className={cn("flex items-center gap-1.5 rounded-full border-2 border-border bg-surface shadow-hardSm", compact ? "h-10 px-2" : "px-2.5 py-1")} title="Conference">
+      <CalendarDays className="size-4 shrink-0 text-muted" aria-hidden />
+      <select
+        aria-label="Conference"
+        value={confId}
+        onChange={(e) => setConfId(e.target.value)}
+        className={cn("cursor-pointer truncate bg-transparent font-heading text-xs font-bold text-text focus:outline-none", compact ? "h-8 max-w-[7rem]" : "h-8 w-full")}
+      >
+        {options.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+      </select>
+    </label>
+  );
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`) || (href === "/plan" && pathname.startsWith("/sessions")) || (href === "/network" && pathname.startsWith("/people"));
@@ -60,7 +84,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-dvh md:flex">
       {/* Sidebar (md+) */}
       <aside className="hidden w-60 shrink-0 flex-col border-r-2 border-border bg-bg px-4 py-5 md:sticky md:top-0 md:flex md:h-dvh">
-        <Link href="/" className="mb-8 px-1"><Logo /></Link>
+        <Link href="/" className="mb-5 px-1"><Logo /></Link>
+        <div className="mb-5"><ConferenceSwitcher /></div>
         <nav className="flex flex-col gap-1">
           {NAV.map((n) => <NavLink key={n.href} {...n} active={isActive(n.href)} />)}
         </nav>
@@ -75,8 +100,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* Top bar (phone) */}
         <header className="sticky top-0 z-30 flex h-[var(--topbar-h)] items-center justify-between border-b-2 border-border bg-bg px-4 md:hidden">
           <Link href="/" aria-label="Conftellations home"><Logo /></Link>
-          <div className="flex items-center gap-2">
-            <Link href="/add" aria-current={isActive("/add") ? "page" : undefined} className={cn("grid size-10 place-items-center rounded-full border-2 border-border shadow-hardSm", isActive("/add") ? "bg-accent" : "bg-surface")} aria-label="Add conference"><Plus className="size-5" /></Link>
+          <div className="flex items-center gap-1.5">
+            <ConferenceSwitcher compact />
+            <Link href="/add" aria-current={isActive("/add") ? "page" : undefined} className={cn("grid size-10 shrink-0 place-items-center rounded-full border-2 border-border shadow-hardSm", isActive("/add") ? "bg-accent" : "bg-surface")} aria-label="Add conference"><Plus className="size-5" /></Link>
             <UserSwitcher />
           </div>
         </header>
