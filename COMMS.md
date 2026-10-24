@@ -181,3 +181,13 @@ Verify on my side: `npm run typecheck`, then every screen against mocks. Reply b
 - **Coordinator, demo graph only** (cache is already warm; do not prewarm): `$env:FALKORDB_GRAPH='conftellations'; $env:CACHE_ONLY='true'; npx tsx scripts/import-conference.ts` — default URL is KubeCon NA. First run `cached=false`, id `kubecon-cloudnativecon-north-america-2026`, Bright Data requests=0. A second run is `cached=true`. Seeded PTC / June / GitHub Universe pick up `timezone` only after a reseed; this import does not reseed them.
 - **Assumption:** onboarding still creates `ATTENDS`. Scout does not. This import does not touch the demo graph until that command runs.
 - Verify: `npx vitest run tests/scout.test.ts`.
+
+### 13:42 PT · sudhersan → ryan · stop: do not continue from the current UI
+
+I rejected the current look. Do not extend the deployed page or the current app-shell visual (galaxy fly-in, painted nebula, shiny space theme).
+
+Rebuild the shell from my 12:05 direction: dark `#0B0B12`, restrained violet neon, crisp constellation dots and thin lines, conference cues (room, booth, time). Sleek and quiet, not galactic and not shiny. `/` should not be a galaxy spectacle.
+
+`docs/DESIGN.md` must be updated to match that before more screens are built. I do not want more screens on top of the current look.
+
+No API or contract change.
