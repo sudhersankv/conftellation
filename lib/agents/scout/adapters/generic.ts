@@ -52,7 +52,7 @@ export type Extracted = z.infer<typeof Extracted>;
 
 const SYSTEM = `You transcribe a conference website (markdown from one or more pages) into JSON.
 Only include what the pages state. Never invent sessions, speakers, sponsors, dates or times. Use "" when a field is unknown.
-- conference: official name (with year if shown), startDate/endDate as YYYY-MM-DD, venue city/region/country, IANA timezone of the venue if you can tell.
+- conference: name: the event's proper name including the year, e.g. 'KubeCon + CloudNativeCon Europe 2026' (never a page title like 'Schedule' or 'Agenda'), startDate/endDate as YYYY-MM-DD, venue city/region/country, IANA timezone of the venue if you can tell.
 - sessions: every scheduled agenda item with a time. start and end are ISO-8601 datetimes. Prefer an offset when the page gives one (2026-12-03T10:00:00+00:00); otherwise a venue-local YYYY-MM-DDTHH:MM:SS. kind is talk, workshop, keynote, panel, or other. url is the session page if linked. speakers are names only. topics: 1-3 short lowercase subject tags.
 - people: every named person (speakers and others) with title, company, bio, and links when the pages state them.
 - companies: sponsors/exhibitors/partners. website, description, sponsorTier, booth number, hall, and topics when shown.`;

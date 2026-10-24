@@ -8,6 +8,15 @@ import { urlVariants } from "@/lib/agents/scout";
 import { extractedToNormalized, type Extracted } from "@/lib/agents/scout/adapters/generic";
 import { _setLookupForTests } from "@/lib/publicUrl";
 import type { AddConferenceResponse, ConferenceDetail } from "@/lib/types";
+import { GET as listConferences } from "@/app/api/conferences/route";
+import { pickScheduleUrl } from "@/lib/agents/scout/find";
+import { domainName, isGenericName, isGenericTopic, normalizeUrl, pageName, stripTitle } from "@/lib/agents/scout/html";
+import { sessionizeToNormalized, type SessionizeAll } from "@/lib/agents/scout/adapters/sessionize";
+import { rainfocusPerson } from "@/lib/agents/scout/adapters/rainfocus";
+import { toPerson } from "@/lib/agents/planner";
+import { peopleByIds } from "@/lib/queries/plan";
+import { loadGithubUniverse } from "@/seed/demo";
+import type { ConferencesResponse } from "@/lib/types";
 import { req } from "./helpers";
 
 const fx = (f: string) => readFileSync(path.join(__dirname, "fixtures", "scout", f), "utf8");
@@ -96,6 +105,16 @@ const nameOnly = {
   ],
 };
 
+/** LLM output that only knows the page title ("Schedule") and tags a session with the conference's own name and a page-role word. */
+const agnt = (name: string) => ({
+  conference: { name, startDate: "2026-12-08", endDate: "2026-12-09", city: "London", ...blankConf },
+  sessions: [
+    { title: `MCP in production (${name})`, abstract: "", kind: "talk", start: "2026-12-08T10:00:00+00:00", end: "2026-12-08T10:30:00+00:00", room: "", url: "", speakers: [], topics: ["mcp", "schedule", "AgntCon + MCPCon North America"] },
+  ],
+  people: [],
+  companies: [],
+});
+
 const rescue = {
   conference: { name: "Rescue Expo 2026", startDate: "2026-12-05", endDate: "2026-12-05", city: "London", ...blankConf },
   sessions: [
@@ -122,6 +141,8 @@ vi.mock("@/lib/llm", async (orig) =>
       if (user.includes("NAME ONLY SPONSORS")) return nameOnly;
       if (user.includes("RESCUE EXPO")) return rescue;
       if (user.includes("CAP PAGES")) return { ...generic, conference: { ...generic.conference, name: "Cap Pages 2026" } };
+      if (user.includes("AGNTCON PAGE")) return agnt("Schedule");
+      if (user.includes("BARE DOMAIN PAGE")) return agnt("Agenda");
       return generic;
     }
     if (name === "timezone") return { timezone: "America/Denver" };
@@ -188,6 +209,25 @@ beforeAll(async () => {
     "BEGIN:VEVENT", "DTSTART:20261203T120000Z", "DTEND:20261203T130000Z", "SUMMARY:Badge pick-up", "CATEGORIES:REGISTRATION", "UID:reg1", "END:VEVENT",
     "END:VCALENDAR",
   ].join("\r\n"));
+  // name → URL via SERP
+  const ics = (cal: string, uid: string) => [
+    "BEGIN:VCALENDAR", `X-WR-CALNAME:${cal}`, "BEGIN:VEVENT", "DTSTART:20261203T170000Z", "DTEND:20261203T173000Z",
+    "SUMMARY:Opening keynote", "CATEGORIES:KEYNOTES", "LOCATION:Hall A\\, Austin\\, TX\\, USA", `UID:${uid}`, "END:VEVENT", "END:VCALENDAR",
+  ].join("\r\n");
+  net.serp.set("Name Search Summit schedule", [
+    { title: "Name Search Summit - Wikipedia", link: "https://en.wikipedia.org/wiki/Name_Search_Summit" },
+    { title: "Name Search Summit 2026", link: "https://namesearch.example/" },
+    { title: "Schedule", link: "https://namesearch26.sched.com/" },
+  ]);
+  net.http.set("https://namesearch26.sched.com/", `<html><head><title>Name Search Summit 2026 Schedule</title></head></html>`);
+  net.http.set("https://namesearch26.sched.com/all.ics", ics("namesearch26", "ns1"));
+  net.serp.set("Fallback Fest schedule", [{ title: "Fallback Fest", link: "https://www.linkedin.com/events/fallback" }]);
+  net.serp.set("Fallback Fest agenda sessions", [{ title: "Agenda", link: "https://fallback26.sched.com/" }]);
+  net.http.set("https://fallback26.sched.com/all.ics", ics("Schedule", "ff1"));
+  // proper names: the page title says "Schedule | <event> | LF Events" and the URL carries ad-click params
+  net.unlock.set("https://agntcon.example/schedule/", "# AGNTCON PAGE\n");
+  net.http.set("https://agntcon.example/schedule/", `<html><head><title>Schedule | AgntCon + MCPCon North America 2026 | LF Events</title><meta property="og:site_name" content="LF Events" /></head></html>`);
+  net.unlock.set("https://events.baredomain.dev/agenda", "# BARE DOMAIN PAGE\n");
 }, 60_000);
 
 beforeEach(() => {
@@ -382,7 +422,10 @@ describe("POST /api/conferences (other paths)", () => {
     const session = (n: number, published = true) => ({
       sessionID: `S${n}`, code: `C${n}`, title: `Session ${n}`, type: "Breakout session", published,
       times: [{ utcStartTime: "2026/10/28 17:00:00", utcEndTime: "2026/10/28 17:30:00", room: "Room 1" }],
-      participants: [{ fullName: "Mona Lisa", jobTitle: "Engineer", companyName: "GitHub", session: [{ sessionID: `S${n}`, published: "true" }] }],
+      participants: [{
+        fullName: "Mona Lisa", jobTitle: "Engineer", companyName: "GitHub", session: [{ sessionID: `S${n}`, published: "true" }],
+        photoURL: "https://static.rainfocus.example/mona.png", linkedIn: "https://www.linkedin.com/in/mona/", twitter: "@monalisa",
+      }],
       attributevalues: [{ attribute_id: "Topic", value: "AI: Agents" }],
     });
     net.http.set(`${rf} type=session&size=50&from=0`, JSON.stringify({ sectionList: [{ items: [session(1), session(2, false)] }] }));
@@ -393,6 +436,9 @@ describe("POST /api/conferences (other paths)", () => {
     expect(body.counts).toMatchObject({ sessions: 1, people: 1, companies: 1 });
     const { body: d } = await detail("github-universe-2026");
     expect(d.sessions[0]).toMatchObject({ id: "ghu26-c1", start: "2026-10-28T10:00:00-07:00", topics: ["agents"] });
+    const [mona] = (await peopleByIds([d.sessions[0].speakers[0].id])).map(toPerson);
+    expect(mona).toMatchObject({ name: "Mona Lisa", photoUrl: "https://static.rainfocus.example/mona.png" });
+    expect(mona.links).toEqual(["https://www.linkedin.com/in/mona/", "https://x.com/monalisa"]);
   });
 
   it("rejects bad input with JSON errors", async () => {
@@ -433,5 +479,136 @@ describe("generic extraction -> normalized", () => {
     const n = extractedToNormalized(base([], companies), { id: "u", url: "https://u.example/", timeZone: "Europe/London", collectedAt: "x" });
     expect(n.companies.find((c) => c.name === "Hall Only")?.booth).toBeUndefined();
     expect(n.companies.find((c) => c.name === "Booth Co")?.booth).toEqual({ label: "B7", hall: "North" });
+  });
+});
+
+describe("POST /api/conferences {name}", () => {
+  it("searches '<name> schedule', skips aggregators and bare home pages, and imports the platform hit", async () => {
+    const { status, body } = await post({ name: "Name Search Summit" });
+    expect(status, body.error).toBe(200);
+    expect(net.calls.filter((c) => c.startsWith("serp "))).toEqual(["serp Name Search Summit schedule"]);
+    expect(body.conference).toMatchObject({ url: "https://namesearch26.sched.com", via: "ics" });
+    expect(body.conference.name).toBe("Name Search Summit 2026");
+    expect(body.counts.sessions).toBe(1);
+  });
+
+  it("falls back to '<name> agenda sessions' and names a generic calendar by its domain", async () => {
+    const { status, body } = await post({ name: "Fallback Fest" });
+    expect(status, body.error).toBe(200);
+    expect(net.calls.filter((c) => c.startsWith("serp "))).toEqual(["serp Fallback Fest schedule", "serp Fallback Fest agenda sessions"]);
+    expect(net.used).toBe(2); // both searches count against the Bright Data request cap
+    expect(body.conference.name).toBe("Fallback26 2026");
+  });
+
+  it("422s with a helpful message when nothing plausible turns up", async () => {
+    const { status, body } = await post({ name: "Nowhere Conf" });
+    expect(status).toBe(422);
+    expect(body.error).toMatch(/couldn't find a public schedule page for "Nowhere Conf".*paste/);
+    expect((await post({ name: "  " })).status).toBe(400);
+  });
+
+  it("picks known platforms first, then the event's own schedule page", () => {
+    expect(pickScheduleUrl([
+      { title: "w", link: "https://en.wikipedia.org/wiki/KubeCon" },
+      { title: "own", link: "https://kubecon.example/program/schedule/" },
+      { title: "lf", link: "https://events.linuxfoundation.org/kubecon-cloudnativecon-north-america/program/schedule/" },
+    ])).toBe("https://events.linuxfoundation.org/kubecon-cloudnativecon-north-america/program/schedule/");
+    expect(pickScheduleUrl([
+      { title: "home", link: "https://sessionize.com/" },
+      { title: "li", link: "https://www.linkedin.com/events/agenda-1" },
+      { title: "own", link: "https://graphsummit.example/agenda" },
+    ])).toBe("https://graphsummit.example/agenda");
+    expect(pickScheduleUrl([{ title: "rf", link: "https://reg.githubuniverse.com/flow/github/universe26/sessioncatalog" }])).toContain("reg.githubuniverse.com");
+    expect(pickScheduleUrl([{ title: "p", link: "https://pretalx.com/pycon-de-2026/schedule/" }])).toContain("pretalx.com");
+    expect(pickScheduleUrl([{ title: "x", link: "http://10.0.0.1/schedule" }, { title: "y", link: "https://blog.example/news" }])).toBeUndefined();
+  });
+});
+
+describe("conference names, urls and topics", () => {
+  it("names a generic import from the page title, not 'Schedule', strips ad-click params, and skips self/generic topics", async () => {
+    const { status, body } = await post({ url: "https://agntcon.example/schedule/?_gl=1*abc*_ga&utm_source=x&gclid=9&gbraid=2&fbclid=3" });
+    expect(status, body.error).toBe(200);
+    expect(body.conference).toMatchObject({ id: "agntcon-mcpcon-north-america-2026", name: "AgntCon + MCPCon North America 2026", url: "https://agntcon.example/schedule" });
+    const { body: d } = await detail(body.conference.id);
+    expect(d.sessions[0].topics).toEqual(["mcp"]);
+    const generic = await q<{ id: string }>(`MATCH (t:Topic) WHERE t.id IN ['schedule', 'agntcon + mcpcon north america'] RETURN t.id AS id`);
+    expect(generic).toEqual([]);
+  });
+
+  it("falls back to the domain + year when page and LLM only offer a generic word", async () => {
+    const { status, body } = await post({ url: "https://events.baredomain.dev/agenda" });
+    expect(status, body.error).toBe(200);
+    expect(body.conference).toMatchObject({ id: "baredomain-2026", name: "Baredomain 2026" });
+  });
+
+  it("derives names from JSON-LD, og:site_name + year, or the stripped title", () => {
+    const ld = `<script type="application/ld+json">{"@type":"Event","name":"Graph Summit 2026","startDate":"2026-12-03"}</script><title>Schedule</title>`;
+    expect(pageName(ld)).toBe("Graph Summit 2026");
+    expect(pageName(`<meta property="og:site_name" content="PyCon DE" /><title>Program | PyCon DE 2026</title>`)).toBe("PyCon DE 2026");
+    expect(pageName(`<meta property="og:site_name" content="LF Events" /><title>Agenda – Open Source Summit Europe</title>`)).toBe("Open Source Summit Europe");
+    expect(pageName(`<title>Schedule</title>`)).toBeUndefined();
+    expect(stripTitle("Home - DevDays 2026")).toBe("DevDays 2026");
+    expect(stripTitle("Speakers | Sessions")).toBeUndefined();
+    expect(isGenericName("Agenda 2026")).toBe(true);
+    expect(isGenericName("KubeCon")).toBe(false);
+    expect(isGenericTopic("schedule")).toBe(true);
+    expect(isGenericTopic("kubecon", "kubecon-2026")).toBe(true);
+    expect(isGenericTopic("kubernetes", "kubecon-2026")).toBe(false);
+    expect(domainName("https://www.agntcon.dev/schedule", "2026-11-12")).toBe("Agntcon 2026");
+    expect(domainName("https://kccncna2026.sched.com/")).toBe("Kccncna2026");
+    expect(normalizeUrl("https://Events.example.org/x/?utm_medium=a&_gl=b&id=7&wbraid=c")).toBe("https://events.example.org/x/?id=7");
+  });
+});
+
+describe("speaker photos and public links", () => {
+  it("Sessionize speakers carry profilePicture and links", () => {
+    const data = JSON.parse(fx("sessionize.json")) as SessionizeAll;
+    const n = sessionizeToNormalized({ data, conference: { id: "x", name: "x", url: "https://x.example", startDate: "", endDate: "" }, source: "s", collectedAt: "t", timeZone: "America/Denver", idPrefix: "sz" });
+    const people = n.sessions.flatMap((s) => s.speakers);
+    const chris = people.find((p) => p.name === "Chris Aniszczyk") ?? sessionizeToNormalized({
+      data: { ...data, sessions: [{ id: "1", title: "t", startsAt: "2026-11-10T10:00:00", endsAt: "2026-11-10T10:30:00", speakers: [data.speakers.find((s) => s.fullName === "Chris Aniszczyk")!.id], categoryItems: [] }] },
+      conference: { id: "x", name: "x", url: "https://x.example", startDate: "", endDate: "" }, source: "s", collectedAt: "t", timeZone: "America/Denver", idPrefix: "sz",
+    }).sessions[0].speakers[0];
+    expect(chris.photoUrl).toMatch(/^https:\/\/cdn\.sessionize\.com\/image\//);
+    expect(chris.links).toContain("https://www.linkedin.com/in/caniszczyk/");
+  });
+
+  it("RainFocus speakers (seed catalogue) carry photoURL and linkedIn", () => {
+    const people = loadGithubUniverse().sessions.flatMap((s) => s.speakers);
+    const withPhoto = people.find((p) => p.photoUrl && p.links?.some((l) => l.includes("linkedin.com")));
+    expect(withPhoto?.photoUrl).toMatch(/^https:\/\/static\.rainfocus\.com\//);
+    expect(rainfocusPerson({ fullName: "Jake", linkedIn: "https://www.linkedin.com/in/jak-e/", twitter: "biznissjake", photoURL: "https://static.rainfocus.com/p.png" }))
+      .toMatchObject({ photoUrl: "https://static.rainfocus.com/p.png", links: ["https://www.linkedin.com/in/jak-e/", "https://x.com/biznissjake"] });
+  });
+
+  it("imported Sessionize people are returned with photoUrl from the graph", async () => {
+    const [row] = await q<{ id: string }>(`MATCH (:Conference {id:$id})-[:HAS_SESSION]->(:Session)<-[:SPEAKS_AT]-(p:Person) WHERE p.photoUrl IS NOT NULL RETURN p.id AS id LIMIT 1`, { id: KCC_ID });
+    expect(row).toBeDefined();
+    const [person] = (await peopleByIds([row.id])).map(toPerson);
+    expect(person.photoUrl).toMatch(/^https:\/\//);
+  });
+});
+
+describe("GET /api/conferences (catalogue)", () => {
+  it("lists every conference with counts, attendees, attending and past/live/upcoming status", async () => {
+    await q(`MERGE (u:User {id:'cat-ada'}) WITH u MATCH (c:Conference {id:$id}) MERGE (u)-[:ATTENDS]->(c)`, { id: KCC_ID });
+    await q(`MERGE (u:User {id:'cat-bob'}) WITH u MATCH (c:Conference {id:$id}) MERGE (u)-[:ATTENDS]->(c)`, { id: KCC_ID });
+    const res = await listConferences(req("/api/conferences?userId=cat-ada&now=2026-11-10T12:00:00-07:00"));
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as ConferencesResponse;
+    const kcc = body.upcoming[0];
+    expect(kcc).toMatchObject({ conference: { id: KCC_ID }, status: "live", attendees: 2, attending: true, counts: { sessions: 8, companies: 4 } });
+    expect(kcc.counts.people).toBeGreaterThan(5);
+    const rest = body.upcoming.slice(1);
+    expect(rest.every((c) => c.status === "upcoming" && !c.attending)).toBe(true);
+    expect(rest.map((c) => c.conference.startDate)).toEqual([...rest.map((c) => c.conference.startDate)].sort());
+    expect(body.past.map((c) => c.conference.id)).toContain("github-universe-2026");
+    expect(body.past.every((c) => c.status === "past")).toBe(true);
+    expect(body.past.map((c) => c.conference.startDate)).toEqual([...body.past.map((c) => c.conference.startDate)].sort().reverse());
+
+    const later = (await (await listConferences(req("/api/conferences?now=2027-01-15T12:00:00-08:00"))).json()) as ConferencesResponse;
+    expect(later.upcoming).toEqual([]);
+    expect(later.past.find((c) => c.conference.id === KCC_ID)).toMatchObject({ status: "past", attending: false, attendees: 2 });
+    expect((await listConferences(req("/api/conferences?now=nope"))).status).toBe(400);
   });
 });

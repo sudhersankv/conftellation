@@ -6,6 +6,7 @@ import {
   companyId, personId, slug, stripHtml, topicId,
   type NormCompany, type NormPerson, type NormalizedConference,
 } from "./normalized";
+import { isGenericTopic } from "./html";
 
 export interface UpsertResult {
   counts: { sessions: number; people: number; companies: number; booths: number };
@@ -67,13 +68,15 @@ export async function upsertConference(n: NormalizedConference): Promise<UpsertR
   n.people?.forEach((p) => addPerson(p));
 
   // ----- topics: normalize, then merge new ones into near-duplicates -----
+  // A topic equal to the conference itself ("kubecon") or a page-role word ("schedule", "general") links everything to everything: drop it.
+  const okTopic = (id: string) => Boolean(id) && !isGenericTopic(id, confId, n.conference.name);
   const allTopicNames = new Map<string, string>();
   for (const t of [...sessions.flatMap((s) => s.topics), ...companies.flatMap((c) => c.topics)]) {
     const id = topicId(t);
-    if (id && !allTopicNames.has(id)) allTopicNames.set(id, t.trim());
+    if (okTopic(id) && !allTopicNames.has(id)) allTopicNames.set(id, t.trim());
   }
   const topicMap = await resolveTopics(allTopicNames);
-  const tids = (names: string[]) => [...new Set(names.map(topicId).filter(Boolean).map((id) => topicMap.get(id) ?? id))];
+  const tids = (names: string[]) => [...new Set(names.map(topicId).filter(okTopic).map((id) => topicMap.get(id) ?? id))];
 
   // ----- writes -----
   const now = { source: prov.source, collectedAt: prov.collectedAt, via: prov.via };
@@ -115,7 +118,7 @@ export async function upsertConference(n: NormalizedConference): Promise<UpsertR
 
   const personRows = [...people.values()].map((p) => ({
     id: p.id, companyId: p.companyId ?? null,
-    p: props({ name: p.name, title: p.title, bio: stripHtml(p.bio), links: p.links, company: p.company, ...now }),
+    p: props({ name: p.name, title: p.title, bio: stripHtml(p.bio), links: p.links, photoUrl: p.photoUrl, company: p.company, ...now }),
   }));
   await q(
     `UNWIND $rows AS r

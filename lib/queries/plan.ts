@@ -214,6 +214,7 @@ export async function conferenceDay(confId: string): Promise<{ from: string | nu
 export interface PersonRow {
   id: string; name: string; title: string | null; company: string | null; companyId: string | null; bio: string | null;
   userId: string | null; openTo: string[] | null; source: string | null; collectedAt: string | null; via: string | null;
+  links?: string[] | null; photoUrl?: string | null;
 }
 
 export async function peopleByIds(ids: string[]): Promise<PersonRow[]> {
@@ -223,7 +224,8 @@ export async function peopleByIds(ids: string[]): Promise<PersonRow[]> {
      OPTIONAL MATCH (p)-[:WORKS_AT]->(co:Company)
      OPTIONAL MATCH (u:User)-[:IS]->(p)
      RETURN p.id AS id, p.name AS name, p.title AS title, coalesce(co.name, p.company) AS company, co.id AS companyId,
-            p.bio AS bio, u.id AS userId, coalesce(u.openTo, p.openTo) AS openTo, p.source AS source, p.collectedAt AS collectedAt, p.via AS via`,
+            p.bio AS bio, u.id AS userId, coalesce(u.openTo, p.openTo) AS openTo, p.source AS source, p.collectedAt AS collectedAt, p.via AS via,
+            p.links AS links, p.photoUrl AS photoUrl`,
     { ids },
   );
 }

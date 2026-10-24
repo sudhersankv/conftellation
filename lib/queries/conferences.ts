@@ -83,3 +83,63 @@ export async function conferenceTopics(id: string): Promise<string[]> {
   );
   return rows.map((r) => r.id);
 }
+
+export interface CatalogueRow {
+  conference: Conference;
+  counts: { sessions: number; people: number; companies: number; booths: number };
+  attendees: number;
+  attending: boolean;
+}
+
+/**
+ * Every Conference with its counts. people = speakers at its sessions ∪ people who work at its sponsors/exhibitors;
+ * companies = SPONSORS ∪ companies with a booth there; attendees = users with ATTENDS; attending = `userId` ATTENDS.
+ */
+export async function conferenceCatalogue(userId?: string): Promise<CatalogueRow[]> {
+  type Row = ConfRow & { sessions: number; people: number; companies: number; booths: number; attendees: number; attending: boolean };
+  const rows = await q<Row>(
+    `MATCH (c:Conference)
+     OPTIONAL MATCH (c)-[:HAS_SESSION]->(s:Session)
+     WITH c, count(DISTINCT s) AS sessions
+     OPTIONAL MATCH (c)-[:HAS_SESSION]->(:Session)<-[:SPEAKS_AT]-(sp:Person)
+     WITH c, sessions, collect(DISTINCT sp.id) AS speakers
+     OPTIONAL MATCH (sc:Company)-[:SPONSORS]->(c)
+     WITH c, sessions, speakers, collect(DISTINCT sc.id) AS sponsors
+     OPTIONAL MATCH (c)-[:HAS_BOOTH]->(b:Booth)
+     OPTIONAL MATCH (bc:Company)-[:HAS_BOOTH]->(b)
+     WITH c, sessions, speakers, sponsors, count(DISTINCT b) AS booths, collect(DISTINCT bc.id) AS exhibitors
+     WITH c, sessions, speakers, booths, sponsors + [x IN exhibitors WHERE NOT x IN sponsors] AS cos
+     OPTIONAL MATCH (w:Person)-[:WORKS_AT]->(wc:Company) WHERE wc.id IN cos
+     WITH c, sessions, speakers, booths, cos, collect(DISTINCT w.id) AS staff
+     OPTIONAL MATCH (u:User)-[:ATTENDS]->(c)
+     WITH c, sessions, booths, size(cos) AS companies, size(speakers) + size([x IN staff WHERE NOT x IN speakers]) AS people,
+          count(DISTINCT u) AS attendees, sum(CASE WHEN u.id = $userId THEN 1 ELSE 0 END) AS mine
+     RETURN ${CONF_FIELDS}, sessions, people, companies, booths, attendees, mine > 0 AS attending`,
+    { userId: userId ?? "" },
+  );
+  return rows.map(({ sessions, people, companies, booths, attendees, attending, ...conf }) => ({
+    conference: toConference(conf as ConfRow),
+    counts: { sessions, people, companies, booths },
+    attendees,
+    attending: Boolean(userId) && Boolean(attending),
+  }));
+}
+
+/** "YYYY-MM-DD" of `now` in the conference's timezone (PT when it has none). */
+export function localDay(now: Date, timeZone = "America/Los_Angeles"): string {
+  try {
+    return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+  } catch {
+    return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+  }
+}
+
+/** past / live / upcoming by the conference's own calendar days. */
+export function conferenceStatus(c: Pick<Conference, "startDate" | "endDate" | "timezone">, now: Date): "past" | "live" | "upcoming" {
+  const today = localDay(now, c.timezone);
+  const start = (c.startDate ?? "").slice(0, 10);
+  const end = (c.endDate || c.startDate || "").slice(0, 10);
+  if (end && end < today) return "past";
+  if (start && start <= today) return "live";
+  return "upcoming";
+}

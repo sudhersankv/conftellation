@@ -19,7 +19,18 @@ export const loadPtc = () => readJson<NormalizedConference>("ptc.json");
 export const loadJune = () => readJson<NormalizedConference>("ai-eng-summit-june.json");
 
 export function loadGithubUniverse(): NormalizedConference {
-  const sessions = readJson<RainFocusSlimSession[]>("raw/github-universe-2026-sessions.slim.json");
+  // The slim session file carries speaker ids only; photos and public profile links come from the speaker catalogue.
+  type RfSpeaker = { speakerId: string; photoURL?: string; linkedIn?: string; twitter?: string; "Speaker-Photo-Published"?: string };
+  const profiles = new Map(readJson<RfSpeaker[]>("raw/github-universe-2026-speakers.json").map((p) => [p.speakerId, p]));
+  const sessions = readJson<RainFocusSlimSession[]>("raw/github-universe-2026-sessions.slim.json").map((s) => ({
+    ...s,
+    speakers: s.speakers?.map((sp) => {
+      const p = sp.speakerId ? profiles.get(sp.speakerId) : undefined;
+      if (!p) return sp;
+      const photo = p["Speaker-Photo-Published"] === undefined || /^published$/i.test(p["Speaker-Photo-Published"]) ? p.photoURL : undefined;
+      return { ...sp, photoURL: photo, linkedIn: p.linkedIn, twitter: p.twitter };
+    }),
+  })) as RainFocusSlimSession[];
   const exhibitors = readJson<RainFocusExhibitor[]>("raw/github-universe-2026-sponsors.json");
   const dates = sessions.flatMap((s) => s.times?.map((t) => t.utcStartTime.slice(0, 10).replace(/\//g, "-")) ?? []).sort();
   return rainfocusToNormalized({

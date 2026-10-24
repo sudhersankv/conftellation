@@ -11,7 +11,7 @@ import { sessionizeToNormalized, sessionizeUrl, type SessionizeAll } from "./ada
 import { icsToNormalized, icsVenue, parseIcs } from "./adapters/ics";
 import { extractedToNormalized, genericExtract } from "./adapters/generic";
 import { enrichSponsors, type EnrichResult } from "./enrich";
-import { jsonLdEvent, links, meta, normalizeUrl, schedHost, sessionizeCodes, sponsorLogos, title, type PageEvent } from "./html";
+import { domainName, isGenericName, jsonLdEvent, links, normalizeUrl, pageName, schedHost, sessionizeCodes, sponsorLogos, stripTracking, type PageEvent } from "./html";
 import { slug, type NormCompany, type NormalizedConference } from "./normalized";
 import { venueTimeZone } from "./timezone";
 import { upsertConference } from "./upsert";
@@ -74,7 +74,7 @@ function parseUrl(raw: string): string {
   const problem = publicUrlProblem(u.toString());
   if (problem) throw new BadInput(problem);
   u.hash = "";
-  return u.toString();
+  return stripTracking(u.toString());
 }
 
 /** Slash and http/https forms. The query string stays intact; only the path gains or loses a trailing slash. */
@@ -144,7 +144,7 @@ async function route(url: string): Promise<{ norm: NormalizedConference; path: S
 
   if (html) {
     if (html.trimStart().startsWith("BEGIN:VCALENDAR")) return { norm: await fromIcs(url, url, {}), path: "ics" };
-    const ev: PageEvent = { ...metaEvent(html), ...stripUndef(jsonLdEvent(html) ?? {}) };
+    const ev: PageEvent = { ...stripUndef({ ...(jsonLdEvent(html) ?? {}), name: undefined }), ...metaEvent(html) };
     let sz = await firstSessionize(sessionizeCodes(html));
     let sched = sz ? undefined : schedHost(url, html);
     if (!sz && !sched) {
@@ -166,7 +166,11 @@ async function route(url: string): Promise<{ norm: NormalizedConference; path: S
 
   const { extracted, collectedAt } = await genericExtract(url);
   const tz = await venueTimeZone({ city: extracted.conference.city ?? undefined, region: extracted.conference.region ?? undefined, country: extracted.conference.country ?? undefined, hint: extracted.conference.timezone });
-  const norm = extractedToNormalized(extracted, { id: confId(extracted.conference.name, extracted.conference.startDate ?? undefined), url, timeZone: tz, collectedAt });
+  const name = (html ? pageName(html) : undefined)
+    ?? (isGenericName(extracted.conference.name) ? undefined : extracted.conference.name.trim())
+    ?? domainName(url, extracted.conference.startDate || undefined);
+  extracted.conference.name = name;
+  const norm = extractedToNormalized(extracted, { id: confId(name, extracted.conference.startDate ?? undefined), url, timeZone: tz, collectedAt });
   if (norm.sessions.length === 0) throw new BadInput("couldn't find a timed agenda on that page");
   return { norm, path: "generic" };
 }
@@ -184,7 +188,7 @@ async function firstSessionize(codes: string[]): Promise<SessionizeHit | undefin
 
 async function fromSessionize(hit: SessionizeHit, url: string, ev: PageEvent): Promise<NormalizedConference> {
   const timeZone = await venueTimeZone(ev);
-  const name = ev.name ?? `Sessionize event ${hit.code}`;
+  const name = ev.name ?? (/sessionize\.com$/i.test(new URL(url).hostname) ? `Sessionize event ${hit.code}` : domainName(url, ev.startDate));
   const norm = sessionizeToNormalized({
     data: hit.data,
     conference: { id: "", name, url, startDate: ev.startDate ?? "", endDate: ev.endDate ?? "", city: ev.city, timezone: timeZone },
@@ -202,7 +206,8 @@ async function fromIcs(icsUrl: string, url: string, ev: PageEvent): Promise<Norm
   const venue = { ...icsVenue(events), ...stripUndef(ev) };
   const timeZone = await venueTimeZone(venue);
   const calName = r.data.match(/^X-WR-CALNAME:(.+)$/m)?.[1]?.trim();
-  const name = ev.name ?? calName ?? new URL(url).hostname;
+  const firstDay = events.map((e) => e.DTSTART ?? "").filter(Boolean).sort()[0];
+  const name = ev.name ?? (calName && !isGenericName(calName) ? calName : undefined) ?? domainName(url, ev.startDate ?? firstDay);
   const norm = icsToNormalized({
     events, source: icsUrl, collectedAt: r.collectedAt, timeZone, idPrefix: `ics-${slug(name).slice(0, 24)}`,
     conference: { id: "", name, url, startDate: ev.startDate ?? "", endDate: ev.endDate ?? "", city: venue.city, timezone: timeZone },
@@ -228,8 +233,9 @@ async function findSponsors(html: string, url: string): Promise<NormCompany[]> {
   return [];
 }
 
+/** The page's proper event name (JSON-LD, og:site_name + year, or the stripped title); `{}` when the page only says "Schedule". */
 function metaEvent(html: string): PageEvent {
-  const name = (meta(html, "og:title") ?? title(html))?.split(/\s+[|\u2013\u2014]\s+/)[0]?.trim();
+  const name = pageName(html);
   return name ? { name } : {};
 }
 
