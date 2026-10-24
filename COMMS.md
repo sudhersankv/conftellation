@@ -143,3 +143,16 @@ Verify on my side: `npm run typecheck`, then every screen against mocks. Reply b
 - **Client (additive)**: `api.tripReport(userId, confId, { regenerate?: boolean })`; the third arg is optional, no UI change needed.
 - **Coordinator**: reseed with `DEMO_MODE=true` so Sam's brief/trip are precomputed (otherwise the first GET computes and stores them live).
 - Verify: `curl "localhost:3001/api/users/sam/brief?confId=ptc-2026"` (add `&regenerate=1`); `npx tsx scripts/brief-demo.ts sam ptc-2026 [--llm]` (read-only); tests `tests/recapper.test.ts`, `tests/brief-cite.test.ts`.
+
+### 13:00 PT · sudhersan → ryan · route `POST /api/users/:id/moments` and `POST /api/moments/:id/share` are live
+- **Capture** (`api.createMoment(userId, momentForm({...}))`): real Scribe, ~350 ms against the hosted graph; response type unchanged (`CreateMomentResponse`). Optional `?now=<ISO>` (or `DEMO_NOW`) sets the moment time and drives auto-attach. JSON bodies are accepted too (handy for curl).
+- **Attach rule** = `PlanResponse.now`: explicit `targetId`, else the latest check-in whose session is still running (booth: within 20 min), else the planned session whose slot contains now. If none, a note/photo/met is saved unattached; a `checkin` with nothing to attach to is **400**.
+- **`CreateMomentFields.clientId?: string`** added to `lib/types.ts` (your request): `[A-Za-z0-9_-]{1,80}`, becomes the Moment id; a retry returns the same moment, no duplicate. Bad clientId → 400.
+- **`lit`** = `[momentId, targetId?, personId?, goalId?]` (goal = the PLANS goal of the target/person, else the goal sharing most topics). These ids will all be in the real `constellation` (#7, next).
+- Check-in/note on a planned item flips its `PLANS` status to `done`. An unplanned target is still captured (it becomes an `unplanned` star).
+- `moment.topics`: 1–3 existing topic ids, synchronously (topic names found in the text, then the target's topics). The LLM adds topics and the text is embedded in the background, so a later read may show one more topic.
+- **Met someone**: `personId` (must exist, else 404) or `newPersonName` (+ `newPersonCompany`) → Person `slug(name)@companyslug` (e.g. `rosa-diaz@acmetrace`), linked to the existing Company by name. `kind:"met"` without either → 400.
+- **Photo**: `file` (≤10 MB) is saved on disk and served from `mediaUrl = /api/uploads/<momentId>.jpg` (same-origin; files under `public/` added at runtime aren't served by `next start`, hence the route). Wiped on each Fly deploy.
+- Errors: unknown user/target/person → 404 `{error}`; bad kind/missing fields → 400.
+- **Share** (`api.shareMoment(id, to)`): `"network"` → `shared:true` (session community); `["emily"]` → `SHARED_WITH` edges (shared stays as is); `[]` → private again (`shared:false`, SHARED_WITH removed). Returns the `Moment`. Unknown id → 404.
+- Verify: `npx vitest run tests/scribe.test.ts`, or `curl -X POST localhost:3001/api/users/sam/moments?now=2026-10-24T13:10:00-07:00 -H 'content-type: application/json' -d '{"confId":"ptc-2026","kind":"note","text":"span per tool call"}'` → attaches to `s-tracing`.
