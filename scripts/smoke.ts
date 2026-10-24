@@ -164,11 +164,13 @@ async function main() {
   if (meet) {
     await step("GET network B (incoming)", () => call<NetworkResponse>(`/api/users/${B}/network?confId=${CONF}`),
       (n) => assert(n.incoming.some((m) => m.id === meet.id), `incoming=${n.incoming.length}`));
-    await step("POST respond accept", () => call<MeetRequest>(`/api/meets/${encodeURIComponent(meet.id)}/respond?now=${NOW}`, post({ action: "accept" })),
+    await step("POST respond without identity → 401", () => call(`/api/meets/${encodeURIComponent(meet.id)}/respond?now=${NOW}`, post({ action: "accept" }, 401)));
+    await step("POST respond by sender → 403", () => call(`/api/meets/${encodeURIComponent(meet.id)}/respond?now=${NOW}`, post({ action: "accept", userId: A }, 403)));
+    await step("POST respond accept (as B)", () => call<MeetRequest>(`/api/meets/${encodeURIComponent(meet.id)}/respond?now=${NOW}`, post({ action: "accept", userId: B })),
       (m) => assert(m.status === "accepted", `status=${m.status}`));
     await step("GET plan B has meet item", () => call<PlanResponse>(`/api/users/${B}/plan?confId=${CONF}&now=${NOW}`),
       (p) => assert(p.itinerary.some((s) => s.item.type === "meet"), `types=${[...new Set(p.itinerary.map((s) => s.item.type))]}`));
-    await step("POST respond bad action → 400", () => call(`/api/meets/${encodeURIComponent(meet.id)}/respond`, post({ action: "ghost" }, 400)));
+    await step("POST respond bad action → 400", () => call(`/api/meets/${encodeURIComponent(meet.id)}/respond`, post({ action: "ghost", userId: B }, 400)));
   }
 
   // ---- remember (Recapper)
