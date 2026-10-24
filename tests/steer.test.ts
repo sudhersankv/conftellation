@@ -140,6 +140,7 @@ describe("POST /api/users/:id/steer", () => {
   });
 
   it("drops a reweight after remove_goal, and undo restores the original goal id", async () => {
+    const [prior] = await q<{ w: number }>(`MATCH (:User {id:'sam'})-[:HAS_GOAL]->(g:Goal {id:'g-role'}) RETURN g.weight AS w`);
     const { status, body } = await steer({
       ops: [
         { op: "remove_goal", goalId: "g-role" },
@@ -150,7 +151,7 @@ describe("POST /api/users/:id/steer", () => {
     expect(body.ops.map((o) => o.op)).toEqual(["remove_goal"]);
     const [gone] = await q<{ n: number }>(`MATCH (:User {id:'sam'})-[:HAS_GOAL]->(g:Goal {id:'g-role'}) RETURN count(g) AS n`);
     expect(gone.n).toBe(0);
-    expect(body.undo).toContainEqual(expect.objectContaining({ op: "add_goal", goalId: "g-role", weight: 0.5 }));
+    expect(body.undo).toContainEqual(expect.objectContaining({ op: "add_goal", goalId: "g-role", weight: prior.w, topics: ["hiring"] }));
     const undone = await steer({ ops: body.undo });
     expect(undone.status).toBe(200);
     const [g] = await q<{ id: string; w: number; topics: string[] }>(
@@ -158,7 +159,7 @@ describe("POST /api/users/:id/steer", () => {
        OPTIONAL MATCH (g)-[:ABOUT]->(t:Topic)
        RETURN g.id AS id, g.weight AS w, collect(t.id) AS topics`,
     );
-    expect(g).toMatchObject({ id: "g-role", w: 0.5 });
+    expect(g).toMatchObject({ id: "g-role", w: prior.w });
     expect(g.topics).toContain("hiring");
   });
 });
