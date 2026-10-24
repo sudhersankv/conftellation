@@ -17,6 +17,19 @@ Full spec: `conftellations-spec.md`. API/graph contract: `lib/types.ts`. Agent-t
 - **Ryan** (`RyanV27`): product + UI: `app/(sky)/**` (galaxy, tabs, sessions, people, me), `app/add`, `app/onboarding`, `app/layout.tsx`, `app/globals.css`, `components/**`, `lib/ui/**`, `docs/DESIGN.md`, `docs/UI_DEPENDENCIES.md`. Route layout: `docs/DESIGN.md` §5. `app/api/**` stays outside `(sky)`.
 - Shared, change only by PR + note in COMMS.md: `lib/types.ts`, `lib/client.ts`, `mocks/index.ts`.
 
+## UI design docs (required for all frontend work)
+For **any** frontend issue or implementation (pages, components, styling, copy, motion, Sky, tokens, `lib/ui/**`, UI GitHub issues #11–#18), read these first and follow them:
+- `docs/DESIGN.md`: visual direction, routes (§5), components, interaction and copy rules. It overrides the spec's and older notes' visual guidance where they differ.
+- `docs/UI_DEPENDENCIES.md`: the approved UI libraries and versions. Use these; don't add alternatives (for example `framer-motion`, `three`, Tailwind v4 plugins).
+If a task needs something the docs don't cover or conflicts with them, don't improvise silently: update the doc (Ryan owns it) or flag it in `COMMS.md`. Backend-only agents need not read them except to follow the route and ownership notes.
+
+## Git workflow (branch per issue, PRs)
+- **Stay in sync with the remote while you work.** Run `git fetch origin` before starting and at natural checkpoints (before each commit, before opening a PR, and roughly every 20-30 minutes of work). If `origin/main` has moved, integrate it (`git rebase origin/main`, or merge if the rebase gets messy) and re-run `npm run typecheck`. Check `COMMS.md` on every sync.
+- **One branch per issue, never commit to `main` directly.** Branch from an up-to-date `main`, named `<type>/<issue#>-<short-slug>` (for example `ui/12-sky-stage`, `fix/21-client-error-parsing`). One issue per branch; don't mix unrelated changes.
+- **Deliver by pull request.** Push the branch; Ryan opens and merges the PR (`gh` isn't installed). Never merge into `main` yourself. In your final message give the branch name, the compare link (`https://github.com/sudhersankv/conftellation/pull/new/<branch>`), and a suggested PR title/body (what changed, `Closes #N`, how to verify). Append the `COMMS.md` entry on the same branch.
+- **Commit messages:** short and descriptive, one line (about 50-72 chars) in `type(scope): summary` form, for example `docs(claude): add git workflow`. Add a body only when the why isn't obvious.
+- Never force-push a shared branch or `main`. Never commit secrets (the repo is public).
+
 ## Working with the other agent (COMMS.md)
 Two people, two coding agents (Sudhersan = backend, Ryan = UI). `COMMS.md` is how the agents hand work to each other. The other agent has none of your chat context, so anything it needs must be written there.
 
