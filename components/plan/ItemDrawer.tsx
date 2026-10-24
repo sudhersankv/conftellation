@@ -6,7 +6,7 @@ import { fmtDay, fmtRange } from "@/lib/ui/format";
 import { TYPE_COLOR } from "@/lib/ui/tokens";
 import { buttonClass, Chip, CollectedAgo, Drawer, SectionHeader, WhyList } from "@/components/ui";
 import { FeedbackButtons } from "./FeedbackButtons";
-import { typeColor } from "./time";
+import { itemTitle, typeColor } from "./time";
 
 const KIND = { session: "Session", booth: "Booth", person: "Person", meet: "Meet", block: "Blocked time" } as const;
 
@@ -26,7 +26,7 @@ export function ItemDrawer({ slot, onClose, tz, goals, confId, locked, onPlan }:
   const link = slot ? itemHref(slot) : null;
   const speakers = item?.session?.speakers ?? [];
   return (
-    <Drawer open={!!slot} onOpenChange={(o) => !o && onClose()} title={item?.title ?? ""} description={item ? KIND[item.type] : undefined}>
+    <Drawer open={!!slot} onOpenChange={(o) => !o && onClose()} title={item ? itemTitle(item) : ""} description={item ? KIND[item.type] : undefined}>
       {slot && item && (
         <div className="flex flex-col gap-5">
           <div className="flex flex-wrap items-center gap-1.5">

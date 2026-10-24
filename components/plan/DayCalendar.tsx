@@ -6,7 +6,7 @@ import { fmtRange, fmtTime } from "@/lib/ui/format";
 import { TYPE_COLOR } from "@/lib/ui/tokens";
 import { cn } from "@/lib/ui/cn";
 import { Chip } from "@/components/ui";
-import { hourLabel, layoutLanes, minuteOfDay, typeColor } from "./time";
+import { hourLabel, itemTitle, layoutLanes, minuteOfDay, typeColor } from "./time";
 
 export const PX_PER_MIN = 1.8;
 
@@ -25,6 +25,7 @@ function Block({ slot, tz, goal, h, onOpen, past }: { slot: ItinerarySlot; tz: s
   const isBlock = item.type === "block";
   const done = item.status === "done";
   const room = item.subtitle;
+  const title = itemTitle(item);
   const oneLine = h < 44; // title + start time on one row
   const tiny = h < 26;
   const showGoal = h >= 76 && goal && !isBlock;
@@ -34,8 +35,8 @@ function Block({ slot, tz, goal, h, onOpen, past }: { slot: ItinerarySlot; tz: s
       type="button"
       onClick={isBlock ? undefined : onOpen}
       disabled={isBlock}
-      title={`${item.title} · ${fmtRange(slot.from, slot.to, tz)}${room ? ` · ${room}` : ""}`}
-      aria-label={`${TYPE_NAME[item.type]}: ${item.title}, ${fmtRange(slot.from, slot.to, tz)}`}
+      title={`${title} · ${fmtRange(slot.from, slot.to, tz)}${room ? ` · ${room}` : ""}`}
+      aria-label={`${TYPE_NAME[item.type]}: ${title}, ${fmtRange(slot.from, slot.to, tz)}`}
       className={cn(
         "group flex h-full w-full min-w-0 flex-col overflow-hidden rounded-[10px] border-2 text-left transition duration-fast",
         isBlock ? "hatched cursor-default border-dashed border-border bg-bg" : "border-border hover:shadow-hardSm",
@@ -47,13 +48,13 @@ function Block({ slot, tz, goal, h, onOpen, past }: { slot: ItinerarySlot; tz: s
     >
       {oneLine ? (
         <div className="flex min-w-0 items-baseline gap-2 text-[11px] leading-4">
-          <span className={cn("min-w-0 truncate font-medium", isBlock ? "capitalize text-muted" : "text-text")}>{item.title}</span>
+          <span className={cn("min-w-0 truncate font-medium", isBlock ? "capitalize text-muted" : "text-text")}>{title}</span>
           <span className="tabular shrink-0 text-muted">{fmtTime(slot.from, tz)}</span>
           {room && !isBlock && <span className="ml-auto hidden shrink-0 truncate text-faint lg:inline">{room}</span>}
         </div>
       ) : (
         <>
-          <div className={cn("min-w-0 font-heading text-xs font-bold leading-[18px]", isBlock ? "capitalize text-muted" : "text-text", twoLineTitle ? "line-clamp-2" : "truncate")}>{item.title}</div>
+          <div className={cn("min-w-0 font-heading text-xs font-bold leading-[18px]", isBlock ? "capitalize text-muted" : "text-text", twoLineTitle ? "line-clamp-2" : "truncate")}>{title}</div>
           <div className="tabular mt-0.5 flex min-w-0 items-center gap-1.5 text-[11px] leading-4 text-muted">
             <span className="shrink-0">{fmtRange(slot.from, slot.to, tz)}</span>
             {room && !isBlock && <span className="min-w-0 truncate text-faint">· {room}</span>}
@@ -160,7 +161,7 @@ export function DayList({ slots, tz, goals, nowMin, onOpen }: Props) {
                 )}
                 style={isBlock ? undefined : { boxShadow: `inset 6px 0 0 ${typeColor(item.type)}, 2px 2px 0 #111` }}
               >
-                <div className={cn("font-heading text-sm font-bold leading-5", isBlock ? "capitalize text-muted" : "text-text")}>{item.title}</div>
+                <div className={cn("break-words font-heading text-sm font-bold leading-5", isBlock ? "capitalize text-muted" : "text-text")}>{itemTitle(item)}</div>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
                   <span className="tabular text-xs text-muted">{fmtRange(slot.from, slot.to, tz)}</span>
                   {item.subtitle && !isBlock && <Chip kind={item.type === "booth" ? "booth" : "room"} className="h-5 px-1.5 text-[11px]">{item.subtitle}</Chip>}

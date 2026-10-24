@@ -1,5 +1,5 @@
 // Time helpers for the plan calendar: venue-zone day keys, minutes-of-day, lane layout.
-import type { ItinerarySlot, PlanItemType, SteerOp } from "@/lib/types";
+import type { ItinerarySlot, PlanItem, PlanItemType, SteerOp } from "@/lib/types";
 import { TYPE_COLOR } from "@/lib/ui/tokens";
 import { fmtTime, TZ } from "@/lib/ui/format";
 
@@ -76,8 +76,18 @@ export function layoutLanes(slots: ItinerarySlot[], tz: string): LaidOut[] {
 }
 
 export const BLOCK_GREY = "#5C5C70";
+/** Accepted meets get a teal edge on the calendar (DESIGN.md §5 Plan: "meets = teal edge"). */
+export const MEET_EDGE = "#14B8A6";
+
 export function typeColor(t: PlanItemType) {
-  return t === "block" ? BLOCK_GREY : t === "booth" ? TYPE_COLOR.booth : t === "meet" ? TYPE_COLOR.meet : t === "person" ? TYPE_COLOR.person : TYPE_COLOR.session;
+  return t === "block" ? BLOCK_GREY : t === "booth" ? TYPE_COLOR.booth : t === "meet" ? MEET_EDGE : t === "person" ? TYPE_COLOR.person : TYPE_COLOR.session;
+}
+
+/** Display title: meets read "Meet · <other person>" (backend sends "Meet <name>"); everything else as-is. */
+export function itemTitle(item: PlanItem): string {
+  if (item.type !== "meet") return item.title;
+  const name = item.person?.name ?? item.title.replace(/^meet\s*(·|with)?\s*/i, "").trim();
+  return name ? `Meet · ${name}` : "Meet";
 }
 
 /** Human chip for a steer op: "set_window → 3:00 PM", "boost tracing". */

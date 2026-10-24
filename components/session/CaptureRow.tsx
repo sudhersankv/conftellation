@@ -42,13 +42,13 @@ export function CaptureRow({ userId, confId, sessionId, onSaved }: { userId: str
   };
 
   const btn = (active: boolean) => cn(
-    "press-sm flex h-16 flex-col items-center justify-center gap-1 rounded-full border-2 border-border font-heading text-xs font-bold text-ink shadow-hardSm disabled:opacity-40 md:h-12 md:flex-row md:gap-2 md:text-sm",
+    "press-sm flex h-12 w-full min-w-0 flex-row items-center justify-center gap-2 rounded-full border-2 border-border font-heading text-sm font-bold text-ink shadow-hardSm disabled:opacity-40",
     active ? "bg-accent" : "bg-surface hover:bg-surface2",
   );
 
   return (
     <div>
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <button type="button" className={btn(false)} disabled={busy === "checkin"} onClick={() => run("checkin", { kind: "checkin" }, "Checked in")}>
           <MapPin className="size-4" />Check in
         </button>

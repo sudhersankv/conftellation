@@ -6,16 +6,46 @@ import { fmtRange } from "@/lib/ui/format";
 import { TYPE_COLOR } from "@/lib/ui/tokens";
 import { buttonClass, Card, Chip, CollectedAgo, EmptyState, SectionHeader, WhyLine } from "@/components/ui";
 import { FeedbackButtons } from "./FeedbackButtons";
+import { itemTitle, MEET_EDGE } from "./time";
 
 export function ByGoalView({ plan, tz, confId, locked, onPlan, onOpen }: {
   plan: PlanResponse; tz: string; confId: string; locked: boolean; onPlan(p: PlanResponse): void; onOpen(slot: ItinerarySlot): void;
 }) {
   if (plan.byGoal.length === 0) return <EmptyState title="No goals yet" text="Add a goal to see your plan grouped by what you came for." action={<Link href="/goals" className={buttonClass()}>Set goals</Link>} />;
   const slotOf = new Map(plan.itinerary.map((s) => [s.item.id, s]));
+  const meets = plan.itinerary.filter((s) => s.item.type === "meet" && s.item.status !== "skipped").sort((a, b) => a.from.localeCompare(b.from));
   return (
     <div className="flex flex-col gap-8">
+      {meets.length > 0 && <MeetsSection meets={meets} tz={tz} onOpen={onOpen} />}
       {plan.byGoal.map((g) => <GoalSection key={g.goal.id} g={g} tz={tz} confId={confId} locked={locked} onPlan={onPlan} slotOf={slotOf} onOpen={onOpen} />)}
     </div>
+  );
+}
+
+/** Accepted meets have no goal, so they get their own line above the goals. */
+function MeetsSection({ meets, tz, onOpen }: { meets: ItinerarySlot[]; tz: string; onOpen(s: ItinerarySlot): void }) {
+  return (
+    <section>
+      <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-border pb-3">
+        <span className="size-2 shrink-0 rounded-full" style={{ background: MEET_EDGE }} aria-hidden />
+        <h2 className="min-w-0 text-base font-semibold tracking-tight">Meets</h2>
+        <span className="ml-auto text-xs text-muted">{meets.length} agreed</span>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {meets.map((s) => (
+          <button key={`${s.item.id}-${s.from}`} type="button" onClick={() => onOpen(s)} className="min-w-0 text-left">
+            <Card accent={MEET_EDGE} className="flex flex-col gap-1 hover:bg-surface2">
+              <div className="min-w-0 break-words font-heading text-sm font-bold text-text">{itemTitle(s.item)}</div>
+              <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
+                <span className="tabular">{fmtRange(s.from, s.to, tz)}</span>
+                {s.item.subtitle && <Chip kind="room" className="h-5 px-1.5 text-[11px]">{s.item.subtitle}</Chip>}
+              </div>
+              {s.item.why[0] && <p className="text-xs text-muted">{s.item.why[0].text}</p>}
+            </Card>
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 

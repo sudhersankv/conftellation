@@ -16,7 +16,7 @@ import { DayGrid, DayList } from "./DayCalendar";
 import { ItemDrawer } from "./ItemDrawer";
 import { ByGoalView } from "./ByGoalView";
 import { ProposalPanel, SteerBar } from "./Steer";
-import { dateRangeLabel, dayKey, dayLabel, dayRange, dayShort, minuteOfDay } from "./time";
+import { dateRangeLabel, dayKey, dayLabel, dayRange, dayShort, MEET_EDGE, minuteOfDay } from "./time";
 
 type View = "day" | "goal";
 
@@ -33,7 +33,8 @@ const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 export function PlanView() {
   const { userId, confId, now, nowIso } = useSession();
   const iso = nowIso();
-  const planQ = useApi(apiKey("plan", userId, confId, iso), () => api.plan(userId, confId, { now: iso }));
+  const planQ = useApi(apiKey("plan", userId, confId, iso), () => api.plan(userId, confId, { now: iso }), { pollMs: 10000 });
+  // Polls every 10 s so a meet accepted on the other phone lands on this calendar without a reload.
   const confQ = useApi<ConferenceDetail>(apiKey("conference", confId), () => api.conference(confId));
   const [view, setView] = useState<View>("day");
   const [day, setDay] = useState<string | null>(null);
@@ -89,41 +90,41 @@ export function PlanView() {
   ].filter(Boolean).join(" · ");
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-w-0 flex-col gap-4">
       {/* Header */}
-      <header className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+      <header className="flex min-w-0 flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0">
           <div className="inline-flex items-center gap-1.5 rounded-full border-2 border-border bg-accent px-2.5 py-0.5 font-heading text-[11px] font-bold uppercase tracking-wide text-ink">
             <CalendarDays className="size-3.5" aria-hidden />Your plan
           </div>
-          <h1 className="mt-2 font-heading text-[28px] font-bold leading-[1.05] tracking-tight md:text-4xl">{conf?.name ?? confId}</h1>
+          <h1 className="mt-2 break-words font-heading text-[28px] font-bold leading-[1.05] tracking-tight md:text-4xl">{conf?.name ?? confId}</h1>
           <p className="tabular mt-1 text-sm text-muted">
             {conf ? `${dateRangeLabel(conf.startDate, conf.endDate)}${conf.city ? ` · ${conf.city}` : ""}` : " "}
             <span className="text-faint"> · </span>
             <span className="text-text">{summary}</span>
           </p>
           {goalCounts.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
+            <div className="scrollbar-thin -mx-4 mt-2 flex gap-1.5 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:overflow-visible md:px-0 md:pb-0">
               {goalCounts.map(({ goal, n }) => (
-                <Chip key={goal.id} kind="goal" dot={TYPE_COLOR.goal} className="max-w-full"><span className="truncate">{goal.text}</span><span className="tabular text-muted">{n}</span></Chip>
+                <Chip key={goal.id} kind="goal" dot={TYPE_COLOR.goal} className="max-w-[16rem] shrink-0 md:max-w-full"><span className="truncate">{goal.text}</span><span className="tabular text-muted">{n}</span></Chip>
               ))}
             </div>
           )}
         </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <div className="grid grid-cols-2 items-center gap-2 md:flex md:shrink-0 md:flex-wrap">
           {plan.now && (
-            <Link href={`/sessions/${encodeURIComponent(plan.now.targetId)}`} className={buttonClass({ variant: "primary", className: "h-10" })} title={`Capture now: ${plan.now.title}`}>
+            <Link href={`/sessions/${encodeURIComponent(plan.now.targetId)}`} className={buttonClass({ variant: "primary", className: "col-span-2 h-10 w-full md:col-span-1 md:w-auto" })} title={`Capture now: ${plan.now.title}`}>
               <PenLine className="size-4" aria-hidden />Capture now
             </Link>
           )}
-          <Segmented<View> value={view} onChange={setView} options={[{ value: "day", label: "Day" }, { value: "goal", label: "By goal" }]} className="h-10" />
+          <Segmented<View> value={view} onChange={setView} options={[{ value: "day", label: "Day" }, { value: "goal", label: "By goal" }]} className="h-10 w-full md:w-auto" />
           {final ? (
-            <div className="flex h-10 items-center gap-1 rounded-full border-2 border-border bg-surface pl-3 pr-1 text-sm font-heading font-bold shadow-hardSm">
-              <Lock className="size-3.5 text-[#0B7A52]" aria-hidden /><span className="text-text">Plan locked</span>
+            <div className="flex h-10 min-w-0 items-center justify-between gap-1 rounded-full border-2 border-border bg-surface pl-3 pr-1 text-sm font-heading font-bold shadow-hardSm">
+              <Lock className="size-3.5 shrink-0 text-[#0B7A52]" aria-hidden /><span className="truncate text-text">Locked</span>
               <Button variant="ghost" size="sm" className="ml-1" onClick={() => { setFinal(false); toast("Plan unlocked"); }}><LockOpen className="size-3.5" aria-hidden />Edit</Button>
             </div>
           ) : (
-            <Button variant="secondary" onClick={() => { setFinal(true); setProposal(null); toast("Plan finalized", { description: "Steering and feedback are hidden. Tap Edit to change it." }); }}>
+            <Button variant="secondary" className="w-full md:w-auto" onClick={() => { setFinal(true); setProposal(null); toast("Plan finalized", { description: "Steering and feedback are hidden. Tap Edit to change it." }); }}>
               <Lock className="size-4" aria-hidden />Finalize
             </Button>
           )}
@@ -180,7 +181,7 @@ export function PlanView() {
 }
 
 function Legend() {
-  const items: [string, string][] = [["Session", TYPE_COLOR.session], ["Booth", TYPE_COLOR.booth], ["Person", TYPE_COLOR.person], ["Meet", TYPE_COLOR.meet]];
+  const items: [string, string][] = [["Session", TYPE_COLOR.session], ["Booth", TYPE_COLOR.booth], ["Person", TYPE_COLOR.person], ["Meet", MEET_EDGE]];
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
       {items.map(([l, c]) => <span key={l} className="flex items-center gap-1.5"><span className="h-3 w-[3px] rounded-full" style={{ background: c }} />{l}</span>)}

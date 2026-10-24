@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Maximize2, MessageCircleQuestion, Play, Square, X } from "lucide-react";
+import { ArrowRight, CalendarDays, Globe2, Maximize2, MessageCircleQuestion, Network, Play, Square, Waypoints, X } from "lucide-react";
 import type { SkyNode, SkyNodeType } from "@/lib/types";
 import { api } from "@/lib/client";
 import { apiKey, useApi } from "@/lib/ui/use-api";
@@ -175,7 +175,7 @@ export function GraphView() {
 
         {/* Header (trace mode): coverage lives on the goal row of the trace itself */}
         {trace && (
-          <div className="pointer-events-none absolute left-3 top-3 max-w-[calc(100%-140px)] md:left-5 md:max-w-[50%]">
+          <div className="pointer-events-none absolute left-3 top-14 max-w-[calc(100%-24px)] md:left-5 md:top-3 md:max-w-[50%]">
             <h1 className="text-xl font-extrabold leading-6 tracking-tight text-[#111] md:text-2xl">My conftellation</h1>
             <div className="truncate text-sm font-semibold text-[#111]">{confName}</div>
             <p className="mt-0.5 hidden text-xs text-[#111]/70 md:block">Your trace through the day. Replay it, or tap a star to open it.</p>
@@ -184,7 +184,7 @@ export function GraphView() {
 
         {/* Coverage (top-left, web mode) */}
         {!trace && goals.length > 0 && (
-          <div className="pointer-events-none absolute left-3 top-3 flex max-w-[46%] flex-col gap-1.5 md:max-w-xs">
+          <div className="pointer-events-none absolute left-3 top-14 flex max-w-[60%] flex-col gap-1.5 md:top-3 md:max-w-xs">
             {goals.map((g) => {
               const pct = g.planned ? Math.min(1, g.covered / g.planned) : 0;
               return (
@@ -203,30 +203,30 @@ export function GraphView() {
         )}
 
         {/* Controls (top-right) */}
-        <div className="absolute right-3 top-3 flex flex-col items-end gap-2 md:flex-row md:items-center">
+        <div className="absolute right-3 top-3 flex max-w-[calc(100%-24px)] flex-row flex-nowrap items-center gap-1.5 md:gap-2">
           <div className="flex gap-1.5">
-            <button type="button" aria-pressed={askOpen} aria-expanded={askOpen} onClick={() => setAskOpen((o) => !o)} className={pill(askOpen, "px-2.5 md:px-3")}>
-              <MessageCircleQuestion className="size-3.5" aria-hidden />Ask
+            <button type="button" aria-pressed={askOpen} aria-expanded={askOpen} onClick={() => setAskOpen((o) => !o)} className={pill(askOpen, "px-2 md:px-3")} aria-label="Ask" title="Ask">
+              <MessageCircleQuestion className="size-3.5" aria-hidden /><span className="hidden md:inline">Ask</span>
             </button>
           {!all && (
             <div className="flex gap-1.5" role="radiogroup" aria-label="View">
-              <button type="button" role="radio" aria-checked={trace} onClick={() => setParam("view", null)} className={pill(trace, "px-2.5 md:px-3")}>Trace</button>
-              <button type="button" role="radio" aria-checked={!trace} onClick={() => setParam("view", "web")} className={pill(!trace, "px-2.5 md:px-3")}>Web</button>
+              <button type="button" role="radio" aria-checked={trace} onClick={() => setParam("view", null)} className={pill(trace, "px-2 md:px-3")} aria-label="Trace view" title="Trace view"><Waypoints className="size-3.5 md:hidden" aria-hidden /><span className="hidden md:inline">Trace</span></button>
+              <button type="button" role="radio" aria-checked={!trace} onClick={() => setParam("view", "web")} className={pill(!trace, "px-2 md:px-3")} aria-label="Web view" title="Web view"><Network className="size-3.5 md:hidden" aria-hidden /><span className="hidden md:inline">Web</span></button>
             </div>
           )}
           </div>
           <div className="flex gap-1.5" role="radiogroup" aria-label="Scope">
-            <button type="button" role="radio" aria-checked={!all} onClick={() => setParam("all", null)} className={pill(!all, "px-2.5 md:px-3")}>
-              <span className="md:hidden">Conf</span><span className="hidden md:inline">This conference</span>
+            <button type="button" role="radio" aria-checked={!all} onClick={() => setParam("all", null)} className={pill(!all, "px-2 md:px-3")} aria-label="This conference" title="This conference">
+              <CalendarDays className="size-3.5 md:hidden" aria-hidden /><span className="hidden md:inline">This conference</span>
             </button>
-            <button type="button" role="radio" aria-checked={all} onClick={() => setParam("all", "1")} className={pill(all, "px-2.5 md:px-3")}>All</button>
+            <button type="button" role="radio" aria-checked={all} onClick={() => setParam("all", "1")} className={pill(all, "px-2 md:px-3")} aria-label="All conferences" title="All conferences"><Globe2 className="size-3.5 md:hidden" aria-hidden /><span className="hidden md:inline">All</span></button>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-1.5 md:gap-2">
             <button
               type="button"
               onClick={revealed ? stopReplay : replay}
               disabled={!data}
-              className={pill(!!revealed, "px-2.5 md:px-3")}
+              className={pill(!!revealed, "px-2 md:px-3")}
               aria-label={revealed ? "Stop replay" : "Replay day"}
               title="Replay day"
             >
@@ -237,7 +237,7 @@ export function GraphView() {
               type="button"
               onClick={() => canvas.current?.zoomToFit()}
               disabled={trace}
-              className={pill(false, "px-2.5 md:px-3")}
+              className={pill(false, "px-2 md:px-3")}
               aria-label="Reset view"
               title="Reset view"
             >

@@ -29,16 +29,16 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
   const s = data.session;
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6">
-      <header>
-        <div className="mb-2 flex flex-wrap items-center gap-1.5">
-          <Chip kind="time">{fmtDay(s.start)} · {fmtRange(s.start, s.end)}</Chip>
-          {s.room && <Chip kind="room">{s.room}</Chip>}
+    <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-6">
+      <header className="min-w-0">
+        <div className="mb-2 flex min-w-0 flex-wrap items-center gap-1.5">
+          <Chip kind="time" className="max-w-full">{fmtDay(s.start)} · {fmtRange(s.start, s.end)}</Chip>
+          {s.room && <Chip kind="room" className="max-w-full"><span className="truncate">{s.room}</span></Chip>}
           <Chip kind="status" className="capitalize">{s.kind}</Chip>
         </div>
-        <h1 className="text-xl font-semibold tracking-tight md:text-2xl">{s.title}</h1>
+        <h1 className="break-words text-xl font-semibold tracking-tight md:text-2xl">{s.title}</h1>
         {s.speakers.length > 0 && (
-          <p className="mt-1.5 text-sm text-muted">
+          <p className="mt-1.5 break-words text-sm text-muted">
             {s.speakers.map((p, i) => (
               <span key={p.id}>
                 {i > 0 && ", "}
@@ -48,12 +48,12 @@ export function SessionView({ sessionId }: { sessionId: string }) {
             ))}
           </p>
         )}
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 [&>*]:min-w-0 [&>*]:max-w-full [&>*]:break-words">
           <CollectedAgo at={s.collectedAt} source={s.source} />
-          <Link href={graphHref([s.id])} className="inline-flex items-center gap-1 text-xs text-muted hover:text-text"><GitBranch className="size-3" />Show in graph</Link>
+          <Link href={graphHref([s.id])} className="inline-flex shrink-0 items-center gap-1 text-xs text-muted hover:text-text"><GitBranch className="size-3" />Show in graph</Link>
         </div>
-        {s.topics.length > 0 && <div className="mt-3 flex flex-wrap gap-1.5">{s.topics.map((t) => <Chip key={t}>{t}</Chip>)}</div>}
-        {s.abstract && <p className="mt-3 text-sm leading-6 text-muted">{s.abstract}</p>}
+        {s.topics.length > 0 && <div className="mt-3 flex min-w-0 flex-wrap gap-1.5">{s.topics.map((t) => <Chip key={t} className="max-w-full"><span className="truncate">{t}</span></Chip>)}</div>}
+        {s.abstract && <p className="mt-3 break-words text-sm leading-6 text-muted">{s.abstract}</p>}
       </header>
 
       <CaptureRow userId={userId} confId={s.conferenceId} sessionId={s.id} onSaved={reload} />
@@ -139,9 +139,9 @@ function MemoCard({ memo, userId, confId, sessionId, onSaved, onExport }: { memo
   };
   return (
     <Card>
-      <div className="mb-2 flex items-center justify-between">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-heading text-sm font-bold">Personal memo</h2>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {memo && <span className="text-xs text-faint">Updated {fmtTime(memo.at)}</span>}
           {memo && !editing && <Button variant="ghost" size="sm" className="px-2" onClick={() => setEditing(true)}><Pencil className="size-3.5" />Edit</Button>}
           <Button variant="secondary" size="sm" className="px-2" onClick={onExport}><Copy className="size-3.5" />Export memo</Button>
@@ -156,7 +156,7 @@ function MemoCard({ memo, userId, confId, sessionId, onSaved, onExport }: { memo
           </div>
         </>
       ) : (
-        <div className="text-text">
+        <div className="min-w-0 break-words text-text">
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={MD_COMPONENTS}>{current}</ReactMarkdown>
         </div>
       )}
@@ -182,10 +182,10 @@ function MomentRow({ m, onShared }: { m: Moment; onShared(): void }) {
         <div className="flex items-center gap-2 text-xs text-muted">
           <span>{KIND_LABEL[m.kind]}</span><span className="tabular text-faint">{fmtTime(m.at)}</span>
         </div>
-        {m.text && <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-text">{m.text}</p>}
+        {m.text && <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-text">{m.text}</p>}
         {m.mediaUrl && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={mediaSrc(m.mediaUrl, { userId })} alt="" className="mt-2 max-h-64 rounded-lg border-2 border-border object-cover" loading="lazy" />
+          <img src={mediaSrc(m.mediaUrl, { userId })} alt="" className="mt-2 max-h-64 max-w-full rounded-lg border-2 border-border object-cover" loading="lazy" />
         )}
       </div>
       {(m.kind === "note" || m.kind === "photo") && (
@@ -262,10 +262,10 @@ function Community({ data }: { data: CommunityResponse }) {
                 <div className="flex items-center gap-2 text-xs text-muted">
                   <span className="text-text">{n.author}</span><span className="tabular text-faint">{fmtTime(n.at)}</span>
                 </div>
-                {n.text && <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-text">{n.text}</p>}
+                {n.text && <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-text">{n.text}</p>}
                 {n.mediaUrl && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={mediaSrc(n.mediaUrl, { userId, momentId: n.id })} alt="" className="mt-2 max-h-64 rounded-lg border-2 border-border object-cover" loading="lazy" />
+                  <img src={mediaSrc(n.mediaUrl, { userId, momentId: n.id })} alt="" className="mt-2 max-h-64 max-w-full rounded-lg border-2 border-border object-cover" loading="lazy" />
                 )}
               </li>
             ))}
