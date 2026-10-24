@@ -128,7 +128,7 @@ async function main() {
   for (const v of VISITS) {
     const [u] = await q<{ name: string; openTo: OpenTo[] | null }>(`MATCH (u:User {id:$id}) RETURN u.name AS name, u.openTo AS openTo`, { id: v.user });
     if (!u) throw new Error(`demo user ${v.user} missing`);
-    const ob = await onboard(v.user, { confId: v.conf, name: u.name, openTo: u.openTo ?? [], goals: v.goals }, v.now);
+    const ob = await onboard(v.user, { confId: v.conf, name: u.name, openTo: u.openTo ?? [], goals: v.goals, problems: [] }, v.now);
     const out: string[] = [];
     for (const [i, c] of v.caps.entries()) {
       const r = await capture({
