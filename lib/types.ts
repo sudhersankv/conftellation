@@ -27,7 +27,7 @@ export interface WhyPath {
   id: string; // stable within a response, e.g. "p3"
   text: string; // one human sentence built from the path, e.g. "Matches your goal 'agent tracing' via topic Tracing"
   nodes: { id: string; label: NodeLabel; name: string }[];
-  edges: { from: string; to: string; type: EdgeType }[];
+  edges: { from: string; to: string; type: EdgeType }[]; // highlight by from/to; real paths use any EdgeType (mocks only use ABOUT)
 }
 
 // ---------- Shared conference layer ----------
@@ -171,6 +171,8 @@ export interface PlanResponse {
   itinerary: ItinerarySlot[]; // time-ordered
   byGoal: GoalPlan[];
   generatedAt: string;
+  /** Where a capture with no explicit target would attach right now (Capture "Now: {title}"). Same rule the backend uses: latest check-in, else the planned session containing now. */
+  now?: { targetId: string; title: string; type: "session" | "booth"; from?: string; to?: string } | null;
 }
 
 // ---------- Steering & feedback ----------
@@ -195,6 +197,7 @@ export interface PlanDiff {
 }
 
 export interface SteerRequest { confId: string; text: string }
+/** `ops: []` means the text wasn't understood: show `summary` as a hint (e.g. "Didn't catch that. Try 'leaving at 3pm'."), plan unchanged. */
 export interface SteerResponse { ops: SteerOp[]; diff: PlanDiff; summary: string; plan: PlanResponse }
 
 export interface FeedbackRequest { confId: string; targetId: string; kind: "skip" | "boost" }
@@ -282,7 +285,27 @@ export interface OnboardingResponse { goals: Goal[]; problems: Problem[] }
 
 export interface SearchResponse { sessions: Session[]; booths: Booth[]; people: Person[] }
 
+/** Fields of the multipart body for POST /api/users/:id/moments. Build it with `momentForm()` from lib/client.ts. */
+export interface CreateMomentFields {
+  confId: string;
+  kind: MomentKind;
+  text?: string;
+  file?: Blob; // photo
+  targetId?: string; // omit → attaches by time (see PlanResponse.now)
+  personId?: string; // "met": existing person
+  newPersonName?: string; // "met": new person
+  newPersonCompany?: string;
+  shared?: boolean;
+}
 export interface CreateMomentResponse { moment: Moment; lit: string[] } // node ids that should light up in Sky
+
+/** GET /api/people/:id?confId=&userId= (person card). `why` explains why this person matters to the user, if anything. */
+export interface PersonDetail {
+  person: Person;
+  sessions: Session[]; // talks at confId (all conferences if omitted)
+  why: WhyPath[];
+  metBefore?: { conferenceId: string; conferenceName: string; at: string }[];
+}
 
 export interface RecordConference {
   conference: Conference;

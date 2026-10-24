@@ -4,8 +4,18 @@ import type {
   AddConferenceResponse, BriefResponse, CommunityResponse, ConferenceDetail, ConstellationResponse,
   CreateMomentResponse, FeedbackRequest, IntrosResponse, MeetRequest, MeetRequestBody, MeetRespondBody,
   Moment, NetworkResponse, OnboardingRequest, OnboardingResponse, PlanResponse, RecordResponse,
-  SearchResponse, SteerResponse, TripReportResponse,
+  SearchResponse, SteerResponse, TripReportResponse, CreateMomentFields, PersonDetail,
 } from "@/lib/types";
+
+/** Typed builder for the multipart body of api.createMoment. */
+export function momentForm(fields: CreateMomentFields): FormData {
+  const form = new FormData();
+  for (const [k, v] of Object.entries(fields)) {
+    if (v === undefined || v === null) continue;
+    form.append(k, v instanceof Blob ? v : String(v));
+  }
+  return form;
+}
 
 async function call<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init);
@@ -31,7 +41,7 @@ export const api = {
   steer: (userId: string, confId: string, text: string) => call<SteerResponse>(`/api/users/${userId}/steer`, post({ confId, text })),
   feedback: (userId: string, body: FeedbackRequest) => call<PlanResponse>(`/api/users/${userId}/feedback`, post(body)),
   search: (confId: string, q_: string) => call<SearchResponse>(`/api/search${q({ confId, q: q_ })}`),
-  /** form fields: confId, kind, text?, file?, targetId?, personId?, newPersonName?, newPersonCompany?, shared? */
+  /** Build `form` with momentForm({ confId, kind, ... }) (fields: CreateMomentFields). */
   createMoment: (userId: string, form: FormData) => call<CreateMomentResponse>(`/api/users/${userId}/moments`, { method: "POST", body: form }),
   shareMoment: (momentId: string, to: string[] | "network") => call<Moment>(`/api/moments/${momentId}/share`, post({ to })),
   constellation: (userId: string, confId?: string) => call<ConstellationResponse>(`/api/users/${userId}/constellation${q({ confId })}`),
@@ -42,6 +52,10 @@ export const api = {
   network: (userId: string, confId: string) => call<NetworkResponse>(`/api/users/${userId}/network${q({ confId })}`),
   requestMeet: (userId: string, body: MeetRequestBody & { confId: string }) => call<MeetRequest>(`/api/users/${userId}/meet`, post(body)),
   respondMeet: (meetId: string, body: MeetRespondBody) => call<MeetRequest>(`/api/meets/${meetId}/respond`, post(body)),
-  community: (sessionId: string) => call<CommunityResponse>(`/api/sessions/${encodeURIComponent(sessionId)}/community`),
+  /** userId fills `myMoments` (empty without it). */
+  community: (sessionId: string, userId?: string) =>
+    call<CommunityResponse>(`/api/sessions/${encodeURIComponent(sessionId)}/community${q({ userId })}`),
+  person: (personId: string, opts: { confId?: string; userId?: string } = {}) =>
+    call<PersonDetail>(`/api/people/${encodeURIComponent(personId)}${q(opts)}`),
   record: (userId: string) => call<RecordResponse>(`/api/users/${userId}/record`),
 };

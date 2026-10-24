@@ -4,7 +4,7 @@
 import type {
   AddConferenceResponse, BriefResponse, Booth, CommunityResponse, ConferenceDetail, ConstellationResponse,
   CreateMomentResponse, Goal, IntrosResponse, MeetRequest, Moment, NetworkResponse, OnboardingResponse,
-  PlanItem, PlanResponse, Problem, RecordResponse, SearchResponse, Session, SteerResponse, TripReportResponse,
+  PersonDetail, PlanItem, PlanResponse, Problem, RecordResponse, SearchResponse, Session, SteerResponse, TripReportResponse,
   User, WhyPath,
 } from "@/lib/types";
 
@@ -61,6 +61,7 @@ const iEmily = item("person", "emily-chen@tensorgrid", "Emily Chen", "Eng Manage
 
 export const plan: PlanResponse = {
   confId: CONF, userId: "sam", generatedAt: "2026-10-24T18:00:00Z",
+  now: { targetId: "s-tracing", title: "Tracing multi-agent systems end to end", type: "session", from: T("13:00"), to: T("13:30") },
   itinerary: [
     { from: T("11:30"), to: T("12:15"), item: iGraph },
     { from: T("12:15"), to: T("12:25"), item: iAcme },
@@ -155,6 +156,25 @@ export const community: CommunityResponse = {
   sharedNotes: [{ ...moments[1], author: "Sam Rivera" }, { id: "m-x1", userId: "u-ana", conferenceId: CONF, kind: "note", at: T("11:52"), text: "Cypher path queries as the debugger.", shared: true, targetId: "s-graphrag", topics: ["graphrag"], author: "Ana Lopez" }],
   crowdSummary: { updatedAt: "2026-10-24T19:00:00Z", lines: [{ text: "Attendees noted storing tool calls as edges makes failures queryable.", momentId: "m2" }] },
   hotMoments: [{ binStart: T("11:48"), count: 5 }, { binStart: T("11:50"), count: 9 }, { binStart: T("11:52"), count: 3 }],
+};
+
+export const people: Record<string, PersonDetail> = {
+  "jake-morales@falkordb": {
+    person: { id: "jake-morales@falkordb", name: "Jake Morales", title: "DevRel", company: "FalkorDB", companyId: "falkordb.com", ...prov },
+    sessions: [sessions[0], sessions[3]],
+    why: [pJake],
+    metBefore: [{ conferenceId: "ai-eng-summit-2026", conferenceName: "AI Engineer Summit", at: "2026-06-04T10:40:00-07:00" }],
+  },
+  "emily-chen@tensorgrid": {
+    person: { id: "emily-chen@tensorgrid", name: "Emily Chen", title: "Engineering Manager", company: "TensorGrid", companyId: "tensorgrid.io", userId: "emily", openTo: ["hiring"] },
+    sessions: [],
+    why: [iEmily.why[0]],
+  },
+  "mike-okafor@acmetrace": {
+    person: { id: "mike-okafor@acmetrace", name: "Mike Okafor", title: "Software Engineer", company: "Acme Trace", companyId: "acmetrace.dev", userId: "mike", ...prov },
+    sessions: [],
+    why: [pBoothAcme],
+  },
 };
 
 export const conferenceDetail: ConferenceDetail = {
