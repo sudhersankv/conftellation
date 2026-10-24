@@ -1,0 +1,14 @@
+---
+description: Conftellations project rules
+alwaysApply: true
+---
+
+Before any task, follow @CLAUDE.md (principles, ownership, commands, FalkorDB facts) and check @HANDOFF.md for current state.
+Keep @HANDOFF.md updated AS YOU CODE (see its "Keeping this file alive" section): refresh TL;DR + Next steps, add a Log line, commit it with the work. Another harness takes over at ~13:50 PT.
+- Contract: @lib/types.ts. UI uses only `api.*` from @lib/client.ts. Fixtures: @mocks/index.ts.
+- No chatbot; LLMs are backend-only. Logic lives in Cypher; every suggestion carries a real `WhyPath`.
+- Always MERGE on id. Every scraped node stores source, collectedAt, via.
+- Vector `score` from FalkorDB is a cosine distance (lower = closer).
+- Bright Data calls go through lib/brightdata.ts (cache + request cap).
+- Tests: vitest at the route-handler seam against the `_test` graph; fake lib/llm and lib/brightdata.
+- Notes to the other builder go in @COMMS.md. Never commit secrets (public repo).

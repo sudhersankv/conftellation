@@ -1,0 +1,1212 @@
+[
+ {
+  "tier": "DIAMOND",
+  "url": "https://www.anthropic.com/",
+  "name": "Anthropic"
+ },
+ {
+  "tier": "DIAMOND",
+  "url": "https://aws.amazon.com/",
+  "name": "AWS"
+ },
+ {
+  "tier": "DIAMOND",
+  "url": "https://cloud.google.com/",
+  "name": "Google Cloud"
+ },
+ {
+  "tier": "DIAMOND",
+  "url": "https://www.haproxy.com/",
+  "name": "HAProxy Technologies"
+ },
+ {
+  "tier": "DIAMOND",
+  "url": "https://azure.microsoft.com/en-us/products/kubernetes-service/",
+  "name": "Microsoft Azure"
+ },
+ {
+  "tier": "DIAMOND",
+  "url": "https://www.nutanix.com/cloud-native",
+  "name": "Nutanix Logo"
+ },
+ {
+  "tier": "DIAMOND",
+  "url": "https://www.oracle.com/cloud/cloud-native/",
+  "name": "Oracle"
+ },
+ {
+  "tier": "DIAMOND",
+  "url": "https://www.redhat.com/",
+  "name": "Red Hat"
+ },
+ {
+  "tier": "DIAMOND",
+  "url": "https://scaleops.com/?utm_source=CNCF_USA",
+  "name": "ScaleOps"
+ },
+ {
+  "tier": "DIAMOND",
+  "url": "https://www.solo.io/",
+  "name": "Solo.io"
+ },
+ {
+  "tier": "Platinum",
+  "url": "https://www.akamai.com/solutions/cloud-computing",
+  "name": "Akamai"
+ },
+ {
+  "tier": "Platinum",
+  "url": "https://canonical.com/",
+  "name": "Canonical"
+ },
+ {
+  "tier": "Platinum",
+  "url": "https://cast.ai/?utm_source=CNCF",
+  "name": "CAST AI"
+ },
+ {
+  "tier": "Platinum",
+  "url": "https://www.chainguard.dev/",
+  "name": "Chainguard"
+ },
+ {
+  "tier": "Platinum",
+  "url": "https://clickhouse.com/",
+  "name": "ClickHouse"
+ },
+ {
+  "tier": "Platinum",
+  "url": "https://www.crusoe.ai/",
+  "name": "Crusoe"
+ },
+ {
+  "tier": "Platinum",
+  "url": "https://www.dash0.com",
+  "name": "Dash0"
+ },
+ {
+  "tier": "Platinum",
+  "url": "https://www.datadoghq.com/",
+  "name": "Datadog"
+ },
+ {
+  "tier": "Platinum",
+  "url": "https://dockr.ly/3OW6752",
+  "name": "Docker"
+ },
+ {
+  "tier": "Platinum",
+  "url": "https://www.f5.com/",
+  "name": "F5"
+ },
+ {
+  "tier": "Platinum",
+  "url": "http://groundcover.com",
+  "name": "groundcover"
+ },
+ {
+  "tier": "Platinum",
+  "url": "https://www.ibm.com/us-en/",
+  "name": "IBM"
+ },
+ {
+  "tier": "Platinum",
+  "url": "https://www.kubecost.com/",
+  "name": "IBM Kubecost"
+ },
+ {
+  "tier": "Platinum",
+  "url": "https://infisical.com/",
+  "name": "Infisical"
+ },
+ {
+  "tier": "Platinum",
+  "url": "https://isovalent.com/",
+  "name": "Isovalent"
+ },
+ {
+  "tier": "Platinum",
+  "url": "https://nebius.com/",
+  "name": "Nebius"
+ },
+ {
+  "tier": "Platinum",
+  "url": "https://www.perfectscale.io/",
+  "name": "PerfectScale by DoiT"
+ },
+ {
+  "tier": "Platinum",
+  "url": "http://Getport.io",
+  "name": "Port"
+ },
+ {
+  "tier": "Platinum",
+  "url": "https://portworx.com/",
+  "name": "Portworx by Everpure-KubeCon"
+ },
+ {
+  "tier": "Platinum",
+  "url": "https://www.postman.com/?utm_campaign=nam_ent_buyer_fy27q4_pstmnevnts&#038;utm_medium=event_tradeshow&#038;utm_source=kubecon-website",
+  "name": "Postman"
+ },
+ {
+  "tier": "Platinum",
+  "url": "https://www.sedai.io/",
+  "name": "Sedai"
+ },
+ {
+  "tier": "Platinum",
+  "url": "https://www.spectrocloud.com/",
+  "name": "Spectro Cloud"
+ },
+ {
+  "tier": "Platinum",
+  "url": "https://www.splunk.com/",
+  "name": "Splunk, a Cisco Company"
+ },
+ {
+  "tier": "Platinum",
+  "url": "https://www.suse.com/",
+  "name": "SUSE"
+ },
+ {
+  "tier": "Platinum",
+  "url": "https://www.siderolabs.com/",
+  "name": "Talos by Sidero"
+ },
+ {
+  "tier": "Platinum",
+  "url": "https://goteleport.com/",
+  "name": "Teleport"
+ },
+ {
+  "tier": "Platinum",
+  "url": "https://tintri.com/",
+  "name": "Tintri"
+ },
+ {
+  "tier": "Platinum",
+  "url": "http://www.traversal.com/",
+  "name": "Traversal"
+ },
+ {
+  "tier": "Platinum",
+  "url": "https://www.vmware.com/products/cloud-infrastructure/vsphere-kubernetes-service",
+  "name": "VMware by Broadcom"
+ },
+ {
+  "tier": "Platinum",
+  "url": "https://www.yugabyte.com/",
+  "name": "yugabyteDB"
+ },
+ {
+  "tier": "gold",
+  "url": "http://akuity.io",
+  "name": "Akuity"
+ },
+ {
+  "tier": "gold",
+  "url": "https://chronosphere.io/",
+  "name": "Chronosphere, a Palo Alto Networks Company"
+ },
+ {
+  "tier": "gold",
+  "url": "https://cloudsmith.com/",
+  "name": "cloudsmith"
+ },
+ {
+  "tier": "gold",
+  "url": "https://controltheory.com/",
+  "name": "ControlTheory"
+ },
+ {
+  "tier": "gold",
+  "url": "https://coreweave.com/",
+  "name": "Coreweave"
+ },
+ {
+  "tier": "gold",
+  "url": "https://www.couchbase.com/",
+  "name": "couchbase"
+ },
+ {
+  "tier": "gold",
+  "url": "https://www.devzero.io/?ref=cncf",
+  "name": "DevZero"
+ },
+ {
+  "tier": "gold",
+  "url": "https://www.dynatrace.com/",
+  "name": "dynatrace"
+ },
+ {
+  "tier": "gold",
+  "url": "http://www.echohq.com/",
+  "name": "Echo"
+ },
+ {
+  "tier": "gold",
+  "url": "https://www.elastic.co/",
+  "name": "Elastic"
+ },
+ {
+  "tier": "gold",
+  "url": "http://gravitee.io/",
+  "name": "Gravitee"
+ },
+ {
+  "tier": "gold",
+  "url": "https://harness.io/",
+  "name": "Harness"
+ },
+ {
+  "tier": "gold",
+  "url": "https://www.heroku.com/home",
+  "name": "Heroku"
+ },
+ {
+  "tier": "gold",
+  "url": "http://www.hpe.com",
+  "name": "HPE"
+ },
+ {
+  "tier": "gold",
+  "url": "https://opensource.intuit.com/intuit-open-source/open-source",
+  "name": "intuit"
+ },
+ {
+  "tier": "gold",
+  "url": "https://komodor.com/",
+  "name": "Komodor"
+ },
+ {
+  "tier": "gold",
+  "url": "https://konghq.com/?utm_source=qr-code&#038;utm_medium=event&#038;utm_campaign=Kubekon-na-2026&#038;utm_content=landing-page",
+  "name": "Kong"
+ },
+ {
+  "tier": "gold",
+  "url": "https://newrelic.com/",
+  "name": "newrelic"
+ },
+ {
+  "tier": "gold",
+  "url": "http://www.nvidia.com",
+  "name": "Nvidia"
+ },
+ {
+  "tier": "gold",
+  "url": "https://octopus.com/",
+  "name": "Octopus Deploy"
+ },
+ {
+  "tier": "gold",
+  "url": "https://openobserve.ai/",
+  "name": "OpenObserve"
+ },
+ {
+  "tier": "gold",
+  "url": "https://opensearch.org/",
+  "name": "OpenSearch"
+ },
+ {
+  "tier": "gold",
+  "url": "https://www.resolve.ai/",
+  "name": "ResolveAI"
+ },
+ {
+  "tier": "gold",
+  "url": "https://sysdig.com/",
+  "name": "sysdig"
+ },
+ {
+  "tier": "gold",
+  "url": "http://www.tailscale.com/",
+  "name": "Tailscale"
+ },
+ {
+  "tier": "gold",
+  "url": "https://temporal.io",
+  "name": "Temporal"
+ },
+ {
+  "tier": "gold",
+  "url": "https://www.tigera.io/",
+  "name": "Tigera"
+ },
+ {
+  "tier": "gold",
+  "url": "https://www.vcluster.com/",
+  "name": "vCluster"
+ },
+ {
+  "tier": "gold",
+  "url": "https://www.veeam.com/products/cloud/kubernetes-data-protection.html",
+  "name": "Veeam"
+ },
+ {
+  "tier": "gold",
+  "url": "https://www.vultr.com/",
+  "name": "vultr"
+ },
+ {
+  "tier": "gold",
+  "url": "https://www.wiz.io/",
+  "name": "Wiz"
+ },
+ {
+  "tier": "gold",
+  "url": "https://zesty.co/",
+  "name": "Zesty"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.activestate.com",
+  "name": "ActiveState"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.adaptive6.com/",
+  "name": "adaptive6"
+ },
+ {
+  "tier": "silver",
+  "url": "https://aenix.io/",
+  "name": "AEnix"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.aikido.dev/",
+  "name": "Aikido"
+ },
+ {
+  "tier": "silver",
+  "url": "https://aiven.io/",
+  "name": "Aiven"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.akamas.io/",
+  "name": "Akamas"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.akeyless.io/",
+  "name": "Akeyless"
+ },
+ {
+  "tier": "silver",
+  "url": "https://antithesis.com/",
+  "name": "Antithesis"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.anyscale.com/",
+  "name": "anyscale"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.apollographql.com/",
+  "name": "Apollo GraphQL"
+ },
+ {
+  "tier": "silver",
+  "url": "https://arpio.io/",
+  "name": "arpio"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.doit.com/products/attribute",
+  "name": "Attribute by DoIt"
+ },
+ {
+  "tier": "silver",
+  "url": "https://betterstack.com/",
+  "name": "Better Stack"
+ },
+ {
+  "tier": "silver",
+  "url": "https://bindplane.com/",
+  "name": "Bindplane"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.blackduck.com/",
+  "name": "Black Duck  North America"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.blacksmith.sh/",
+  "name": "Blacksmith"
+ },
+ {
+  "tier": "silver",
+  "url": "https://camaraproject.org/",
+  "name": "CAMARA Project"
+ },
+ {
+  "tier": "silver",
+  "url": "https://ciq.com/",
+  "name": "CIQ"
+ },
+ {
+  "tier": "silver",
+  "url": "https://ciroos.ai/",
+  "name": "ciroos"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.cloudbees.com/",
+  "name": "CloudBees"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.cockroachlabs.com/",
+  "name": "Cockroach Labs"
+ },
+ {
+  "tier": "silver",
+  "url": "https://coder.com/",
+  "name": "Coder"
+ },
+ {
+  "tier": "silver",
+  "url": "http://www.coralogix.com/",
+  "name": "Coralogix"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.cosmonic.com/",
+  "name": "Cosmonic"
+ },
+ {
+  "tier": "silver",
+  "url": "https://crashoverride.com/",
+  "name": "Crash Override"
+ },
+ {
+  "tier": "silver",
+  "url": "https://cribl.io/",
+  "name": "Cribl"
+ },
+ {
+  "tier": "silver",
+  "url": "http://www.data-agent.co/",
+  "name": "DataAgent Logo"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.databricks.com/",
+  "name": "Databricks"
+ },
+ {
+  "tier": "silver",
+  "url": "http://datacore.com",
+  "name": "DataCore"
+ },
+ {
+  "tier": "silver",
+  "url": "https://decimal.app/",
+  "name": "Decimal"
+ },
+ {
+  "tier": "silver",
+  "url": "https://depot.dev/",
+  "name": "Depot"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.diagrid.io/",
+  "name": "Diagrid"
+ },
+ {
+  "tier": "silver",
+  "url": "http://www.digital.ai/",
+  "name": "digital.ai"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.dragonflydb.io/",
+  "name": "Dragonflydb"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.enterprisedb.com/",
+  "name": "EDB Postgres"
+ },
+ {
+  "tier": "silver",
+  "url": "https://edera.dev/",
+  "name": "Edera"
+ },
+ {
+  "tier": "silver",
+  "url": "https://edgedelta.com",
+  "name": "EdgeDelta"
+ },
+ {
+  "tier": "silver",
+  "url": "https://empirik.ai/",
+  "name": "empirik"
+ },
+ {
+  "tier": "silver",
+  "url": "https://endor.ai",
+  "name": "Endor Labs"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.xmatters.com/",
+  "name": "Everbridge xMatters"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.faros.ai/",
+  "name": "faros AI"
+ },
+ {
+  "tier": "silver",
+  "url": "https://fastly.com/",
+  "name": "Fastly"
+ },
+ {
+  "tier": "silver",
+  "url": "http://www.gofirefly.io",
+  "name": "Firefly"
+ },
+ {
+  "tier": "silver",
+  "url": "https://flox.dev/",
+  "name": "Flox"
+ },
+ {
+  "tier": "silver",
+  "url": "https://frame.work",
+  "name": "Framework"
+ },
+ {
+  "tier": "silver",
+  "url": "https://fusionauth.io/",
+  "name": "FusionAuth"
+ },
+ {
+  "tier": "silver",
+  "url": "https://grafana.com/",
+  "name": "Grafana Labs"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.gremlin.com/",
+  "name": "gremlin"
+ },
+ {
+  "tier": "silver",
+  "url": "https://grepr.ai/",
+  "name": "Grepr"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.greptime.com/",
+  "name": "Greptime Logo"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.hashicorp.com/",
+  "name": "HashiCorp"
+ },
+ {
+  "tier": "silver",
+  "url": "http://herodevs.com/?utm_source=event&#038;utm_medium=event&#038;utm_campaign=2026q4_conf-kubecon-na-2026_global",
+  "name": "HeroDevs"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.honeycomb.io/",
+  "name": "Honeycomb.io"
+ },
+ {
+  "tier": "silver",
+  "url": "http://incident.io/",
+  "name": "Incident.io"
+ },
+ {
+  "tier": "silver",
+  "url": "https://iowngf.org/",
+  "name": "IOWN Global Forum"
+ },
+ {
+  "tier": "silver",
+  "url": "http://www.jetbrains.com/",
+  "name": "jetbrains"
+ },
+ {
+  "tier": "silver",
+  "url": "https://jozu.com/",
+  "name": "Jozu"
+ },
+ {
+  "tier": "silver",
+  "url": "https://klique.ai/",
+  "name": "Klique"
+ },
+ {
+  "tier": "silver",
+  "url": "https://kodekloud.com",
+  "name": "KodeKloud"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.kubermatic.com/",
+  "name": "Kubermatic"
+ },
+ {
+  "tier": "silver",
+  "url": "https://kubex.ai",
+  "name": "Kubex"
+ },
+ {
+  "tier": "silver",
+  "url": "http://www.lablup.com",
+  "name": "Lablup"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.latitude.sh/",
+  "name": "Latitude.sh"
+ },
+ {
+  "tier": "silver",
+  "url": "https://linbit.com/",
+  "name": "linbit"
+ },
+ {
+  "tier": "silver",
+  "url": "https://training.linuxfoundation.org/",
+  "name": "Linux Foundation Education"
+ },
+ {
+  "tier": "silver",
+  "url": "https://loopholelabs.io",
+  "name": "Loophole Labs"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.macstadium.com/",
+  "name": "MacStadium"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.mezmo.com/?utm_medium=conferences-events&#038;utm_source=sponsorship&#038;utm_campaign=event-kubecon-na-fy23q4",
+  "name": "Mezmo"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.mirantis.com/",
+  "name": "Mirantis"
+ },
+ {
+  "tier": "silver",
+  "url": "https://momentic.ai/",
+  "name": "momentic"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.myota.io/",
+  "name": "Myota"
+ },
+ {
+  "tier": "silver",
+  "url": "http://netlox.io/",
+  "name": "NetLOX"
+ },
+ {
+  "tier": "silver",
+  "url": "https://neubird.ai/",
+  "name": "NeuBird"
+ },
+ {
+  "tier": "silver",
+  "url": "https://nirmata.com/",
+  "name": "Nirmata"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.north.cloud/?utm_source=native&#038;utm_medium=events&#038;utm_campaign=nmrk-general-events-kubecon&#038;utm_content=lp_north",
+  "name": "north"
+ },
+ {
+  "tier": "silver",
+  "url": "https://northflank.com/",
+  "name": "Northflank"
+ },
+ {
+  "tier": "silver",
+  "url": "https://nmc2.com/",
+  "name": "NorthMark Compute"
+ },
+ {
+  "tier": "silver",
+  "url": "https://obot.ai/",
+  "name": "Obot.ai"
+ },
+ {
+  "tier": "silver",
+  "url": "http://snowflake.com/observe",
+  "name": "Observe by Snowflake"
+ },
+ {
+  "tier": "silver",
+  "url": "https://openssf.org/",
+  "name": "OpenSSF"
+ },
+ {
+  "tier": "silver",
+  "url": "https://orca.security/",
+  "name": "orca security"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.pagerduty.com/?utm_medium=event&#038;utm_source=kubecon&#038;utm_campaign=kubecon-sponsorship&#038;utm_term=null&#038;utm_content=null",
+  "name": "PagerDuty"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.percona.com/",
+  "name": "Percona"
+ },
+ {
+  "tier": "silver",
+  "url": "https://pganalyze.com/",
+  "name": "pganalyze"
+ },
+ {
+  "tier": "silver",
+  "url": "https://planetscale.com/",
+  "name": "planetscale"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.plural.sh/",
+  "name": "plural"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.portainer.io/",
+  "name": "Portainer"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.prosperops.com/",
+  "name": "ProsperOps"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.pulumi.com/",
+  "name": "Pulumi"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.pump.co/",
+  "name": "Pump"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.qualcomm.com/",
+  "name": "Qualcomm"
+ },
+ {
+  "tier": "silver",
+  "url": "https://rafay.co/?utm_campaign=kubecon-na&#038;utm_source=cncf&#038;utm_medium=referral&#038;utm_content=general",
+  "name": "Rafay Systems"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.rapidfort.com",
+  "name": "RapidFort"
+ },
+ {
+  "tier": "silver",
+  "url": "https://ravendb.net/",
+  "name": "RavenDB"
+ },
+ {
+  "tier": "silver",
+  "url": "http://redpanda.com",
+  "name": "Redpanda"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.replicated.com",
+  "name": "Replicated"
+ },
+ {
+  "tier": "silver",
+  "url": "https://home.robusta.dev/",
+  "name": "Robusta.dev"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.runpod.io/",
+  "name": "Runpod"
+ },
+ {
+  "tier": "silver",
+  "url": "https://sentry.io/welcome/",
+  "name": "sentry"
+ },
+ {
+  "tier": "silver",
+  "url": "https://signoz.io/",
+  "name": "SigNoz"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.sonatype.com/",
+  "name": "Sonatype"
+ },
+ {
+  "tier": "silver",
+  "url": "https://sonraisecurity.com",
+  "name": "Sonrai Security"
+ },
+ {
+  "tier": "silver",
+  "url": "https://spacelift.io/",
+  "name": "Spacelift"
+ },
+ {
+  "tier": "silver",
+  "url": "https://backstage.spotify.com/",
+  "name": "Spotify"
+ },
+ {
+  "tier": "silver",
+  "url": "https://squaredup.com/",
+  "name": "SquaredUp"
+ },
+ {
+  "tier": "silver",
+  "url": "http://stackgen.com",
+  "name": "StackGen"
+ },
+ {
+  "tier": "silver",
+  "url": "http://www.stacklet.io/",
+  "name": "Stacklet"
+ },
+ {
+  "tier": "silver",
+  "url": "https://stormforge.io/",
+  "name": "StormForge by CloudBolt"
+ },
+ {
+  "tier": "silver",
+  "url": "https://supabase.com/",
+  "name": "Supabase"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.syntasso.io/",
+  "name": "Syntasso"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.tigrisdata.com/",
+  "name": "tigris"
+ },
+ {
+  "tier": "silver",
+  "url": "http://traefik.io",
+  "name": "Traefik Labs"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.truefoundry.com/",
+  "name": "truefoundry"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.twingate.com/",
+  "name": "Twingate"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.uber.com/",
+  "name": "Uber"
+ },
+ {
+  "tier": "silver",
+  "url": "https://upbound.io/",
+  "name": "upbound"
+ },
+ {
+  "tier": "silver",
+  "url": "http://www.varnish-software.com/",
+  "name": "Varnish Software"
+ },
+ {
+  "tier": "silver",
+  "url": "https://www.vastdata.com/",
+  "name": "VAST"
+ },
+ {
+  "tier": "silver",
+  "url": "https://vates.tech/",
+  "name": "Vates"
+ },
+ {
+  "tier": "silver",
+  "url": "https://victoriametrics.com/",
+  "name": "VictoriaMetrics"
+ },
+ {
+  "tier": "silver",
+  "url": "https://xata.io",
+  "name": "Xata"
+ },
+ {
+  "tier": "silver",
+  "url": "http://www.zededa.com",
+  "name": "Zededa"
+ },
+ {
+  "tier": "Start-up",
+  "url": "https://actualyze.ai/",
+  "name": "Actualyze AI"
+ },
+ {
+  "tier": "Start-up",
+  "url": "https://amutable.com/",
+  "name": "Amutable"
+ },
+ {
+  "tier": "Start-up",
+  "url": "https://aranya.tech/",
+  "name": "aranya"
+ },
+ {
+  "tier": "Start-up",
+  "url": "https://archestra.ai/",
+  "name": "Archestra.ai"
+ },
+ {
+  "tier": "Start-up",
+  "url": "https://ascendranetworks.com/",
+  "name": "Ascendra Networks"
+ },
+ {
+  "tier": "Start-up",
+  "url": "https://causaldynamics.com/",
+  "name": "Causal Dynamics Lab"
+ },
+ {
+  "tier": "Start-up",
+  "url": "https://www.causely.ai/",
+  "name": "Causely"
+ },
+ {
+  "tier": "Start-up",
+  "url": "https://cloudchipr.com/",
+  "name": "Cloudchipr"
+ },
+ {
+  "tier": "Start-up",
+  "url": "http://codevisionary.ai",
+  "name": "CodeVisionary"
+ },
+ {
+  "tier": "Start-up",
+  "url": "https://www.effodio.com/",
+  "name": "effodio"
+ },
+ {
+  "tier": "Start-up",
+  "url": "http://www.emphere.com/",
+  "name": "emphere"
+ },
+ {
+  "tier": "Start-up",
+  "url": "https://fluidcloud.com/",
+  "name": "FluidCloud"
+ },
+ {
+  "tier": "Start-up",
+  "url": "https://infino.ai/",
+  "name": "Infino"
+ },
+ {
+  "tier": "Start-up",
+  "url": "https://infros.io/",
+  "name": "InfrOS"
+ },
+ {
+  "tier": "Start-up",
+  "url": "https://kedify.io/",
+  "name": "Kedify"
+ },
+ {
+  "tier": "Start-up",
+  "url": "https://kubedb.com/",
+  "name": "KubeDB"
+ },
+ {
+  "tier": "Start-up",
+  "url": "https://mazehq.com/",
+  "name": "Maze"
+ },
+ {
+  "tier": "Start-up",
+  "url": "http://metalbear.com/mirrord",
+  "name": "Mirrord by MetalBear"
+ },
+ {
+  "tier": "Start-up",
+  "url": "https://moonlightmarketing.io/",
+  "name": "Moonlight Marketing"
+ },
+ {
+  "tier": "Start-up",
+  "url": "https://www.mydecisive.ai/",
+  "name": "mydecisive.ai"
+ },
+ {
+  "tier": "Start-up",
+  "url": "https://ollygarden.com/",
+  "name": "OllyGarden"
+ },
+ {
+  "tier": "Start-up",
+  "url": "https://www.omnistrate.com/",
+  "name": "Omnistrate"
+ },
+ {
+  "tier": "Start-up",
+  "url": "https://papercompute.com/",
+  "name": "Paper Compute Company"
+ },
+ {
+  "tier": "Start-up",
+  "url": "https://patapsco.ai/",
+  "name": "PatapscoAI"
+ },
+ {
+  "tier": "Start-up",
+  "url": "https://www.pgedge.com",
+  "name": "pgEDGE"
+ },
+ {
+  "tier": "Start-up",
+  "url": "https://plakar.io/",
+  "name": "Plakar"
+ },
+ {
+  "tier": "Start-up",
+  "url": "http://www.radarhq.io/",
+  "name": "Radar"
+ },
+ {
+  "tier": "Start-up",
+  "url": "https://www.rootly.com/",
+  "name": "Rootly"
+ },
+ {
+  "tier": "Start-up",
+  "url": "https://www.runwhen.com/",
+  "name": "RunWhen"
+ },
+ {
+  "tier": "Start-up",
+  "url": "https://www.stackguardian.io/",
+  "name": "StackGuardian"
+ },
+ {
+  "tier": "Start-up",
+  "url": "http://www.stacklok.com",
+  "name": "Stacklok"
+ },
+ {
+  "tier": "Start-up",
+  "url": "https://superplane.com",
+  "name": "SuperPlane"
+ },
+ {
+  "tier": "Start-up",
+  "url": "http://tensormesh.ai",
+  "name": "Tensormesh"
+ },
+ {
+  "tier": "Start-up",
+  "url": "http://testkube.io",
+  "name": "testkube – kubeshop"
+ },
+ {
+  "tier": "Start-up",
+  "url": "https://vijil.ai/",
+  "name": "vijil"
+ },
+ {
+  "tier": "Start-up",
+  "url": "https://villagesql.com/",
+  "name": "VillageSQL"
+ },
+ {
+  "tier": "End User",
+  "url": "https://www.bloomberg.com/company/values/tech-at-bloomberg/",
+  "name": "Bloomberg Engineering"
+ },
+ {
+  "tier": "End User",
+  "url": "https://www.cvshealth.com/",
+  "name": "CVS Health"
+ },
+ {
+  "tier": "Media Partners",
+  "url": "https://learnkube.com/",
+  "name": "LearnKube"
+ },
+ {
+  "tier": "Media Partners",
+  "url": "https://www.opsmatters.com/",
+  "name": "OpsMatters"
+ },
+ {
+  "tier": "Media Partners",
+  "url": "https://sdtimes.com/",
+  "name": "SD Times"
+ },
+ {
+  "tier": "Media Partners",
+  "url": "https://www.sdxcentral.com/",
+  "name": "SDxCentral"
+ },
+ {
+  "tier": "Media Partners",
+  "url": "https://techrevolt.news/",
+  "name": "TechRevolt News"
+ },
+ {
+  "tier": "Media Partners",
+  "url": "https://techstrong.tv/",
+  "name": "Techstrong"
+ },
+ {
+  "tier": "Media Partners",
+  "url": "https://www.tfir.io/",
+  "name": "TFIR"
+ },
+ {
+  "tier": "Media Partners",
+  "url": "https://thecube.net/",
+  "name": "the cube"
+ },
+ {
+  "tier": "Media Partners",
+  "url": "https://thenewstack.io/",
+  "name": "The New Stack"
+ },
+ {
+  "tier": "Media Partners",
+  "url": "https://vmblog.com/",
+  "name": "VMblog"
+ }
+]

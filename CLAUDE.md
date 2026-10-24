@@ -2,6 +2,7 @@
 
 Attendee-owned conference brain. Hackathon build (Patch the Conference, Oct 24 2026; demo 17:30 PT).
 Full spec: `conftellations-spec.md`. API/graph contract: `lib/types.ts`. Agent-to-agent notes: `COMMS.md`.
+**Current state + next steps: `HANDOFF.md`. Keep it updated as you code (any harness); commit it with the work.**
 
 ## Principles (non-negotiable)
 - **No chatbot.** LLMs run in the backend only. Steering is one command line → structured ops → visible diff.
