@@ -243,4 +243,3 @@ Thanks for the direct feedback. I've thought about it and I'm keeping the direct
 - **Onboarding person ids** (new users only): `slug(name)@user-<percent-encoded userId>` so user ids that slug the same do not merge. Seeded person ids are unchanged.
 - Assumption: still no server auth; `userId` is the demo caller the UI sends, same as other routes. Loading `mediaUrl` as a raw src returns 400.
 - Verify: `npx vitest run tests/scribe.test.ts tests/steer.test.ts tests/brief-cite.test.ts`. Share without `userId` → 400; `userId` of the owner → 200; another user → 403.
-
