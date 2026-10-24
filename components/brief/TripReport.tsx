@@ -19,7 +19,7 @@ const MD: Components = {
   ol: ({ children }) => <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm leading-6 text-muted marker:text-faint">{children}</ol>,
   li: ({ children }) => <li className="pl-0.5">{children}</li>,
   strong: ({ children }) => <strong className="font-semibold text-text">{children}</strong>,
-  a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-accentStrong underline underline-offset-2">{children}</a>,
+  a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-text underline underline-offset-2">{children}</a>,
   code: ({ children }) => <code className="rounded bg-surface2 px-1 py-0.5 text-xs text-text">{children}</code>,
   hr: () => <hr className="my-4 border-border" />,
   blockquote: ({ children }) => <blockquote className="mt-2 border-l-2 border-border pl-3 text-muted">{children}</blockquote>,

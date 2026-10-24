@@ -79,7 +79,7 @@ export function ProposalPanel({ res, tz, onPlan, onClose }: { res: SteerResponse
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-xs text-muted">
-            <Check className="size-3.5 text-ok" aria-hidden />Applied · Planner re-routed your day
+            <Check className="size-3.5 text-[#0B7A52]" aria-hidden />Applied · Planner re-routed your day
           </div>
           <p className="mt-1 text-sm font-medium leading-6 text-text">{res.summary}</p>
         </div>

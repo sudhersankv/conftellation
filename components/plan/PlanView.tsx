@@ -105,7 +105,7 @@ export function PlanView() {
           {goalCounts.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1.5">
               {goalCounts.map(({ goal, n }) => (
-                <Chip key={goal.id} kind="goal" dot={TYPE_COLOR.goal} className="max-w-full"><span className="truncate">{goal.text}</span><span className="tabular text-goal/70">{n}</span></Chip>
+                <Chip key={goal.id} kind="goal" dot={TYPE_COLOR.goal} className="max-w-full"><span className="truncate">{goal.text}</span><span className="tabular text-muted">{n}</span></Chip>
               ))}
             </div>
           )}
@@ -114,7 +114,7 @@ export function PlanView() {
           <Segmented<View> value={view} onChange={setView} options={[{ value: "day", label: "Day" }, { value: "goal", label: "By goal" }]} className="h-10" />
           {final ? (
             <div className="flex h-10 items-center gap-1 rounded-lg border border-border bg-surface pl-3 pr-1 text-sm">
-              <Lock className="size-3.5 text-ok" aria-hidden /><span className="text-text">Plan locked</span>
+              <Lock className="size-3.5 text-[#0B7A52]" aria-hidden /><span className="text-text">Plan locked</span>
               <Button variant="ghost" size="sm" className="ml-1" onClick={() => { setFinal(false); toast("Plan unlocked"); }}><LockOpen className="size-3.5" aria-hidden />Edit</Button>
             </div>
           ) : (
@@ -154,7 +154,7 @@ export function PlanView() {
 
       {view === "day" ? (
         <>
-          {days.length === 1 && day && <div className="-mb-1 text-xs font-medium text-muted">{dayLabel(day)}{day === today && <span className="text-danger"> · Today</span>}</div>}
+          {days.length === 1 && day && <div className="-mb-1 text-xs font-medium text-muted">{dayLabel(day)}{day === today && <span className="text-[#D7263D]"> · Today</span>}</div>}
           {daySlots.length === 0 ? (
             <EmptyState title={`Nothing planned on ${day ? dayLabel(day) : "this day"}`} text={days.length > 1 ? "Pick another day, or steer to add sessions here." : "Steer to add sessions, e.g. “more tracing”."} />
           ) : (

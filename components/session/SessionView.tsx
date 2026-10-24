@@ -173,7 +173,7 @@ function Community({ data }: { data: CommunityResponse }) {
                 <span className="min-w-0 flex-1">
                   {l.text}{" "}
                   {noteIds.has(l.momentId)
-                    ? <button type="button" onClick={() => jump(l.momentId)} className="font-mono text-[10px] text-faint hover:text-accentStrong">[{l.momentId}]</button>
+                    ? <button type="button" onClick={() => jump(l.momentId)} className="font-mono text-[10px] text-faint hover:text-text">[{l.momentId}]</button>
                     : <span className="font-mono text-[10px] text-faint">[{l.momentId}]</span>}
                 </span>
               </li>

@@ -20,21 +20,21 @@ export function Drawer({ open, onOpenChange, title, description, children, class
   return (
     <V.Root open={open} onOpenChange={onOpenChange}>
       <V.Portal>
-        <V.Overlay className="fixed inset-0 z-40 bg-black/50" />
+        <V.Overlay className="fixed inset-0 z-40 bg-ink/20" />
         <V.Content
           className={cn(
-            "fixed inset-x-0 bottom-0 z-50 flex max-h-[90dvh] flex-col rounded-t-xl border border-border bg-surface text-text shadow-xl outline-none",
-            side === "right" ? "md:inset-y-3 md:left-auto md:right-3 md:max-h-none md:w-[440px] md:rounded-xl" : "md:inset-x-auto md:bottom-auto md:left-1/2 md:top-1/2 md:w-[520px] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-xl",
+            "fixed inset-x-0 bottom-0 z-50 flex max-h-[90dvh] flex-col rounded-t-2xl border-2 border-border bg-surface text-text shadow-hardLg outline-none",
+            side === "right" ? "md:inset-y-3 md:left-auto md:right-3 md:max-h-none md:w-[440px] md:rounded-2xl" : "md:inset-x-auto md:bottom-auto md:left-1/2 md:top-1/2 md:w-[520px] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-2xl",
             className,
           )}
         >
-          <V.Handle className="mx-auto mt-2 !h-1 !w-8 shrink-0 rounded-full !bg-borderStrong md:hidden" />
+          <V.Handle className="mx-auto mt-2 !h-1 !w-8 shrink-0 rounded-full !bg-ink md:hidden" />
           <div className="flex items-start justify-between gap-3 px-4 pb-2 pt-3">
             <div className="min-w-0">
-              <V.Title className="text-base font-semibold leading-6">{title}</V.Title>
+              <V.Title className="font-heading text-lg font-bold leading-6 tracking-tight">{title}</V.Title>
               {description ? <V.Description className="mt-0.5 text-xs text-muted">{description}</V.Description> : <V.Description className="sr-only">{title}</V.Description>}
             </div>
-            <button type="button" onClick={() => onOpenChange(false)} className="rounded-md p-1 text-muted hover:bg-surface2 hover:text-text" aria-label="Close">
+            <button type="button" onClick={() => onOpenChange(false)} className="grid size-8 place-items-center rounded-full border-2 border-border bg-surface text-text shadow-hardSm hover:bg-accent" aria-label="Close">
               <X className="size-4" />
             </button>
           </div>

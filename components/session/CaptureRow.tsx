@@ -161,7 +161,7 @@ function MetForm({ confId, busy, onSave, onCancel }: { confId: string; busy: boo
             ))}
             {q.trim().length >= 2 && !searching && people.length === 0 && <li className="px-2 py-2 text-xs text-muted">No one matches.</li>}
           </ul>
-          <button type="button" onClick={() => { setAdding(true); setName(q); }} className="mt-1 flex items-center gap-2 rounded-md px-2 py-2 text-sm text-accentStrong hover:bg-surface2">
+          <button type="button" onClick={() => { setAdding(true); setName(q); }} className="mt-1 flex items-center gap-2 rounded-md px-2 py-2 text-sm text-text hover:bg-surface2">
             <UserPlus className="size-4" />Add new{q.trim() ? `: ${q.trim()}` : ""}
           </button>
         </>

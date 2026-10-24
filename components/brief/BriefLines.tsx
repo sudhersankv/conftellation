@@ -39,7 +39,7 @@ function BriefLineItem({ text, path, confId }: { text: string; path?: WhyPath; c
             {path.text}
           </span>
         </span>
-        <GitBranch className="mt-1.5 size-3.5 shrink-0 text-faint group-hover:text-accent" aria-label="Show path in graph" />
+        <GitBranch className="mt-1.5 size-3.5 shrink-0 text-faint group-hover:text-text" aria-label="Show path in graph" />
       </Link>
     </li>
   );

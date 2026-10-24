@@ -166,7 +166,7 @@ export function GoalsScreen() {
             />
           ))}
         </div>
-        {goalError && <p className="mt-2 text-xs text-danger" role="alert">Write at least one goal of 3 characters or more.</p>}
+        {goalError && <p className="mt-2 text-xs text-[#D7263D]" role="alert">Write at least one goal of 3 characters or more.</p>}
         {goals.length < 3 && (
           <Button variant="ghost" className="mt-2" onClick={() => edit(() => setGoals((gs) => [...gs, blank()]))}><Plus className="size-4" />Add a goal</Button>
         )}
@@ -197,7 +197,7 @@ export function GoalsScreen() {
                 onClick={() => edit(() => setOpenTo((v) => (on ? v.filter((x) => x !== o.value) : [...v, o.value])))}
                 className={cn(
                   "inline-flex h-10 items-center rounded-md border px-3 text-sm transition duration-fast",
-                  on ? "border-accent/50 bg-accent/10 text-accentStrong" : "border-border bg-surface text-muted hover:border-borderStrong hover:text-text",
+                  on ? "border-border bg-accent shadow-hardSm text-text" : "border-border bg-surface text-muted hover:border-borderStrong hover:text-text",
                 )}
               >
                 {o.label}
@@ -225,7 +225,7 @@ export function GoalsScreen() {
               <Input id="avail-to" type="time" value={to} onChange={(e) => edit(() => setTo(e.target.value))} className={cn("w-32 [color-scheme:dark]", availError && "border-danger/60")} />
             </div>
             <StatusLine className="pb-3">Venue time{c.timezone ? ` (${c.timezone.split("/").pop()?.replace(/_/g, " ")})` : ""}</StatusLine>
-            {availError && <p className="w-full text-xs text-danger" role="alert">End time must be after start time.</p>}
+            {availError && <p className="w-full text-xs text-[#D7263D]" role="alert">End time must be after start time.</p>}
           </div>
         )}
       </section>

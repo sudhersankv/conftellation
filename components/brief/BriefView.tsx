@@ -60,7 +60,7 @@ export function BriefView() {
         <>
           {regen && (
             <Card className="flex items-center gap-3 border-accent/40">
-              <RefreshCw className="size-4 animate-spin text-accent" aria-hidden />
+              <RefreshCw className="size-4 animate-spin text-text" aria-hidden />
               <StatusLine className="text-text">Recapper is reading your day&apos;s paths…</StatusLine>
             </Card>
           )}

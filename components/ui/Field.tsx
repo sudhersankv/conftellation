@@ -2,10 +2,10 @@
 import { forwardRef, type InputHTMLAttributes, type LabelHTMLAttributes, type TextareaHTMLAttributes } from "react";
 import { cn } from "@/lib/ui/cn";
 
-const FIELD = "w-full rounded-lg border border-border bg-surface px-3 text-sm text-text placeholder:text-faint transition duration-fast hover:border-borderStrong focus:border-accent focus:outline-none disabled:opacity-50";
+const FIELD = "w-full rounded-lg border-2 border-border bg-surface px-3 text-sm text-text placeholder:text-faint transition duration-fast focus:outline-none focus:ring-[3px] focus:ring-accent disabled:opacity-50";
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input({ className, ...rest }, ref) {
-  return <input ref={ref} className={cn(FIELD, "h-10", className)} {...rest} />;
+  return <input ref={ref} className={cn(FIELD, "h-11", className)} {...rest} />;
 });
 Input.displayName = "Input";
 
@@ -16,8 +16,8 @@ Textarea.displayName = "Textarea";
 
 export function Label({ className, hint, children, ...rest }: LabelHTMLAttributes<HTMLLabelElement> & { hint?: string }) {
   return (
-    <label className={cn("mb-1.5 block text-xs font-medium text-muted", className)} {...rest}>
-      {children}{hint && <span className="ml-1 font-normal text-faint">{hint}</span>}
+    <label className={cn("mb-1.5 block font-heading text-xs font-bold text-text", className)} {...rest}>
+      {children}{hint && <span className="ml-1 font-sans font-normal text-muted">{hint}</span>}
     </label>
   );
 }

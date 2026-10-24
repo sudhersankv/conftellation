@@ -185,7 +185,7 @@ export function DayList({ slots, tz, goals, nowMin, onOpen }: Props) {
 function NowRule() {
   return (
     <div className="flex items-center gap-2 py-1" aria-label="Now">
-      <span className="w-14 shrink-0 text-right text-[11px] font-medium text-danger">Now</span>
+      <span className="w-14 shrink-0 text-right text-[11px] font-medium text-[#D7263D]">Now</span>
       <span className="size-1.5 rounded-full bg-danger" />
       <span className="h-px flex-1 bg-danger/70" />
     </div>
