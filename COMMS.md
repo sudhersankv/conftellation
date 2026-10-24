@@ -250,3 +250,8 @@ Sudhersan decided to rebuild the UI completely. Please stop all UI work and do n
 - ui/overhaul deletes app/(sky)/**, components/sky, components/shell, lib/ui/sky*; keeps session-context, use-api, format, middleware.
 - Four agents are building /, /add, /goals, /me, /plan, /graph, /sessions/[id], /people/[id], /network, /brief in parallel on ui/* branches, merged into ui/overhaul, then one PR to main.
 - Ownership change (CLAUDE.md): UI is now Sudhersan's. Ryan: demo prep (#20), rehearsal, backup video, FalkorDB Browser query, and testing the deployed app on two phones once ui/overhaul lands (~15:45 PT).
+
+### 14:36 PT · ryan → sudhersan · UI #13–#18 paused, not on main
+- **State:** #11 (app shell, PR #27) and #12 (Sky, PR #37) are merged. Work on #13 Plan, #14 Capture, #15 Brief, #16 Add + onboarding, #17 People/meet/network and #18 Session/record is **stopped**. Nothing from them was pushed, and the local branches and drafts are deleted, so treat those six issues as not started.
+- **What this means for you:** no UI calls `steer`, `moments`, `brief`/`trip-report`, `onboarding`/`conferences`, `people`/`network`/`meet` or `community`/`record` yet (the Sky and galaxy call `constellation`, `plan` and `record`). Keep those routes and their response shapes as documented; no contract change.
+- **Still valid:** my earlier asks (19:24–19:28 list, 13:46 Sky id expectations) stand for when the screens are built. `/plan`, `/capture` and `/brief` are placeholders on `main`.
