@@ -80,6 +80,7 @@ const nameOnly = {
   people: [],
   companies: [
     { name: "Found Co", website: "", description: "", sponsorTier: "Gold", booth: "", hall: "", topics: [] },
+    { name: "Other Co", website: "", description: "", sponsorTier: "", booth: "", hall: "", topics: [] },
     { name: "Ghost Co", website: "", description: "", sponsorTier: "", booth: "", hall: "", topics: [] },
     { name: "Loopback Labs", website: "http://127.0.0.1/", description: "", sponsorTier: "", booth: "", hall: "", topics: [] },
   ],
@@ -130,6 +131,10 @@ beforeAll(async () => {
   net.unlock.set("https://nameonly.example/", "# NAME ONLY SPONSORS\n");
   net.unlock.set("https://found.example/", `# Found Co\n${"We build cloud infrastructure for platform teams. ".repeat(12)}`);
   net.serp.set("Found Co", [{ title: "Found Co", link: "https://found.example/", description: "Found builds storage." }]);
+  net.serp.set("Other Co", [
+    { title: "Other Co", link: "https://en.wikipedia.org/wiki/Other_Co", description: "directory" },
+    { title: "Found Co", link: "https://found.example/", description: "different company" },
+  ]);
   net.serp.set("Ghost Co", [{ title: "internal", link: "http://10.1.1.1/secret", description: "no" }]);
   const capLinks = Array.from({ length: 8 }, (_, i) => `[a](https://cap.example/agenda/${"p".repeat(i + 1)})`).join("\n");
   net.unlock.set("https://cap.example/start", `# CAP PAGES\n${capLinks}\n`);
@@ -243,12 +248,14 @@ describe("POST /api/conferences (other paths)", () => {
     expect(net.calls.some((c) => c.startsWith("serp ") && c.includes("Found Co"))).toBe(true);
     expect(net.calls.some((c) => c.startsWith("serp ") && c.includes("Ghost Co"))).toBe(true);
     expect(net.calls).toContain("unlock https://found.example/");
-    expect(net.calls.some((c) => c.includes("127.0.0.1") || c.includes("10.1.1.1"))).toBe(false);
+    expect(net.calls.some((c) => c.includes("127.0.0.1") || c.includes("10.1.1.1") || c.includes("wikipedia.org"))).toBe(false);
     const { body: d } = await detail("name-only-expo-2026");
-    expect(d.sponsors?.find((s) => s.name === "Found Co")).toMatchObject({ id: "found.example", website: "https://found.example/", via: "unlocker", description: "Found Co builds cloud infrastructure for platform teams." });
+    expect(d.sponsors?.find((s) => s.name === "Found Co")).toMatchObject({ id: "found-co", website: "https://found.example/", via: "unlocker", description: "Found Co builds cloud infrastructure for platform teams." });
     const rows = await q<{ id: string; skip: string | null; website: string | null }>(
       `MATCH (co:Company)-[:SPONSORS]->(:Conference {id:'name-only-expo-2026'}) RETURN co.id AS id, co.enrichSkip AS skip, co.website AS website`,
     );
+    expect(rows.map((r) => r.id)).not.toContain("found.example");
+    expect(rows.find((r) => r.id === "other-co")).toMatchObject({ skip: "no website; search returned no result for this company", website: null });
     expect(rows.find((r) => r.id === "ghost-co")).toMatchObject({ skip: "no website; search returned no public url", website: null });
     expect(rows.find((r) => r.id === "loopback-labs")?.skip).toBe("website is not a public http(s) url");
     expect(rows.find((r) => r.id === "loopback-labs")?.website ?? null).toBeNull();

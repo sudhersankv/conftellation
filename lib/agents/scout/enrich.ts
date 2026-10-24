@@ -5,7 +5,7 @@ import { memo, serp, unlock, type SerpResult } from "@/lib/brightdata";
 import { hasLLM, structured } from "@/lib/llm";
 import { assertResolvedPublic, publicUrlProblem, UnsafeUrlError } from "@/lib/publicUrl";
 import type { Via } from "@/lib/types";
-import type { NormCompany } from "./normalized";
+import { companyId, type NormCompany } from "./normalized";
 import { mapLimit } from "./upsert";
 
 const TIER_RANK = [/diamond/i, /platinum/i, /gold/i, /silver/i, /bronze/i, /start-?up/i, /end user/i];
@@ -43,6 +43,9 @@ export interface EnrichResult {
   skipped: { name: string; reason: string }[];
 }
 
+const AGGREGATORS = ["linkedin.com", "wikipedia.org", "wikidata.org", "crunchbase.com", "facebook.com", "fb.com", "twitter.com", "x.com", "instagram.com", "youtube.com", "medium.com", "bloomberg.com", "pitchbook.com", "zoominfo.com", "glassdoor.com", "yelp.com", "google.com", "bing.com", "duckduckgo.com", "reddit.com", "github.com", "fandom.com"];
+const NAME_STOP = new Set(["inc", "llc", "ltd", "corp", "the", "and", "co", "company", "gmbh", "plc"]);
+
 const publicLink = (link: string) => {
   try {
     return publicUrlProblem(link) ? undefined : link;
@@ -51,7 +54,27 @@ const publicLink = (link: string) => {
   }
 };
 
-async function searchWebsite(c: NormCompany, context?: string): Promise<{ url: string; snippets: string; source: string; collectedAt: string } | { skip: string }> {
+const hostOf = (link: string) => {
+  try {
+    return new URL(link).hostname.replace(/^www\./, "").toLowerCase();
+  } catch {
+    return "";
+  }
+};
+
+const isAggregator = (host: string) => AGGREGATORS.some((d) => host === d || host.endsWith(`.${d}`));
+
+/** A result counts only when its host looks like this company, not an aggregator or the conference site. */
+function hostMatchesCompany(name: string, link: string, conferenceHost?: string): boolean {
+  const host = hostOf(link);
+  if (!host || isAggregator(host)) return false;
+  const conf = conferenceHost?.replace(/^www\./, "").toLowerCase();
+  if (conf && (host === conf || host.endsWith(`.${conf}`) || conf.endsWith(`.${host}`))) return false;
+  const tokens = name.toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length >= 3 && !NAME_STOP.has(t));
+  return tokens.some((t) => host.split(".")[0] === t || host.includes(t));
+}
+
+async function searchWebsite(c: NormCompany, context?: string, conferenceHost?: string): Promise<{ url: string; snippets: string; source: string; collectedAt: string } | { skip: string }> {
   const query = [c.name, context, "official website"].filter(Boolean).join(" ").replace(/\s+/g, " ");
   let results: { data: SerpResult[]; source: string; collectedAt: string };
   try {
@@ -59,10 +82,11 @@ async function searchWebsite(c: NormCompany, context?: string): Promise<{ url: s
   } catch (e) {
     return { skip: `no website; search failed: ${e instanceof Error ? e.message : String(e)}`.slice(0, 160) };
   }
-  const url = results.data.map((r) => r.link).map(publicLink).find((link): link is string => Boolean(link));
-  if (!url) return { skip: "no website; search returned no public url" };
+  const usable = results.data.filter((r) => publicLink(r.link));
+  const match = usable.find((r) => hostMatchesCompany(c.name, r.link, conferenceHost));
+  if (!match) return { skip: usable.length ? "no website; search returned no result for this company" : "no website; search returned no public url" };
   const snippets = results.data.slice(0, 8).map((x) => `- ${x.title}: ${x.description ?? ""} (${x.link})`).join("\n");
-  return { url, snippets, source: results.source, collectedAt: results.collectedAt };
+  return { url: match.link, snippets, source: results.source, collectedAt: results.collectedAt };
 }
 
 function skip(c: NormCompany, reason: string, skipped: EnrichResult["skipped"]) {
@@ -72,7 +96,7 @@ function skip(c: NormCompany, reason: string, skipped: EnrichResult["skipped"]) 
 }
 
 /** Mutates the top `limit` companies in place: description, topics, provenance (via "unlocker" or "serp"). */
-export async function enrichSponsors(companies: NormCompany[], opts: { limit?: number; concurrency?: number; context?: string } = {}): Promise<EnrichResult> {
+export async function enrichSponsors(companies: NormCompany[], opts: { limit?: number; concurrency?: number; context?: string; conferenceHost?: string } = {}): Promise<EnrichResult> {
   const limit = opts.limit ?? Number(process.env.SCOUT_ENRICH_LIMIT ?? 22);
   const picked = topSponsors(companies, limit);
   const failed: string[] = [];
@@ -84,7 +108,8 @@ export async function enrichSponsors(companies: NormCompany[], opts: { limit?: n
       let fallback = "";
       let fallbackSrc: { source: string; collectedAt: string; via: Via } | undefined;
       if (!url) {
-        const found = await searchWebsite(c, opts.context);
+        c.id ??= companyId(c.name, undefined);
+        const found = await searchWebsite(c, opts.context, opts.conferenceHost);
         if ("skip" in found) return skip(c, found.skip, skipped);
         url = found.url;
         c.website = url;

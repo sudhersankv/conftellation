@@ -44,7 +44,14 @@ export async function importConference(rawUrl: string, opts: { enrich?: boolean 
     throw e;
   }
   const { norm, path } = built;
-  const enrich = opts.enrich === false || norm.companies.length === 0 ? undefined : await enrichSponsors(norm.companies, { context: norm.conference.name });
+  const conferenceHost = (() => {
+    try {
+      return new URL(norm.conference.url).hostname;
+    } catch {
+      return undefined;
+    }
+  })();
+  const enrich = opts.enrich === false || norm.companies.length === 0 ? undefined : await enrichSponsors(norm.companies, { context: norm.conference.name, conferenceHost });
   await ensureIndexes();
   const r = await upsertConference(norm);
   const conference = (await conferenceById(norm.conference.id)) as Conference;
